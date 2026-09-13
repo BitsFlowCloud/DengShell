@@ -46,7 +46,7 @@ DengShell 是一款中文界面的开源 SSH 桌面工具，适合日常管理 V
 
 ## 下载与安装
 
-在本仓库的 **Releases** 页面选择适合自己系统的文件。安装好的程序无需另外安装 Go 或 Node.js。
+在本仓库的 **[Releases](https://github.com/BitsFlowCloud/DengShell/releases)** 页面选择适合自己系统的文件。安装好的程序无需另外安装 Go 或 Node.js。
 
 | 平台与用途 | 下载文件 | 使用方式 |
 | --- | --- | --- |
@@ -59,9 +59,12 @@ DengShell 是一款中文界面的开源 SSH 桌面工具，适合日常管理 V
 
 Windows 版本需要 Microsoft Edge WebView2，缺少时程序会提供安装指引。安装版默认安装到当前用户目录，卸载保留个人配置。
 
-Linux 版本使用 GTK3 和 WebKitGTK 4.1，发行构建以 Ubuntu 22.04 / glibc 2.35 为基线。已在 Ubuntu 22.04、Ubuntu 24.04、Debian 12、Fedora 43 和 openSUSE Tumbleweed 容器中完成对应包安装及原生界面启动验证。当前包不适用于 ARM、32 位、Alpine/musl 或缺少对应运行库的系统。
+Linux 版本使用 GTK3 和 WebKitGTK 4.1，发行构建以 Ubuntu 22.04 / glibc 2.35 为基线。当前包不适用于 ARM、32 位、Alpine/musl 或缺少对应运行库的系统。
 
-本版本的 Windows 实机安装与卸载仍待验证；Linux 容器验证也不涵盖所有实体桌面的显卡、托盘、缩放和 Wayland 组合。
+**测试情况：**
+
+- **Linux：已测试通过。** 已在 Ubuntu 22.04、Ubuntu 24.04、Debian 12、Fedora 43 和 openSUSE Tumbleweed 容器中通过安装、原生界面启动及卸载保留配置测试。
+- **Windows：用户正在实机使用，目前未发现问题。**
 
 ### Linux 安装示例
 
