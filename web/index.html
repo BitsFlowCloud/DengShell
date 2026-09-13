@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DengShell · SSH 工作台</title>
+  <meta name="referrer" content="no-referrer">
+  <script src="bootstrap.js"></script>
+  <script>if(location.protocol!=='wails:'&&location.hostname!=='wails.localhost'){const nonce=new URLSearchParams(location.search).get('window');if(/^[A-Za-z0-9_-]{24,96}$/.test(nonce||'')){window.CLOUDSHELL.detachedNonce=nonce;window.CLOUDSHELL.startupAnimation=false;}}</script>
+  <script src="theme.js?v=20260913-v001-r20"></script>
+  <link rel="stylesheet" href="vendor/xterm.css">
+  <link rel="stylesheet" href="style.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="theme.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="workspace-tools.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="appearance.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="workspace-refinements.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="file-browser.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="themed-select.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="config-document.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="startup-update.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="desktop-polish.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="splash.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="server-manager.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="help-guide.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="appearance-tools.css?v=20260913-v001-r20">
+  <link rel="icon" href="assets/dengshell.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="file-tools.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="desktop-tray.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="latency-chart.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="common-apps.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="session-windows.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="system-identity.css?v=20260913-v001-r20">
+  <link rel="stylesheet" href="chart-styles.css?v=20260913-v001-r20">
+</head>
+<body>
+  <svg class="icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+    <symbol id="i-popout" viewBox="0 0 24 24"><path d="M14 3h7v7m0-7-10 10M10 5H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/></symbol>
+    <symbol id="i-terminal" viewBox="0 0 24 24"><path d="m5 7 5 5-5 5m8 0h6"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7V5h6l2 2h10v13H3Z"/><path d="M3 10h18"/></symbol>
+    <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 6.5h.01M7 17.5h.01M12 6.5h5M12 17.5h5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.4 6.7M20 4v7h-7"/></symbol>
+    <symbol id="i-reconnect" viewBox="0 0 24 24"><path d="M8 3v4m8-4v4M6 7h12v4a6 6 0 0 1-12 0V7Zm6 10v4"/></symbol>
+    <symbol id="i-disconnect" viewBox="0 0 24 24"><path d="m13 7 4 4m-9 2 3 3M7 13l-3 3a3 3 0 0 0 4 4l3-3M13 7l3-3a3 3 0 0 1 4 4l-3 3M4 4l16 16"/></symbol>
+    <symbol id="i-erase" viewBox="0 0 24 24"><path d="m15 3 6 6-11 11H5l-3-3L15 3ZM8 11l6 6M10 20h11"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="m6 11 6-6 6 6M12 5v15"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="m7 9 5-5 5 5M12 4v11M4 15v5h16v-5"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M5 3h9l5 5v13H5ZM14 3v6h5"/></symbol>
+    <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 3v3m6-3v3M9 18v3m6-3v3M3 9h3m-3 6h3m12-6h3m-3 6h3"/><rect x="9" y="9" width="6" height="6" rx="1"/></symbol>
+    <symbol id="i-disk" viewBox="0 0 24 24"><path d="m5 4-3 11v5h20v-5L19 4Z M2 15h20M16 17.5h.01m3 0h.01"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-layout" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18m0-7h12"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m7 7-5 5 5 5m10-10 5 5-5 5m-4-13-2 20"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 13A8.5 8.5 0 0 1 11 3.5 8.5 8.5 0 1 0 20.5 13Z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="8" r="5"/><path d="m11.5 11.5 9 9M16 16l3-3m-1 5 3-3"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M19.02,9.09 L19.45,10.52 L21.89,10.51 L21.89,13.49 L19.45,13.48 L19.02,14.91 L18.32,16.22 L20.04,17.94 L17.94,20.04 L16.22,18.32 L14.91,19.02 L13.48,19.45 L13.49,21.89 L10.51,21.89 L10.52,19.45 L9.09,19.02 L7.78,18.32 L6.06,20.04 L3.96,17.94 L5.68,16.22 L4.98,14.91 L4.55,13.48 L2.11,13.49 L2.11,10.51 L4.55,10.52 L4.98,9.09 L5.68,7.78 L3.96,6.06 L6.06,3.96 L7.78,5.68 L9.09,4.98 L10.52,4.55 L10.51,2.11 L13.49,2.11 L13.48,4.55 L14.91,4.98 L16.22,5.68 L17.94,3.96 L20.04,6.06 L18.32,7.78 Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-7 5 8"/></symbol>
+    <symbol id="i-type" viewBox="0 0 24 24"><path d="M3 6V3h18v3M12 3v18m-4 0h8"/></symbol>
+    <symbol id="i-network" viewBox="0 0 24 24"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><path d="M12 8v5H5v3m7-3h7v3"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 4v6h6M3 10a9 9 0 1 1 0 5M12 7v5l3 2"/></symbol>
+    <symbol id="i-minimise" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-maximise" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3"/></symbol>
+    <symbol id="i-restore" viewBox="0 0 24 24"><rect x="4" y="8" width="12" height="12" rx="2.5"/><path d="M8 8V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2"/></symbol>
+    <symbol id="i-font-decrease" viewBox="0 0 24 24"><path d="m3 19 5-14 5 14M5 14h6m5-2h6"/></symbol>
+    <symbol id="i-font-increase" viewBox="0 0 24 24"><path d="m3 19 5-14 5 14M5 14h6m5-2h6m-3-3v6"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-4-4L5 15Z"/></symbol>
+    <symbol id="i-help-book" viewBox="0 0 24 24"><path d="M12 5C8 2 4 3 2 4v15c3-1 6-1 10 1 4-2 7-2 10-1V4c-2-1-6-2-10 1ZM12 5v15M5 7h3M5 10h3m8-3h3m-3 3h3"/></symbol>
+  </defs></svg>
+
+  <header class="titlebar">
+    <div class="brand"><img class="brand-logo" src="assets/dengshell.svg" alt=""><span class="brand-name"><strong>DengShell</strong></span><span class="version" id="app-version">v0.01</span></div>
+    <nav class="session-bar" aria-label="SSH 会话"><button id="connection-button" class="connection-button" title="打开服务器分组" aria-label="打开服务器分组"><svg><use href="#i-folder"/></svg></button><div id="session-tabs" class="session-tabs"></div><button class="icon-button add-session" id="add-session" aria-label="添加会话" title="添加会话"><svg><use href="#i-plus"/></svg></button><button class="icon-button" id="toggle-monitor" aria-label="系统与磁盘信息" title="系统与磁盘信息" aria-expanded="false"><svg><use href="#i-cpu"/></svg></button><button class="icon-button header-pill reset-pill" id="reset-layout" aria-label="恢复默认布局" title="恢复默认布局与终端字号"><svg><use href="#i-layout"/></svg></button><button class="icon-button theme-toggle header-pill theme-pill" id="theme-toggle" aria-label="深色模式" aria-pressed="false" title="切换到深色模式"><svg class="theme-moon"><use href="#i-moon"/></svg><svg class="theme-sun"><use href="#i-sun"/></svg></button><button class="icon-button header-pill font-pill" id="manage-fonts" title="字体管理器" aria-label="字体管理器"><svg><use href="#i-type"/></svg></button><button class="icon-button header-pill help-pill" id="help-button" title="使用手册与功能引导" aria-label="使用手册与功能引导" aria-haspopup="dialog"><svg><use href="#i-help-book"/></svg></button><button class="icon-button header-pill settings-pill" id="settings-button" title="设置" aria-label="设置" aria-haspopup="menu" aria-expanded="false"><svg><use href="#i-settings"/></svg></button><div class="window-controls" id="window-controls" hidden><button data-window-action="minimise" title="最小化" aria-label="最小化"><svg><use href="#i-minimise"/></svg></button><button data-window-action="toggle-maximise" id="window-maximise" title="最大化" aria-label="最大化"><svg><use href="#i-maximise"/></svg></button><button data-window-action="close" class="window-close" title="关闭窗口" aria-label="关闭窗口"><svg><use href="#i-close"/></svg></button></div></nav>
+  </header>
+
+  <div class="app-shell" id="app-shell">
+    <aside class="sidebar">
+      <section class="system-section">
+        <h2><svg><use href="#i-cpu"/></svg>系统信息<span id="system-os">—</span></h2>
+        <div class="specs"><span>运行 <b id="uptime">—</b></span><span>负载 <b id="system-load">—</b></span></div>
+        <div class="cpu-model"><span id="cpu-model">—</span><span id="cpu-cores">—</span></div>
+        <div class="server-addresses"><button class="address-copy" data-copy-address="server-ipv4" disabled aria-label="复制 IPv4 地址"><b>IPv4</b><span id="server-ipv4">-</span></button><button class="address-copy" data-copy-address="server-ipv6" disabled aria-label="复制 IPv6 地址"><b>IPv6</b><span id="server-ipv6">-</span></button></div>
+        <div class="metric"><span>CPU</span><div class="meter" id="cpu-meter"><i style="width:0" class="cpu-fill"></i><b>—</b><em>—</em></div></div>
+        <div class="metric"><span>内存</span><div class="meter" id="memory-meter"><i style="width:0" class="memory-fill"></i><b>—</b><em>—</em></div></div>
+        <div class="metric"><span>交换</span><div class="meter" id="swap-meter"><i style="width:0"></i><b>—</b><em>—</em></div></div>
+        <div class="network-grid">
+          <div class="network-card traffic-card"><div class="chart-caption network-caption">网络流量 <select id="network-interface" aria-label="选择真实网卡" title="选择网卡"><option value="">未连接</option></select></div><div class="chart-heading"><b class="upload-color">上行 —</b><b class="download-color">下行 —</b></div><svg id="network-chart" class="chart" role="button" tabindex="0" title="上传与下载共用零起点刻度，单位为每秒字节；点击运行 MTR 路径诊断" viewBox="0 0 270 54" preserveAspectRatio="none" aria-label="网络流量图，上传与下载共用刻度，点击运行 MTR 路径诊断"></svg></div>
+          <div class="network-card icmp-card" id="ping-status"><div class="icmp-heading"><span>当前延迟</span><b id="ping-latency">— <small>ms</small></b></div><div class="ping-chart"><div id="ping-samples" class="ping-samples" role="group" aria-label="1 分钟内延迟柱状图，左旧右新"></div></div><div class="ping-detail" id="ping-detail">1分钟内丢包率 <b id="ping-loss">—</b></div></div>
+        </div>
+        <details class="process-details process-card"><summary>活跃进程 <span id="monitor-state" title="系统监控状态">待连接</span><span id="process-count">—</span><svg><use href="#i-chevron"/></svg></summary><div class="process-table" tabindex="0" aria-label="进程列表，可独立滚动"><table><colgroup><col class="process-memory-col"><col class="process-cpu-col"><col class="process-name-col"></colgroup><thead><tr><th aria-sort="none"><button id="sort-process-memory" title="点击升序／降序，双击恢复默认">内存 <span></span></button></th><th aria-sort="none"><button id="sort-process-cpu" title="采样间隔内的 CPU 占用；单核满载为 100%。点击升序／降序，双击恢复默认。">CPU <span></span></button></th><th>进程</th></tr></thead><tbody id="process-list"></tbody></table></div></details>
+
+      </section>
+      <section class="disk-section"><h2 title="磁盘容量与挂载信息约每 30 秒更新；读写速率按监控采样更新"><svg><use href="#i-disk"/></svg>磁盘空间</h2><div class="disk-summary"><span>已使用 <b id="disk-used">—</b> / 总计 <b id="disk-total">—</b></span><span>可用百分比 <b id="disk-percent">—</b></span></div><div class="disk-total-bar" title="可用空间比例"><i style="width:0"></i></div><div class="disk-table-head"><span>挂载路径</span><span>可用 / 总量</span></div><div id="disk-list"></div><div class="disk-io"><div class="disk-readout read"><span>↓ 读取</span><strong id="disk-read">—</strong></div><div class="disk-readout write"><span>↑ 写入</span><strong id="disk-write">—</strong></div></div></section>
+    </aside>
+    <div class="splitter vertical" id="sidebar-splitter" role="separator" aria-label="调整侧栏宽度" aria-orientation="vertical" aria-valuemin="240" aria-valuemax="460" aria-valuenow="304" tabindex="0"><span></span></div>
+
+    <main class="main-panel">
+
+      <div class="workspace" id="workspace">
+        <section class="terminal-panel" aria-label="SSH 终端">
+          <div class="terminal-meta"><span><span class="status-dot green"></span><span id="terminal-meta-host">SSH 终端</span><span class="terminal-protocol" id="terminal-state">待连接</span></span><span class="terminal-encoding">UTF-8 <span class="meta-divider">│</span> xterm-256color</span><button id="detach-terminal" class="terminal-popout" title="将当前 SSH 拆分为独立窗口" aria-label="拆分为独立窗口" hidden disabled><svg><use href="#i-popout"/></svg><span>独立窗口</span></button></div>
+          <div class="terminal-output" id="terminal-output"><div class="welcome-state" id="welcome-state"><span class="welcome-icon"><svg><use href="#i-terminal"/></svg></span><h1>你的服务器工作台</h1><p>连接服务器，终端、文件与运行状态尽在眼前。</p><button id="welcome-connect">添加或选择服务器 <svg><use href="#i-chevron"/></svg></button><small>支持密码、私钥和 SSH Agent 登录</small></div></div>
+          <div class="terminal-command-bar"><svg><use href="#i-terminal"/></svg><form id="command-form"><textarea id="command-input" rows="1" aria-label="发送命令到服务器" placeholder="输入命令并回车发送 · ↑↓ 历史" autocomplete="off" spellcheck="false"></textarea></form><button class="terminal-tool" id="command-history" title="历史命令" aria-label="历史命令"><svg><use href="#i-history"/></svg></button><button class="terminal-tool" id="disconnect" title="断开连接，保留终端内容" aria-label="断开连接" disabled><svg><use href="#i-disconnect"/></svg></button><button class="terminal-tool" id="reconnect" title="重新连接" aria-label="重新连接"><svg><use href="#i-reconnect"/></svg></button><button class="terminal-tool" id="font-down" title="缩小终端字体 0.5 px" aria-label="缩小终端字体 0.5 px"><svg><use href="#i-font-decrease"/></svg></button><button class="terminal-tool" id="font-up" title="放大终端字体 0.5 px" aria-label="放大终端字体 0.5 px"><svg><use href="#i-font-increase"/></svg></button><button class="terminal-tool" id="clear-terminal" title="清除终端滚屏" aria-label="清空终端"><svg><use href="#i-erase"/></svg></button></div>
+        </section>
+        <div class="splitter horizontal" id="files-splitter" role="separator" aria-label="调整文件面板高度" aria-orientation="horizontal" aria-valuemin="170" aria-valuemax="600" aria-valuenow="370" tabindex="0"><span></span></div>
+        <section class="files-panel" id="files-panel" aria-label="远程文件">
+          <div class="file-tabs"><button class="file-tab active" data-pane="files"><svg><use href="#i-folder"/></svg>文件</button><button class="file-tab" data-pane="commands"><svg><use href="#i-code"/></svg>命令</button><button class="file-tab" data-pane="common-apps"><svg><use href="#i-layout"/></svg>常用应用</button><button class="file-tab" data-pane="transfers"><svg><use href="#i-upload"/></svg>传输任务<span id="transfer-count" class="count-badge">0</span></button><label class="follow-label"><input type="checkbox" id="follow-terminal">跟随终端目录</label><span class="files-tip">拖入文件或文件夹上传</span></div>
+          <div id="files-view" class="files-view">
+            <div class="file-toolbar"><button class="icon-button" id="parent-directory" title="上一级目录" aria-label="上一级目录"><svg><use href="#i-up"/></svg></button><form id="path-form" class="path-form"><svg><use href="#i-folder"/></svg><input id="path-input" value="" placeholder="连接后显示远程目录" aria-label="远程目录路径" spellcheck="false"></form><button class="icon-button" id="refresh-files" title="刷新目录" aria-label="刷新目录"><svg><use href="#i-refresh"/></svg></button><span class="toolbar-divider"></span><button class="icon-button" id="mkdir" title="新建文件或文件夹" aria-label="新建文件或文件夹" aria-haspopup="menu" aria-expanded="false"><svg><use href="#i-plus"/></svg></button><button class="upload-button" id="choose-files"><svg><use href="#i-upload"/></svg>上传</button><div class="file-search"><svg><use href="#i-search"/></svg><input id="file-filter" aria-label="筛选文件" placeholder="筛选文件"></div><input type="file" id="file-picker" multiple hidden><input type="file" id="folder-picker" webkitdirectory multiple hidden></div>
+            <div class="file-content" tabindex="0" aria-label="目录与文件列表，可滚动浏览"><nav class="directory-tree" aria-label="远程目录树" id="directory-tree"></nav><div class="file-table-wrap"><table class="file-table"><thead><tr><th><button id="sort-files">文件名 <span id="sort-arrow" aria-hidden="true">↑</span></button></th><th><button id="sort-size">大小 <span aria-hidden="true">↕</span></button></th><th><button id="sort-time">修改时间 <span aria-hidden="true">↕</span></button></th><th>权限</th><th>用户 / 用户组</th></tr></thead><tbody id="file-list"></tbody></table><div id="file-empty" class="empty-state" hidden>当前目录没有匹配的文件</div></div></div>
+            <div class="file-status"><span id="file-status-count">尚未连接</span><span id="file-actions"><button id="download-file" disabled>下载</button><button id="rename-file" disabled>重命名</button><button id="delete-file" disabled>删除</button></span><span id="file-owner-info">SFTP</span></div>
+          </div>
+          <div id="commands-view" class="commands-view" hidden>
+            <div class="commands-toolbar"><nav id="command-groups" aria-label="命令分组"></nav><span id="command-target">连接后点击命令执行</span><button class="upload-button" id="new-command"><svg><use href="#i-plus"/></svg>新建命令</button></div>
+            <div class="commands-content" tabindex="0" aria-label="快捷命令，右键可新建分组"><div id="command-list" class="command-list"></div><div id="commands-empty" class="empty-state">把常用命令收在这里；右键可新建分组，点击「新建命令」开始。</div></div>
+          </div>
+          <div id="common-apps-view" class="common-apps-view" hidden><div class="common-apps-header"><p>选择工具，在当前 SSH 终端执行。</p><span id="common-app-target">连接后选择应用</span></div><div id="common-app-list" class="common-app-list"></div></div>
+          <div id="transfers-view" class="transfers-view" hidden><div class="transfer-notice">文件通过 SFTP 上传，完成后自动刷新目录。</div><div id="transfer-list"></div><div id="transfer-empty" class="transfer-empty"><svg><use href="#i-upload"/></svg><strong>将文件拖到这里</strong><span>或在文件面板中选择文件上传</span></div></div>
+          <div class="drop-overlay" id="drop-overlay" hidden><svg><use href="#i-upload"/></svg><strong>松开以上传到当前目录</strong><span>目标目录 <b id="drop-path">—</b></span></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div id="monitor-backdrop" hidden></div>
+  <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+  <aside class="connections-drawer" id="connections-drawer" aria-label="服务器分组管理" hidden>
+    <div class="drawer-heading"><div><span class="eyebrow">CONNECTIONS</span><h2>服务器管理</h2></div><button id="close-connections" class="icon-button" aria-label="关闭服务器管理"><svg><use href="#i-close"/></svg></button></div>
+    <div class="server-manager-tabs" role="tablist" aria-label="连接列表"><button id="server-tab-servers" role="tab" aria-selected="true" aria-controls="connection-groups" data-server-tab="servers">服务器<span>0</span></button><button id="server-tab-history" role="tab" aria-selected="false" aria-controls="connection-groups" data-server-tab="history" tabindex="-1">历史连接<span>0</span></button><button id="server-tab-trash" role="tab" aria-selected="false" aria-controls="connection-groups" data-server-tab="trash" tabindex="-1">已删除<span>0</span></button></div>
+    <label class="connection-search"><svg><use href="#i-search"/></svg><input id="connection-search" placeholder="搜索名称、地址或分组" aria-label="搜索服务器"></label>
+    <div id="connection-groups" role="tabpanel" aria-labelledby="server-tab-servers"></div>
+    <div id="server-manager-create" class="server-manager-create"><button class="new-connection" id="new-connection"><svg><use href="#i-plus"/></svg>新建连接</button><button class="text-button" id="new-group">＋ 新建分组</button></div>
+  </aside>
+  <div id="server-group-menu" class="server-group-menu" role="menu" aria-label="分组操作" hidden></div>
+  <dialog id="server-group-dialog"><form id="server-group-form">
+    <div class="dialog-heading"><h2 id="server-group-editor-title">新建分组</h2><button type="button" id="cancel-server-group" class="icon-button" aria-label="取消分组编辑"><svg><use href="#i-close"/></svg></button></div>
+    <input name="id" type="hidden"><label>分组名称<input name="name" required maxlength="100" placeholder="例如：生产环境"></label>
+    <label>上级分组<select name="parentId" id="group-parent"><option value="">顶层分组</option></select></label>
+    <label>分组图标<div class="group-emoji-field"><span id="group-emoji-preview" aria-hidden="true"></span><input name="emoji" maxlength="32" placeholder="选用下方图标，或输入表情符号" aria-label="分组表情符号"><button type="button" id="clear-group-emoji">清除</button></div></label>
+    <details id="group-emoji-picker"><summary>常用图标与国旗</summary><input type="search" id="group-emoji-search" placeholder="搜索图标、国家或地区（如：日本 / JP）" aria-label="搜索分组图标"><div id="group-emoji-options"></div></details>
+    <p id="server-group-error" role="alert" hidden></p><button type="submit" id="save-server-group" class="primary-button">保存分组</button>
+  </form></dialog>
+
+  <dialog id="connection-dialog"><form id="connection-form">
+    <div class="dialog-heading"><h2 id="connection-form-title">新建连接</h2><button type="button" id="cancel-connection" class="icon-button" aria-label="取消"><svg><use href="#i-close"/></svg></button></div>
+    <input name="id" type="hidden">
+    <label>名称<input name="name" required maxlength="100" placeholder="例如：Tokyo-01"></label>
+    <div class="form-row"><label class="host-field">服务器地址<input name="host" required maxlength="253" placeholder="主机名或 IP"></label><label class="port-field">端口<input name="port" type="number" min="1" max="65535" value="22" required></label></div>
+    <label>分组<div class="input-with-button"><select name="groupId" id="profile-group" required></select><button type="button" id="profile-new-group">新建分组</button></div></label><label>用户名<input name="user" required maxlength="100" value="root"></label>
+    <label>认证方式<select name="auth"><option value="password">密码</option><option value="key">私钥</option><option value="agent">SSH Agent</option></select></label>
+    <label id="key-library-field" hidden>选择私钥<div class="input-with-button"><select name="keyId" id="profile-key"></select><button type="button" id="manage-profile-keys">管理密钥</button></div></label>
+    <label id="key-path-field" hidden>私钥路径<div class="input-with-button"><input name="keyPath" placeholder="~/.ssh/id_ed25519"><button type="button" id="choose-key">选择</button></div></label>
+    <label id="secret-field"><span id="secret-label">密码</span><input name="secret" type="password" autocomplete="new-password" placeholder="留空则连接时输入"></label>
+    <label class="checkbox-label" id="remember-secret-field"><input name="remember" type="checkbox">在本机保存密码／口令</label>
+    <p id="saved-secret-note" hidden>已保存凭据。留空保留，取消勾选则清除保存的凭据。</p>
+    <p id="managed-key-secret-note" hidden>自动使用密钥管理器中保存的口令，无需为此连接重复填写。</p>
+    <details class="proxy-settings" id="proxy-settings"><summary>连接代理 <span id="proxy-summary">直连</span><svg><use href="#i-chevron"/></svg></summary>
+      <label>使用代理<div class="input-with-button"><select name="proxyId" id="profile-proxy"></select><button type="button" id="manage-profile-proxies">管理代理</button></div></label>
+      <label id="proxy-type-field">自定义代理类型<select name="proxyType"><option value="direct">直连</option><option value="socks5">SOCKS5</option><option value="http">HTTP CONNECT</option></select></label>
+      <div id="proxy-fields" hidden><div class="form-row"><label>代理地址<input name="proxyHost" placeholder="127.0.0.1" autocomplete="off"></label><label class="port-field">端口<input name="proxyPort" type="number" min="1" max="65535" placeholder="7890"></label></div><div class="form-row"><label>用户名（可选）<input name="proxyUser" autocomplete="off"></label><label>密码（可选）<input name="proxyPassword" type="password" autocomplete="new-password" placeholder="留空保留已保存密码"></label></div><label class="checkbox-label"><input name="clearProxyPassword" type="checkbox">清除已保存的代理密码</label></div>
+      <p class="proxy-note">直连遵循系统路由；开启 TUN 时仍可能经过代理。SOCKS5／HTTP 代理由代理端解析服务器域名。</p>
+    </details>
+    <button type="button" id="reset-host-key" class="text-button" hidden>重置此服务器的主机指纹</button>
+    <button type="submit" class="primary-button" id="save-connection">保存并连接</button>
+  </form></dialog>
+  <dialog id="action-dialog"><form id="action-form"><h2 id="action-title"></h2><p id="action-description"></p><label id="action-input-label"><input id="action-input" autocomplete="off"></label><div class="dialog-buttons"><button type="button" id="action-cancel">取消</button><button type="submit" class="primary-button" id="action-confirm">确定</button></div></form></dialog>
+  <dialog id="command-dialog"><form id="quick-command-form">
+    <div class="dialog-heading"><h2 id="command-dialog-title">新建快捷命令</h2><button type="button" class="icon-button" id="cancel-command" aria-label="关闭命令编辑器"><svg><use href="#i-close"/></svg></button></div>
+    <input name="id" type="hidden"><div class="form-row"><label>名称<input name="name" required maxlength="100" placeholder="例如：查看容器"></label><div class="command-group-field"><label for="quick-command-group">分组</label><div class="command-group-choice"><select id="quick-command-group" name="group" required aria-label="命令分组"></select><button type="button" class="icon-button" id="new-command-group" title="新建命令分组" aria-label="新建命令分组"><svg><use href="#i-plus"/></svg></button></div></div></div>
+    <fieldset class="command-colors"><legend>按钮颜色</legend><div id="command-colors"></div></fieldset>
+    <label>命令内容<textarea name="body" required rows="7" maxlength="65536" spellcheck="false" placeholder="docker ps -a"></textarea></label><p>点击胶囊按钮，将命令发送到当前 SSH 会话并执行。支持多行命令。</p>
+    <div class="dialog-buttons"><button type="button" class="danger-button" id="delete-command" hidden>删除</button><button type="submit" class="primary-button" id="save-command">保存命令</button></div>
+  </form></dialog>
+  <dialog id="keys-dialog"><div class="dialog-heading"><h2>密钥管理</h2><button class="icon-button" id="close-keys" aria-label="关闭密钥管理"><svg><use href="#i-close"/></svg></button></div><div class="keys-toolbar"><span>在多台服务器间复用同一密钥</span><button class="upload-button" id="import-key">导入私钥</button><button class="upload-button" id="generate-key">生成密钥</button></div><div id="key-list"></div><p id="keys-empty" class="empty-state">还没有密钥，可导入已有私钥或生成 Ed25519 密钥。</p></dialog>
+  <dialog id="key-editor-dialog"><form id="key-editor-form"><div class="dialog-heading"><h2 id="key-editor-title">导入私钥</h2><button type="button" class="icon-button" id="cancel-key-editor" aria-label="关闭密钥编辑"><svg><use href="#i-close"/></svg></button></div><input type="hidden" name="id"><label>名称<input name="name" required maxlength="100" placeholder="例如：个人服务器"></label><div id="key-import-fields"><label>私钥文件<div class="input-with-button"><input name="sourcePath" placeholder="~/.ssh/id_ed25519"><button type="button" id="choose-library-key">选择文件</button></div></label><label>或粘贴私钥<textarea name="privateKey" rows="5" spellcheck="false" autocomplete="off" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"></textarea></label></div><label id="key-passphrase-field"><span id="key-passphrase-label">私钥口令（已加密时填写）</span><input name="passphrase" type="password" autocomplete="new-password"></label><p id="key-editor-note">导入后保存一份本机副本，原文件不受影响。口令随密钥保存在本机加密配置中，所有引用此密钥的 SSH 连接自动使用。</p><button class="primary-button" type="submit" id="save-key">保存密钥</button></form></dialog>
+  <dialog id="public-key-dialog"><div class="dialog-heading"><h2 id="public-key-title">公钥</h2><button class="icon-button" id="close-public-key" aria-label="关闭公钥"><svg><use href="#i-close"/></svg></button></div><p id="public-key-fingerprint"></p><textarea id="public-key-content" rows="5" readonly spellcheck="false" aria-label="SSH 公钥"></textarea><div class="dialog-buttons"><button class="primary-button" id="copy-public-key">复制公钥</button></div></dialog>
+  <div id="upload-menu" class="popup-menu" hidden><button id="upload-files-option">选择文件</button><button id="upload-folder-option">选择文件夹</button></div>
+
+  <div class="settings-menu" id="settings-menu" role="menu" aria-label="设置" hidden>
+    <div class="settings-caption">DengShell 设置</div>
+    <label class="startup-animation-setting" for="startup-animation"><span>开启动画<small id="startup-animation-hint">每次打开时播放 · 3.5 秒</small></span><span class="startup-animation-value"><span id="startup-animation-state" aria-hidden="true">开</span><input id="startup-animation" type="checkbox" role="switch" aria-describedby="startup-animation-hint" checked></span></label>
+    <button role="menuitem" id="manage-keys"><svg><use href="#i-key"/></svg>密钥管理器<span>私钥与公钥</span></button>
+    <button role="menuitem" id="manage-chart-styles"><svg><use href="#i-network"/></svg>曲线样式<span>网速与延迟</span></button>
+    <button role="menuitem" id="manage-backgrounds"><svg><use href="#i-image"/></svg>背景管理器<span>终端背景</span></button>
+    <button role="menuitem" id="manage-proxies"><svg><use href="#i-network"/></svg>代理管理器<span>连接路径</span></button>
+    <div class="scale-setting"><label for="ui-scale">界面缩放</label><select id="ui-scale" aria-label="界面缩放"><option value="0.75">75%</option><option value="0.9">90%</option><option value="1">100%</option><option value="1.1">110%</option><option value="1.25">125%</option><option value="1.5">150%</option><option value="1.75">175%</option><option value="2">200%</option></select></div>
+    <p id="scale-effective" hidden></p>
+    
+  </div>
+  <dialog id="appearance-dialog" class="manager-dialog appearance-palette" aria-labelledby="appearance-title" aria-modal="false"><div class="dialog-heading appearance-drag-handle" id="appearance-drag-handle" tabindex="0" aria-label="拖动管理器，方向键移动，Home 恢复位置"><div><h2 id="appearance-title">背景管理器</h2><p id="appearance-description"></p></div><button class="icon-button" id="close-appearance" aria-label="关闭管理器"><svg><use href="#i-close"/></svg></button></div>
+    <div class="appearance-body">
+      <div class="manager-toolbar"><span id="asset-count"></span><button class="upload-button" id="import-asset"><svg><use href="#i-plus"/></svg><span>导入背景</span></button></div>
+      <div class="background-strength" id="background-strength"><label for="background-opacity">背景强度 <output id="background-opacity-value">42%</output></label><input id="background-opacity" type="range" min="0" max="100" step="1"><span>向右拖动，让图片更清晰</span></div>
+      <div class="font-preview" id="font-preview" hidden><span id="font-preview-name"></span><pre id="font-preview-text">DengShell ~ $ echo "你好，世界！"
+中文目录 /home/用户  ┌─────┐
+繁體中文 ABC 012345  │ SSH │</pre><div class="font-preview-options"><label>字号<select id="terminal-size"></select></label></div></div>
+
+      <div id="asset-list" class="asset-list"></div><input id="asset-picker" type="file" hidden>
+    </div>
+  </dialog>
+  <dialog id="proxies-dialog" class="manager-dialog"><div class="dialog-heading"><div><h2>代理管理器</h2><p>保存常用代理，在服务器连接配置中选择。</p></div><button class="icon-button" id="close-proxies" aria-label="关闭代理管理器"><svg><use href="#i-close"/></svg></button></div><div class="manager-toolbar"><span>支持 SOCKS5 与 HTTP CONNECT</span><button class="upload-button" id="new-proxy"><svg><use href="#i-plus"/></svg>新建代理</button></div><div id="proxy-list"></div><p class="empty-state" id="proxies-empty">还没有代理。可添加本机代理，也可连接远程代理。</p></dialog>
+  <dialog id="proxy-editor-dialog"><form id="proxy-editor-form"><div class="dialog-heading"><h2 id="proxy-editor-title">新建代理</h2><button type="button" class="icon-button" id="close-proxy-editor" aria-label="关闭代理编辑"><svg><use href="#i-close"/></svg></button></div><input type="hidden" name="id"><label>名称<input name="name" required maxlength="100" placeholder="例如：本机代理"></label><label>类型<select name="type"><option value="socks5">SOCKS5</option><option value="http">HTTP CONNECT</option></select></label><div class="form-row"><label>地址<input name="host" required placeholder="127.0.0.1"></label><label class="port-field">端口<input name="port" type="number" min="1" max="65535" required value="7890"></label></div><label>用户名（可选）<input name="user" autocomplete="off"></label><label>密码（可选）<input name="password" type="password" autocomplete="new-password" placeholder="留空保留已保存密码"></label><label class="checkbox-label"><input type="checkbox" name="clearPassword">清除已保存的代理密码</label><button class="primary-button" type="submit" id="save-proxy">保存代理</button></form></dialog>
+
+
+  <div id="terminal-menu" class="popup-menu terminal-popup" role="menu" aria-label="终端操作" hidden><button id="copy-terminal-selection" role="menuitem">复制选中文字 <span>Ctrl+Shift+C</span></button><button id="paste-terminal-clipboard" role="menuitem">粘贴 <span>Ctrl+Shift+V</span></button></div>
+  <dialog id="history-dialog"><div class="dialog-heading"><div><h2>历史命令</h2><p id="history-target"></p></div><button class="icon-button" id="close-history" aria-label="关闭历史命令"><svg><use href="#i-close"/></svg></button></div><input id="history-filter" placeholder="搜索历史命令" aria-label="搜索历史命令"><div id="history-list"></div><p id="history-empty" class="empty-state">在任意 VPS 的终端、输入条或快捷命令中执行的 Shell 命令都会记录到这里。</p><div class="history-footer"><span>最近 2000 条 · 点击填入输入条，回车后执行</span><button class="text-button" id="clear-history">清空历史列表</button></div></dialog>
+  <dialog id="diagnostics-dialog"><div class="dialog-heading"><div><h2>MTR 网络诊断</h2><p id="diagnostics-route">本机 → 当前服务器</p></div><button class="icon-button" id="close-diagnostics" aria-label="关闭网络诊断"><svg><use href="#i-close"/></svg></button></div><div class="diagnostics-toolbar"><span id="diagnostics-status" role="status">准备检测</span><button class="upload-button" id="retry-diagnostics">重新检测</button><button class="upload-button" id="cancel-diagnostics">停止</button><button class="upload-button" id="copy-diagnostics"><svg><use href="#i-copy"/></svg>复制结果</button></div><div id="mtr-install-notice" class="mtr-install-notice" hidden><span id="mtr-install-summary"></span><button id="mtr-install-open" class="upload-button">安装 mtr…</button></div><pre id="diagnostics-output" tabindex="0" aria-label="MTR 检测结果">正在开始检测…</pre><p class="diagnostics-note">本机检测遵循系统路由，不通过应用内 SSH 代理。中间节点不回应或限速不代表终点丢包。</p><div class="diagnostics-footer"><button id="diagnostics-local" class="text-button">本机 → 当前服务器</button><button id="diagnostics-remote" class="upload-button">从服务器 MTR 到…</button></div></dialog>
+  <dialog id="mtr-install-dialog" aria-labelledby="mtr-install-title"><div class="dialog-heading"><h2 id="mtr-install-title">需要安装 mtr</h2><button id="mtr-install-close" class="icon-button" aria-label="关闭安装窗口"><svg><use href="#i-close"/></svg></button></div><p id="mtr-install-location"></p><p id="mtr-install-description" role="status">正在检查系统与包管理器…</p><pre id="mtr-install-command" tabindex="0" aria-label="将执行的安装命令"></pre><pre id="mtr-install-output" tabindex="0" aria-label="mtr 安装进度" hidden></pre><p class="mtr-install-note" id="mtr-install-note"></p><div class="dialog-buttons"><button id="mtr-install-dismiss">暂不安装</button><button id="mtr-install-confirm" class="primary-button" disabled>确定安装</button></div></dialog>
+  <dialog id="exit-dialog"><form id="exit-form"><h2>退出 DengShell？</h2><p id="exit-description">确认关闭应用。</p><div class="dialog-buttons"><button type="button" id="cancel-exit">继续使用</button><button class="primary-button" type="submit" id="confirm-exit">退出</button></div></form></dialog>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script src="splash.js?v=20260913-v001-r20"></script>
+  <script src="vendor/xterm.js"></script>
+  <script src="vendor/addon-fit.js"></script>
+  <script src="vendor/addon-serialize.js"></script>
+  <script src="workspace-tools.js?v=20260913-v001-r20"></script>
+  <script src="appearance.js?v=20260913-v001-r20"></script>
+  <script src="file-browser.js?v=20260913-v001-r20"></script>
+  <script src="latency-chart.js?v=20260913-v001-r20"></script>
+  <script src="workspace-refinements.js?v=20260913-v001-r20"></script>
+  <script src="themed-select.js?v=20260913-v001-r20"></script>
+  <script src="terminal-integration.js?v=20260913-v001-r20"></script>
+  <script src="mtr-installation.js?v=20260913-v001-r20"></script>
+  <script src="config-document.js?v=20260913-v001-r20"></script>
+  <script src="startup-update.js?v=20260913-v001-r20"></script>
+  <script src="portable-preferences.js?v=20260913-v001-r20"></script>
+  <script src="server-manager.js?v=20260913-v001-r20"></script>
+  <script src="help-guide.js?v=20260913-v001-r20"></script>
+  <script src="chart-styles.js?v=20260913-v001-r20"></script>
+  <script src="appearance-tools.js?v=20260913-v001-r20"></script>
+  <script src="terminal-snapshot.js?v=20260913-v001-r20"></script>
+  <script src="server-addresses.js?v=20260913-v001-r20"></script>
+  <script src="window-preview.js?v=20260913-v001-r20"></script>
+  <script src="window-transfers.js?v=20260913-v001-r20"></script>
+  <script src="session-windows.js?v=20260913-v001-r20"></script>
+  <script src="system-identity.js?v=20260913-v001-r20"></script>
+  <script src="app.js?v=20260913-v001-r20"></script>
+  <script src="common-apps.js?v=20260913-v001-r20"></script>
+  <script src="text-model.js?v=20260913-v001-r20"></script>
+  <script src="file-tools.js?v=20260913-v001-r20"></script>
+  <script src="desktop-tray.js?v=20260913-v001-r20"></script>
+</body>
+</html>

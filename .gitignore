@@ -1,0 +1,47 @@
+# Local application data and credentials
+/data/
+/keys/
+/assets/
+**/dengshell.config.enc
+**/dengshell.config.key
+**/dengshell.config.json
+**/cloudshell.config.enc
+**/cloudshell.config.key
+**/cloudshell.config.json
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa
+id_ed25519
+
+# Generated programs and release packages
+/dengshell
+/dengshell-server
+/cloudshell
+/cloudshell-server
+/cloudshell-preview
+/build/linux/native/dengshell
+/build/linux/packages/
+/dist/
+*.exe
+*.deb
+*.rpm
+*.zip
+*.tar.gz
+*.AppImage
+*.test
+
+# Development caches and local output
+/node_modules/
+/.cache/
+/coverage/
+__pycache__/
+*.py[cod]
+*.log
+*.tmp
+*.bak
+*~
+.DS_Store
+Thumbs.db

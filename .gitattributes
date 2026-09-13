@@ -1,0 +1,22 @@
+# Detect text files and keep platform launch scripts usable after checkout.
+* text=auto
+*.sh text eol=lf
+*.ps1 text eol=crlf
+*.go text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+
+# Embedded fonts, artwork, recordings and Windows resource objects.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.syso binary

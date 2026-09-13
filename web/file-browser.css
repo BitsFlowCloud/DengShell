@@ -1,0 +1,63 @@
+/* Directory navigation and file contents own separate scroll areas. */
+.file-content {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  align-items: stretch;
+  grid-template-columns: clamp(126px, 18%, 208px) minmax(0, 1fr);
+}
+.file-content > .directory-tree,
+.file-content > .file-table-wrap {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.file-content > .directory-tree {
+  display: block;
+  padding: 2px 7px 8px 2px;
+}
+.file-content > .file-table-wrap { padding: 0 0 7px 5px; }
+.file-content > :is(.directory-tree, .file-table-wrap):is(:hover, :focus-within, .is-scrolling) {
+  scrollbar-color: #a4b6c36b transparent;
+}
+.file-content > :is(.directory-tree, .file-table-wrap)::-webkit-scrollbar-thumb { background: transparent; }
+.file-content > :is(.directory-tree, .file-table-wrap):is(:hover, :focus-within, .is-scrolling)::-webkit-scrollbar-thumb { background: #a4b6c36b; }
+.file-table thead { position: sticky; top: 0; z-index: 2; }
+.directory-tree .tree-row { min-height: 28px; height: 28px; }
+.directory-tree .tree-row.contains-current { color: var(--accent, #7198b1); }
+.directory-tree .tree-row.contains-current .tree-link > span:first-of-type { font-weight: 600; }
+.tree-placeholder, .tree-directory-status {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted, #8f9fae);
+  padding: 5px 6px 5px calc(10px + var(--depth, 0) * 12px);
+  overflow-wrap: anywhere;
+}
+.tree-placeholder { padding: 12px 8px; }
+.tree-retry {
+  padding: 0;
+  font: inherit;
+  color: var(--accent, #7198b1);
+  text-align: left;
+}
+.tree-link .tree-symlink { flex-shrink: 0; font-size: 10px; opacity: .65; }
+.directory-tree .tree-toggle:disabled { opacity: .4; }
+[data-compact="true"] .file-content { grid-template-columns: 116px minmax(0, 1fr); }
+[data-narrow="true"] .file-content { grid-template-columns: 104px minmax(0, 1fr); }
+[data-narrow="true"] .file-content > .directory-tree { display: block; }
+@media (max-width: 1050px) {
+  .file-content { grid-template-columns: 126px minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .file-content { grid-template-columns: 104px minmax(0, 1fr); padding-inline: 4px; }
+  .file-content > .directory-tree { padding-right: 3px; }
+  .directory-tree .tree-row { padding-left: calc(var(--depth, 0) * 8px); }
+  .directory-tree .tree-toggle { width: 15px; }
+  .directory-tree .tree-link { gap: 4px; }
+}

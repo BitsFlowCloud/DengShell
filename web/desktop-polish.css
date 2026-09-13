@@ -1,0 +1,64 @@
+/* Align the visible brand components without changing the titlebar's height. */
+.titlebar .brand { display:grid; grid-template-columns:40px minmax(0,1fr) 40px; align-items:center; gap:7px; }
+.titlebar .brand-logo { justify-self:start; }
+.titlebar .brand-name { display:block; text-align:center; min-width:0; }
+.titlebar .brand #app-version { justify-self:end; text-align:right; margin:0; }
+[data-narrow="true"] .titlebar .brand { width:154px; grid-template-columns:28px minmax(0,1fr) 28px; gap:5px; }
+.titlebar .brand strong { font-size:17px; line-height:1; }
+[data-narrow="true"] .titlebar .brand strong { font-size:15px; }
+
+/* Dark frosted surfaces keep terminal controls readable over every wallpaper. */
+.terminal-panel .terminal-meta,
+.terminal-panel .terminal-command-bar {
+  background:#1a2c38;
+  color:#c6d7e1;
+  box-shadow:inset 0 1px 0 #ffffff12,0 3px 12px #07111c12;
+}
+.terminal-panel .terminal-meta { padding-inline:17px; border-radius:15px 15px 0 0; }
+.terminal-panel .terminal-command-bar { border-radius:11px; }
+.terminal-panel #terminal-meta-host { color:#d6e5ed; font-weight:500; }
+.terminal-panel .terminal-protocol { color:#acc3cf; }
+.terminal-panel .meta-divider { color:#8da6b866; }
+.terminal-panel .terminal-command-bar textarea { color:#edf5f9; }
+.terminal-panel .terminal-command-bar textarea::placeholder { color:#a6becd; }
+.terminal-panel .terminal-tool { color:#bdd2df; transition:background .16s,color .16s,transform .16s; }
+.terminal-panel .terminal-tool:hover,.terminal-panel .terminal-tool:focus-visible { background:#bdd8e51f; color:#f0f9fc; }
+.terminal-panel .terminal-tool:active { transform:translateY(1px); }
+.terminal-panel .terminal-tool svg { width:16px; height:16px; stroke-width:1.7; }
+.terminal-panel #disconnect:enabled { color:#d4aaa6; }
+.terminal-panel #disconnect:enabled:hover { color:#f0bfba; background:#b77a7926; }
+.terminal-panel #reconnect:enabled { color:#a7cdbf; }
+.terminal-panel #reconnect:enabled:hover { color:#c6e7d8; background:#7fb59c26; }
+[data-narrow="true"] .terminal-panel .terminal-command-bar { gap:5px; padding-inline:8px; }
+[data-narrow="true"] .terminal-panel .terminal-tool { min-width:25px; }
+[data-theme="dark"] .terminal-panel .terminal-meta,
+[data-theme="dark"] .terminal-panel .terminal-command-bar { background:#111f29; }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) {
+  .terminal-panel .terminal-meta,.terminal-panel .terminal-command-bar {
+    background:#192d3be0;
+    -webkit-backdrop-filter:blur(24px) saturate(115%);
+    backdrop-filter:blur(24px) saturate(115%);
+  }
+  [data-theme="dark"] .terminal-panel .terminal-meta,
+  [data-theme="dark"] .terminal-panel .terminal-command-bar { background:#10212de0; }
+}
+
+/* Window actions use the workspace palette and retain the native hit targets. */
+.titlebar .window-controls { flex-shrink:0; gap:3px; padding:2px; border-radius:11px; background:#a7bed218; }
+.titlebar .window-controls button { height:28px; border-radius:8px; color:#728ca2; transition:background .16s,color .16s,box-shadow .16s; }
+.titlebar .window-controls svg { width:14px; height:14px; stroke-width:1.8; }
+.titlebar .window-controls button:hover,.titlebar .window-controls button:focus-visible { background:#fdfefe; color:#395b73; box-shadow:0 2px 6px #253b4c13; }
+.titlebar .window-controls button:active { background:#d9e5ed; box-shadow:inset 0 1px 3px #37566b14; }
+.titlebar .window-controls .window-close { color:#a7858b; }
+.titlebar .window-controls .window-close:hover,.titlebar .window-controls .window-close:focus-visible { background:#d77b85; color:#fff; box-shadow:0 2px 7px #af576427; }
+.titlebar .window-controls .window-close:active { background:#c46b76; }
+[data-theme="dark"] .titlebar .window-controls { background:#08121d35; }
+[data-theme="dark"] .titlebar .window-controls button { color:#acbecf; }
+[data-theme="dark"] .titlebar .window-controls button:hover,[data-theme="dark"] .titlebar .window-controls button:focus-visible { background:#344454; color:#e7f0f6; box-shadow:none; }
+[data-theme="dark"] .titlebar .window-controls button:active { background:#3c5062; }
+[data-theme="dark"] .titlebar .window-controls .window-close { color:#cba2ac; }
+[data-theme="dark"] .titlebar .window-controls .window-close:hover,[data-theme="dark"] .titlebar .window-controls .window-close:focus-visible { background:#a55566; color:#fff; }
+[data-theme="dark"] .titlebar .window-controls .window-close:active { background:#934958; }
+[data-narrow="true"] .titlebar .window-controls { gap:2px; margin-left:1px; }
+[data-short="true"] .terminal-panel .terminal-meta { padding-inline:12px; }
+@media (prefers-reduced-motion:reduce) { .terminal-panel .terminal-tool,.titlebar .window-controls button { transition:none; } }

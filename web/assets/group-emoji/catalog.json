@@ -1,0 +1,517 @@
+{
+  "source": "Twemoji v14.0.2 / Twitter and contributors",
+  "license": "CC-BY-4.0",
+  "items": [
+    {
+      "emoji": "📁",
+      "name": "文件夹",
+      "keywords": "folder files",
+      "category": "common",
+      "file": "assets/group-emoji/1f4c1.svg"
+    },
+    {
+      "emoji": "🖥️",
+      "name": "服务器",
+      "keywords": "server desktop",
+      "category": "common",
+      "file": "assets/group-emoji/1f5a5.svg"
+    },
+    {
+      "emoji": "☁️",
+      "name": "云服务",
+      "keywords": "cloud",
+      "category": "common",
+      "file": "assets/group-emoji/2601.svg"
+    },
+    {
+      "emoji": "🌐",
+      "name": "网站",
+      "keywords": "web internet",
+      "category": "common",
+      "file": "assets/group-emoji/1f310.svg"
+    },
+    {
+      "emoji": "🚀",
+      "name": "生产",
+      "keywords": "production rocket",
+      "category": "common",
+      "file": "assets/group-emoji/1f680.svg"
+    },
+    {
+      "emoji": "🧪",
+      "name": "测试",
+      "keywords": "test lab",
+      "category": "common",
+      "file": "assets/group-emoji/1f9ea.svg"
+    },
+    {
+      "emoji": "🛠️",
+      "name": "开发",
+      "keywords": "development tools",
+      "category": "common",
+      "file": "assets/group-emoji/1f6e0.svg"
+    },
+    {
+      "emoji": "🔒",
+      "name": "安全",
+      "keywords": "security lock",
+      "category": "common",
+      "file": "assets/group-emoji/1f512.svg"
+    },
+    {
+      "emoji": "🗄️",
+      "name": "数据库",
+      "keywords": "database",
+      "category": "common",
+      "file": "assets/group-emoji/1f5c4.svg"
+    },
+    {
+      "emoji": "💾",
+      "name": "存储",
+      "keywords": "storage backup",
+      "category": "common",
+      "file": "assets/group-emoji/1f4be.svg"
+    },
+    {
+      "emoji": "📦",
+      "name": "应用",
+      "keywords": "app package",
+      "category": "common",
+      "file": "assets/group-emoji/1f4e6.svg"
+    },
+    {
+      "emoji": "🐳",
+      "name": "容器",
+      "keywords": "docker container whale",
+      "category": "common",
+      "file": "assets/group-emoji/1f433.svg"
+    },
+    {
+      "emoji": "🐧",
+      "name": "Linux",
+      "keywords": "linux penguin",
+      "category": "common",
+      "file": "assets/group-emoji/1f427.svg"
+    },
+    {
+      "emoji": "🪟",
+      "name": "Windows",
+      "keywords": "windows",
+      "category": "common",
+      "file": "assets/group-emoji/1fa9f.svg"
+    },
+    {
+      "emoji": "🍎",
+      "name": "Mac",
+      "keywords": "mac apple",
+      "category": "common",
+      "file": "assets/group-emoji/1f34e.svg"
+    },
+    {
+      "emoji": "🏠",
+      "name": "家庭",
+      "keywords": "home",
+      "category": "common",
+      "file": "assets/group-emoji/1f3e0.svg"
+    },
+    {
+      "emoji": "🏢",
+      "name": "办公",
+      "keywords": "office",
+      "category": "common",
+      "file": "assets/group-emoji/1f3e2.svg"
+    },
+    {
+      "emoji": "🔧",
+      "name": "维护",
+      "keywords": "maintenance wrench",
+      "category": "common",
+      "file": "assets/group-emoji/1f527.svg"
+    },
+    {
+      "emoji": "⚙️",
+      "name": "配置",
+      "keywords": "settings gear",
+      "category": "common",
+      "file": "assets/group-emoji/2699.svg"
+    },
+    {
+      "emoji": "📡",
+      "name": "网络",
+      "keywords": "network satellite",
+      "category": "common",
+      "file": "assets/group-emoji/1f4e1.svg"
+    },
+    {
+      "emoji": "🌍",
+      "name": "全球",
+      "keywords": "global earth",
+      "category": "common",
+      "file": "assets/group-emoji/1f30d.svg"
+    },
+    {
+      "emoji": "⭐",
+      "name": "收藏",
+      "keywords": "favorite star",
+      "category": "common",
+      "file": "assets/group-emoji/2b50.svg"
+    },
+    {
+      "emoji": "💎",
+      "name": "重要",
+      "keywords": "important diamond",
+      "category": "common",
+      "file": "assets/group-emoji/1f48e.svg"
+    },
+    {
+      "emoji": "🔥",
+      "name": "热门",
+      "keywords": "hot fire",
+      "category": "common",
+      "file": "assets/group-emoji/1f525.svg"
+    },
+    {
+      "emoji": "💡",
+      "name": "想法",
+      "keywords": "idea",
+      "category": "common",
+      "file": "assets/group-emoji/1f4a1.svg"
+    },
+    {
+      "emoji": "🎮",
+      "name": "游戏",
+      "keywords": "game",
+      "category": "common",
+      "file": "assets/group-emoji/1f3ae.svg"
+    },
+    {
+      "emoji": "🤖",
+      "name": "机器人",
+      "keywords": "robot bot",
+      "category": "common",
+      "file": "assets/group-emoji/1f916.svg"
+    },
+    {
+      "emoji": "📊",
+      "name": "监控",
+      "keywords": "monitor chart",
+      "category": "common",
+      "file": "assets/group-emoji/1f4ca.svg"
+    },
+    {
+      "emoji": "💻",
+      "name": "代码",
+      "keywords": "code laptop",
+      "category": "common",
+      "file": "assets/group-emoji/1f4bb.svg"
+    },
+    {
+      "emoji": "🛰️",
+      "name": "卫星",
+      "keywords": "satellite",
+      "category": "common",
+      "file": "assets/group-emoji/1f6f0.svg"
+    },
+    {
+      "emoji": "⚡",
+      "name": "快速",
+      "keywords": "fast lightning",
+      "category": "common",
+      "file": "assets/group-emoji/26a1.svg"
+    },
+    {
+      "emoji": "☀️",
+      "name": "日间",
+      "keywords": "sun day",
+      "category": "common",
+      "file": "assets/group-emoji/2600.svg"
+    },
+    {
+      "emoji": "🌙",
+      "name": "夜间",
+      "keywords": "moon night",
+      "category": "common",
+      "file": "assets/group-emoji/1f319.svg"
+    },
+    {
+      "emoji": "🟢",
+      "name": "绿色",
+      "keywords": "green",
+      "category": "common",
+      "file": "assets/group-emoji/1f7e2.svg"
+    },
+    {
+      "emoji": "🔵",
+      "name": "蓝色",
+      "keywords": "blue",
+      "category": "common",
+      "file": "assets/group-emoji/1f535.svg"
+    },
+    {
+      "emoji": "🟣",
+      "name": "紫色",
+      "keywords": "purple",
+      "category": "common",
+      "file": "assets/group-emoji/1f7e3.svg"
+    },
+    {
+      "emoji": "🟠",
+      "name": "橙色",
+      "keywords": "orange",
+      "category": "common",
+      "file": "assets/group-emoji/1f7e0.svg"
+    },
+    {
+      "emoji": "🔴",
+      "name": "红色",
+      "keywords": "red",
+      "category": "common",
+      "file": "assets/group-emoji/1f534.svg"
+    },
+    {
+      "emoji": "🟡",
+      "name": "黄色",
+      "keywords": "yellow",
+      "category": "common",
+      "file": "assets/group-emoji/1f7e1.svg"
+    },
+    {
+      "emoji": "🤍",
+      "name": "白色",
+      "keywords": "white",
+      "category": "common",
+      "file": "assets/group-emoji/1f90d.svg"
+    },
+    {
+      "emoji": "🇨🇳",
+      "name": "中国",
+      "keywords": "CN China",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1e8-1f1f3.svg"
+    },
+    {
+      "emoji": "🇭🇰",
+      "name": "香港",
+      "keywords": "HK Hong Kong",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1ed-1f1f0.svg"
+    },
+    {
+      "emoji": "🇲🇴",
+      "name": "澳门",
+      "keywords": "MO Macau",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1f2-1f1f4.svg"
+    },
+    {
+      "emoji": "🇹🇼",
+      "name": "台湾",
+      "keywords": "TW Taiwan",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1f9-1f1fc.svg"
+    },
+    {
+      "emoji": "🇺🇸",
+      "name": "美国",
+      "keywords": "US United States USA",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1fa-1f1f8.svg"
+    },
+    {
+      "emoji": "🇯🇵",
+      "name": "日本",
+      "keywords": "JP Japan",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1ef-1f1f5.svg"
+    },
+    {
+      "emoji": "🇸🇬",
+      "name": "新加坡",
+      "keywords": "SG Singapore",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1f8-1f1ec.svg"
+    },
+    {
+      "emoji": "🇰🇷",
+      "name": "韩国",
+      "keywords": "KR South Korea",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1f0-1f1f7.svg"
+    },
+    {
+      "emoji": "🇦🇺",
+      "name": "澳大利亚",
+      "keywords": "AU Australia",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1e6-1f1fa.svg"
+    },
+    {
+      "emoji": "🇬🇧",
+      "name": "英国",
+      "keywords": "GB United Kingdom UK",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1ec-1f1e7.svg"
+    },
+    {
+      "emoji": "🇩🇪",
+      "name": "德国",
+      "keywords": "DE Germany",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1e9-1f1ea.svg"
+    },
+    {
+      "emoji": "🇫🇷",
+      "name": "法国",
+      "keywords": "FR France",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1eb-1f1f7.svg"
+    },
+    {
+      "emoji": "🇳🇱",
+      "name": "荷兰",
+      "keywords": "NL Netherlands",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1f3-1f1f1.svg"
+    },
+    {
+      "emoji": "🇨🇦",
+      "name": "加拿大",
+      "keywords": "CA Canada",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1e8-1f1e6.svg"
+    },
+    {
+      "emoji": "🇮🇳",
+      "name": "印度",
+      "keywords": "IN India",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1ee-1f1f3.svg"
+    },
+    {
+      "emoji": "🇧🇷",
+      "name": "巴西",
+      "keywords": "BR Brazil",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1e7-1f1f7.svg"
+    },
+    {
+      "emoji": "🇷🇺",
+      "name": "俄罗斯",
+      "keywords": "RU Russia",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1f7-1f1fa.svg"
+    },
+    {
+      "emoji": "🇮🇹",
+      "name": "意大利",
+      "keywords": "IT Italy",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1ee-1f1f9.svg"
+    },
+    {
+      "emoji": "🇪🇸",
+      "name": "西班牙",
+      "keywords": "ES Spain",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1ea-1f1f8.svg"
+    },
+    {
+      "emoji": "🇨🇭",
+      "name": "瑞士",
+      "keywords": "CH Switzerland",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1e8-1f1ed.svg"
+    },
+    {
+      "emoji": "🇸🇪",
+      "name": "瑞典",
+      "keywords": "SE Sweden",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1f8-1f1ea.svg"
+    },
+    {
+      "emoji": "🇫🇮",
+      "name": "芬兰",
+      "keywords": "FI Finland",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1eb-1f1ee.svg"
+    },
+    {
+      "emoji": "🇳🇴",
+      "name": "挪威",
+      "keywords": "NO Norway",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1f3-1f1f4.svg"
+    },
+    {
+      "emoji": "🇳🇿",
+      "name": "新西兰",
+      "keywords": "NZ New Zealand",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1f3-1f1ff.svg"
+    },
+    {
+      "emoji": "🇲🇾",
+      "name": "马来西亚",
+      "keywords": "MY Malaysia",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1f2-1f1fe.svg"
+    },
+    {
+      "emoji": "🇮🇩",
+      "name": "印度尼西亚",
+      "keywords": "ID Indonesia",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1ee-1f1e9.svg"
+    },
+    {
+      "emoji": "🇹🇭",
+      "name": "泰国",
+      "keywords": "TH Thailand",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1f9-1f1ed.svg"
+    },
+    {
+      "emoji": "🇻🇳",
+      "name": "越南",
+      "keywords": "VN Vietnam",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1fb-1f1f3.svg"
+    },
+    {
+      "emoji": "🇹🇷",
+      "name": "土耳其",
+      "keywords": "TR Turkey",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1f9-1f1f7.svg"
+    },
+    {
+      "emoji": "🇦🇪",
+      "name": "阿联酋",
+      "keywords": "AE United Arab Emirates UAE",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1e6-1f1ea.svg"
+    },
+    {
+      "emoji": "🇿🇦",
+      "name": "南非",
+      "keywords": "ZA South Africa",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1ff-1f1e6.svg"
+    },
+    {
+      "emoji": "🇵🇱",
+      "name": "波兰",
+      "keywords": "PL Poland",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1f5-1f1f1.svg"
+    },
+    {
+      "emoji": "🇮🇪",
+      "name": "爱尔兰",
+      "keywords": "IE Ireland",
+      "category": "flags",
+      "file": "assets/group-emoji/1f1ee-1f1ea.svg"
+    }
+  ]
+}

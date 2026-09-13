@@ -1,0 +1,13 @@
+{
+  "name": "Source Sans 3",
+  "family": "Deng UI",
+  "file": "assets/fonts/ui-source-sans-3.woff2",
+  "weightRange": "200 900",
+  "license": "assets/fonts/licenses/ui-source-sans-3.txt",
+  "licenseName": "SIL Open Font License 1.1",
+  "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/sourcesans3/SourceSans3[wght].ttf",
+  "sourceSha256": "042fe2cc0b933e328410d7acbd0aa6a1873dca5aef81875f4bc214b08825c7b9",
+  "sha256": "707229357fb90c9c5da177826aac06c6da031f569a9a520bfa7fcca5cd03355a",
+  "bytes": 169416,
+  "fallback": "Deng CJK"
+}

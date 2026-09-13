@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 2,
+  "servers": [
+    {
+      "id": "333333333333333333333333333333333333333333333333",
+      "name": "示例服务器",
+      "host": "198.51.100.25",
+      "port": 22,
+      "user": "root",
+      "groupId": "222222222222222222222222222222222222222222222222",
+      "group": "生产环境 / 新加坡",
+      "auth": "password",
+      "proxy": {
+        "type": "direct"
+      }
+    }
+  ],
+  "groups": [
+    "生产环境",
+    "生产环境 / 新加坡"
+  ],
+  "groupNodes": [
+    {
+      "id": "111111111111111111111111111111111111111111111111",
+      "name": "生产环境",
+      "parentId": "",
+      "emoji": "🚀"
+    },
+    {
+      "id": "222222222222222222222222222222222222222222222222",
+      "name": "新加坡",
+      "parentId": "111111111111111111111111111111111111111111111111",
+      "emoji": "🇸🇬"
+    }
+  ],
+  "connectionHistory": [],
+  "hostKeys": {},
+  "commands": [],
+  "keys": [],
+  "proxies": [],
+  "assets": [],
+  "appearance": {
+    "fontId": "builtin:jetbrains-mono",
+    "fontColors": {},
+    "fontBold": {},
+    "backgroundId": "builtin:none",
+    "backgroundOpacity": 0.42,
+    "backgroundVersion": 2,
+    "uiScale": 1,
+    "terminalFontSize": 14,
+    "startupAnimation": true,
+    "theme": "system",
+    "windowWidth": 0,
+    "windowHeight": 0,
+    "windowMaximised": false,
+    "onboardingCompleted": false,
+    "layout": {},
+    "monitorSide": "left",
+    "filesPosition": "bottom",
+    "promptUsernameColor": "",
+    "promptHostnameColor": "",
+    "minimizeAction": "ask",
+    "externalEditor": ""
+  }
+}

@@ -1,0 +1,18 @@
+.config-document-dialog { width:620px; }
+.config-document-dialog .dialog-heading { align-items:flex-start; gap:12px; }
+.config-document-dialog .dialog-heading h2 { margin:0; }
+.config-document-dialog .dialog-heading p { margin:10px 0 0; font-size:12px; line-height:1.7; color:var(--muted); }
+.config-document-dialog .dialog-heading button { flex-shrink:0; }
+.config-document-location { display:flex; flex-direction:column; align-items:flex-start; gap:12px; padding:16px; border-radius:14px; background:var(--surface-inset,#edf3f7); }
+.config-document-location > span { font-size:11px; color:var(--muted); }
+.config-document-location > code { max-width:100%; overflow-wrap:anywhere; font:12px/1.8 var(--terminal-family,monospace); user-select:text; }
+.config-document-guide { font-size:12px; line-height:1.85; }
+.config-document-guide ol { padding-left:20px; }
+.config-document-guide li { margin:10px 0; }
+.config-document-guide strong { font-weight:550; }
+.config-document-guide > p:last-child { color:var(--muted); font-size:11px; }
+.config-document-footer { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; margin-top:20px; }
+.config-document-dialog .secondary-button { padding:10px 14px; border-radius:10px; background:var(--surface-hover,#e5eef4); color:var(--text); font-size:12px; }
+.config-document-dialog .secondary-button:hover { background:var(--surface-selected,#dce9f2); }
+.config-document-footer .primary-button { width:auto; }
+#config-document-feedback { margin:12px 0 0; color:var(--text); font-size:11px; line-height:1.6; }

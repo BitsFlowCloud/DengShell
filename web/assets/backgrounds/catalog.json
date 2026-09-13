@@ -1,0 +1,76 @@
+{
+  "version": 2,
+  "generationMode": "built-in imagegen",
+  "backgrounds": [
+    {
+      "id": "mist",
+      "name": "远山雾岚",
+      "file": "assets/backgrounds/mist.png"
+    },
+    {
+      "id": "dunes",
+      "name": "暮色沙丘",
+      "file": "assets/backgrounds/dunes.png"
+    },
+    {
+      "id": "ocean",
+      "name": "深海微光",
+      "file": "assets/backgrounds/ocean.png"
+    },
+    {
+      "id": "aurora",
+      "name": "极光夜幕",
+      "file": "assets/backgrounds/aurora.png"
+    },
+    {
+      "id": "moonlake",
+      "name": "月泊静湖",
+      "file": "assets/backgrounds/moonlake.png"
+    },
+    {
+      "id": "pineforest",
+      "name": "松林薄雾",
+      "file": "assets/backgrounds/pineforest.png"
+    },
+    {
+      "id": "snowridge",
+      "name": "雪脊暮蓝",
+      "file": "assets/backgrounds/snowridge.png"
+    },
+    {
+      "id": "nebula",
+      "name": "星云幽境",
+      "file": "assets/backgrounds/nebula.png"
+    },
+    {
+      "id": "basaltcoast",
+      "name": "玄岩静岸",
+      "file": "assets/backgrounds/basaltcoast.png"
+    },
+    {
+      "id": "bamboorain",
+      "name": "竹影听雨",
+      "file": "assets/backgrounds/bamboorain.png"
+    },
+    {
+      "id": "paperfolds",
+      "name": "折纸光影",
+      "file": "assets/backgrounds/paperfolds.png"
+    },
+    {
+      "id": "flowingsilk",
+      "name": "流绸夜色",
+      "file": "assets/backgrounds/flowingsilk.png"
+    },
+    {
+      "id": "distantcity",
+      "name": "远城灯火",
+      "file": "assets/backgrounds/distantcity.png"
+    },
+    {
+      "id": "autumnhills",
+      "name": "秋丘余晖",
+      "file": "assets/backgrounds/autumnhills.png"
+    }
+  ]
+}

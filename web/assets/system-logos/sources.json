@@ -1,0 +1,160 @@
+{
+  "simpleIconsRevision": "4ba19240849175ab4b855a732ab98c0f87cfb714",
+  "assets": [
+    {
+      "file": "almalinux.svg",
+      "title": "AlmaLinux",
+      "upstreamAsset": "https://raw.githubusercontent.com/AlmaLinux/almalinux.org/81dc300bece175a9b02bddf082898402fcb31ba4/static/images/icon.svg",
+      "officialSource": "https://almalinux.org/branding/",
+      "guidelines": "https://almalinux.org/p/the-almalinux-os-trademark-usage-policy/",
+      "license": {
+        "type": "Official AlmaLinux brand asset; nominative OS identification, see trademark policy"
+      },
+      "sha256": "a5f3a60400124d6e92888bb0461c58f8ecd73ef9c3489b3f8783041c03a2a3a4"
+    },
+    {
+      "file": "alpinelinux.svg",
+      "title": "Alpine Linux",
+      "upstreamAsset": "https://raw.githubusercontent.com/simple-icons/simple-icons/4ba19240849175ab4b855a732ab98c0f87cfb714/icons/alpinelinux.svg",
+      "officialSource": "https://alpinelinux.org",
+      "guidelines": null,
+      "license": {
+        "type": "CC0-1.0 (Simple Icons contribution; underlying marks retain their owners rights)"
+      },
+      "sha256": "d37d0a7873c65174308d63929f09ab93c3aaa7f5c5df79cdec4be532e015fc98"
+    },
+    {
+      "file": "archlinux.svg",
+      "title": "Arch Linux",
+      "upstreamAsset": "https://raw.githubusercontent.com/simple-icons/simple-icons/4ba19240849175ab4b855a732ab98c0f87cfb714/icons/archlinux.svg",
+      "officialSource": "https://www.archlinux.org/art",
+      "guidelines": "https://wiki.archlinux.org/index.php/DeveloperWiki:TrademarkPolicy#Logo_Usage_Guidelines",
+      "license": {
+        "type": "CC0-1.0 (Simple Icons contribution; underlying marks retain their owners rights)"
+      },
+      "sha256": "2b1d26b4a1194c40dc068b2aba4b3a5f9ea83b6a8f1da04c229d03fe80308bfa"
+    },
+    {
+      "file": "centos.svg",
+      "title": "CentOS",
+      "upstreamAsset": "https://raw.githubusercontent.com/simple-icons/simple-icons/4ba19240849175ab4b855a732ab98c0f87cfb714/icons/centos.svg",
+      "officialSource": "https://wiki.centos.org/ArtWork/Brand/Logo",
+      "guidelines": null,
+      "license": {
+        "type": "CC0-1.0 (Simple Icons contribution; underlying marks retain their owners rights)"
+      },
+      "sha256": "94a3ca4414ed77c8bdf1ff0bd6d40d64ac4e27bd863889af50044ab6167ce1fa"
+    },
+    {
+      "file": "debian.svg",
+      "title": "Debian",
+      "upstreamAsset": "https://raw.githubusercontent.com/simple-icons/simple-icons/4ba19240849175ab4b855a732ab98c0f87cfb714/icons/debian.svg",
+      "officialSource": "https://www.debian.org/logos",
+      "guidelines": "https://www.debian.org/logos/",
+      "license": {
+        "type": "CC-BY-SA-3.0"
+      },
+      "sha256": "8835536d63c80990f9c90c935982ba329d163e707c894278ca6bd73258d1962b"
+    },
+    {
+      "file": "fedora.svg",
+      "title": "Fedora",
+      "upstreamAsset": "https://raw.githubusercontent.com/simple-icons/simple-icons/4ba19240849175ab4b855a732ab98c0f87cfb714/icons/fedora.svg",
+      "officialSource": "https://docs.fedoraproject.org/en-US/project/brand/",
+      "guidelines": "https://fedoraproject.org/wiki/Legal:Trademark_guidelines",
+      "license": {
+        "type": "custom",
+        "url": "https://docs.fedoraproject.org/en-US/project/brand/"
+      },
+      "sha256": "c234757373cab5ed80d7b2df8ff26ea039bcec16a9e9a47adbd29f5d0e94489a"
+    },
+    {
+      "file": "kalilinux.svg",
+      "title": "Kali Linux",
+      "upstreamAsset": "https://raw.githubusercontent.com/simple-icons/simple-icons/4ba19240849175ab4b855a732ab98c0f87cfb714/icons/kalilinux.svg",
+      "officialSource": "https://www.kali.org/docs/policy/trademark/",
+      "guidelines": "https://www.kali.org/docs/policy/trademark/",
+      "license": {
+        "type": "CC0-1.0 (Simple Icons contribution; underlying marks retain their owners rights)"
+      },
+      "sha256": "0ceffe5e8ce02aae42f7f5f6cada390f79e5ab6450a4e460b03127a370c33a1a"
+    },
+    {
+      "file": "linux.svg",
+      "title": "Linux",
+      "upstreamAsset": "https://raw.githubusercontent.com/simple-icons/simple-icons/4ba19240849175ab4b855a732ab98c0f87cfb714/icons/linux.svg",
+      "officialSource": "https://www.linuxfoundation.org/the-linux-mark/",
+      "guidelines": null,
+      "license": {
+        "type": "CC0-1.0 (Simple Icons contribution; underlying marks retain their owners rights)"
+      },
+      "sha256": "7e55f2779ae11a83c9dad2d0414a65d8ca7867d0716ce58bfe41ed299ae1447f"
+    },
+    {
+      "file": "linuxmint.svg",
+      "title": "Linux Mint",
+      "upstreamAsset": "https://raw.githubusercontent.com/simple-icons/simple-icons/4ba19240849175ab4b855a732ab98c0f87cfb714/icons/linuxmint.svg",
+      "officialSource": "https://github.com/linuxmint/brand-logo/blob/540ac3b08e987866d77a340f557f994c988ac2ae/ring-mono-green.svg",
+      "guidelines": null,
+      "license": {
+        "type": "CC0-1.0 (Simple Icons contribution; underlying marks retain their owners rights)"
+      },
+      "sha256": "ab7e227a8e7b7d167d8bc4617c6323c205b4565ce1c206e6d1fd677669cd27d4"
+    },
+    {
+      "file": "opensuse.svg",
+      "title": "openSUSE",
+      "upstreamAsset": "https://raw.githubusercontent.com/simple-icons/simple-icons/4ba19240849175ab4b855a732ab98c0f87cfb714/icons/opensuse.svg",
+      "officialSource": "https://github.com/openSUSE/artwork/blob/33e94aa76837c09f03d1712705949b71a246a53b/logos/buttons/button-colour.svg",
+      "guidelines": "https://en.opensuse.org/Portal:Artwork",
+      "license": {
+        "type": "CC0-1.0 (Simple Icons contribution; underlying marks retain their owners rights)"
+      },
+      "sha256": "22f842b1d6b2cf32b7b1a569708c2ca73bd5cae627def4e45e15d07915f0d6bf"
+    },
+    {
+      "file": "redhat.svg",
+      "title": "Red Hat",
+      "upstreamAsset": "https://raw.githubusercontent.com/simple-icons/simple-icons/4ba19240849175ab4b855a732ab98c0f87cfb714/icons/redhat.svg",
+      "officialSource": "https://www.redhat.com/en/about/brand/new-brand/details",
+      "guidelines": null,
+      "license": {
+        "type": "CC0-1.0 (Simple Icons contribution; underlying marks retain their owners rights)"
+      },
+      "sha256": "3d0e1854a9dad1a8ad11132843f522f948197ec0e0ee49b7a51d5fdf44230568"
+    },
+    {
+      "file": "rockylinux.svg",
+      "title": "Rocky Linux",
+      "upstreamAsset": "https://raw.githubusercontent.com/simple-icons/simple-icons/4ba19240849175ab4b855a732ab98c0f87cfb714/icons/rockylinux.svg",
+      "officialSource": "https://github.com/rocky-linux/branding/blob/94e97dd30b87d909cc4f6a6838a2926f77f9ac47/logo/src/icon-black.svg",
+      "guidelines": null,
+      "license": {
+        "type": "CC-BY-SA-4.0"
+      },
+      "sha256": "a65476b168c4ef14c6b743e7eb3875e56c9d60ca15bbaef57a72a6cdeab242d0"
+    },
+    {
+      "file": "suse.svg",
+      "title": "SUSE",
+      "upstreamAsset": "https://raw.githubusercontent.com/simple-icons/simple-icons/4ba19240849175ab4b855a732ab98c0f87cfb714/icons/suse.svg",
+      "officialSource": "https://brand.suse.com",
+      "guidelines": "https://brand.suse.com",
+      "license": {
+        "type": "CC0-1.0 (Simple Icons contribution; underlying marks retain their owners rights)"
+      },
+      "sha256": "718dd111e0c2553a1b7c86e8ef70db8f44bab7e001528b6c3fac6786fef19099"
+    },
+    {
+      "file": "ubuntu.svg",
+      "title": "Ubuntu",
+      "upstreamAsset": "https://raw.githubusercontent.com/simple-icons/simple-icons/4ba19240849175ab4b855a732ab98c0f87cfb714/icons/ubuntu.svg",
+      "officialSource": "https://design.ubuntu.com/resources",
+      "guidelines": "https://design.ubuntu.com/brand",
+      "license": {
+        "type": "CC0-1.0 (Simple Icons contribution; underlying marks retain their owners rights)"
+      },
+      "sha256": "b0aca674c881a07bb60b26afbcee07093ae419e29ee38e376f938817fa66ae03"
+    }
+  ]
+}

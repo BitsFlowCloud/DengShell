@@ -1,0 +1,126 @@
+{
+  "version": "0.01",
+  "generationMode": "built-in imagegen",
+  "backgrounds": [
+    {
+      "id": "moonlake",
+      "name": "月泊静湖",
+      "prompt": "Use case: stylized-concept. Asset type: original bitmap background for a modern SSH terminal. Primary request: moonlit alpine lake at blue hour, a small pale moon low above distant low mountains, dark teal still water reflecting a broad soft ribbon of moonlight, a few gentle shoreline silhouettes at the far edges. Style: refined atmospheric cinematic landscape with subtle painterly softness, sophisticated restrained color. Composition: wide landscape 1536x1024 or 16:9, horizon in lower third, generous smooth sky and water areas through the center; recognizable lake scenery. Lighting: soft moonlight, muted indigo and blue teal midtones, visibly detailed but low contrast, calm and luminous enough to see the scene beneath terminal text. Constraints: a single full bleed image; no text, logos, watermark, interface, people, bright stars, hard white highlights or busy detail. The background must support readable white terminal text without becoming a featureless black image.",
+      "source": "/home/bitsflow/.codex/generated_images/01a096d2-ad5b-75d2-964e-c4cc8e5e1880/exec-d7f34a83-f00b-404d-aaa6-539459e5937d.png",
+      "destination": "/home/bitsflow/projects/cloudshell/web/assets/backgrounds/moonlake.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1796241,
+      "sha256": "8d453424747ab63bdbb32708c0cd08d257e503e10034dc0f92180980a88953c9",
+      "inspection": "Original and actual dark-theme terminal at42% opacity inspected: recognizable scene, readable Chinese/English light text, no text/logo/UI in the source image."
+    },
+    {
+      "id": "pineforest",
+      "name": "松林薄雾",
+      "prompt": "Use case: stylized-concept. Asset type: original bitmap background for a modern SSH terminal. Primary request: layered evergreen pine forest silhouettes seen across a quiet valley, tall softly outlined trees along the lower edges, distant forest softened by drifting horizontal mist, open blue green fog across the middle. Style: premium atmospheric nature illustration with softly photographic depth, very restrained fine detail. Composition: wide landscape 1536x1024 or 16:9; readable spacious center, forest concentrated along lower quarter and far edges, no central tree blocking the quiet space. Lighting: overcast twilight with muted sage, deep petrol green and slate blue; gentle tonal separation, recognizable trees and mist, not almost black. Constraints: one full bleed landscape, no text, symbols, logos, interface, people, sunbeams, bright flecks or harsh contrast. Designed to stay unobtrusive beneath white terminal characters.",
+      "source": "/home/bitsflow/.codex/generated_images/01a096d2-ad5b-75d2-964e-c4cc8e5e1880/exec-a3ab2307-80c4-43ec-ad4c-900ece55be0a.png",
+      "destination": "/home/bitsflow/projects/cloudshell/web/assets/backgrounds/pineforest.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1932273,
+      "sha256": "ab3196e7465a4e286515d6e90cc5b1ec231adeec3dc14a8526282da41b28640d",
+      "inspection": "Original and actual dark-theme terminal at42% opacity inspected: recognizable scene, readable Chinese/English light text, no text/logo/UI in the source image."
+    },
+    {
+      "id": "snowridge",
+      "name": "雪脊暮蓝",
+      "prompt": "Use case: stylized-concept. Asset type: bitmap terminal wallpaper. Primary request: a single long sculptural snow-covered ridge under a clear dusk sky, seen from a neighboring high peak, wind-smoothed snow slopes with faint lavender shadows and a very restrained dusty rose line at the horizon. No forest, lake or dunes. Style: elegant minimal landscape photography with gently softened detail. Composition: one full bleed wide landscape around1536x1024 or16:9, ridge sits in the lower half and sweeps diagonally away, broad uninterrupted blue sky and smooth snow planes. Lighting: blue hour before sunrise; slate blue, muted periwinkle, soft pale cool snow, modest brightness and low contrast suitable for a terminal background. The scene must be clearly visible rather than almost black. Avoid white glare, sharp craggy texture, clouds full of tiny details, bright stars, people, buildings, text, logos, interface and watermark.",
+      "source": "/home/bitsflow/.codex/generated_images/01a096d2-ad5b-75d2-964e-c4cc8e5e1880/exec-5319369f-051a-4eb1-a0f0-e1c013f7c69c.png",
+      "destination": "/home/bitsflow/projects/cloudshell/web/assets/backgrounds/snowridge.png",
+      "width": 1536,
+      "height": 1024,
+      "bytes": 1973647,
+      "sha256": "2fd2f027034c23061b423a8a92608933b85ba58c3139ccd1518217409aa70f55",
+      "inspection": "Original and actual dark-theme terminal at42% opacity inspected: recognizable scene, readable Chinese/English light text, no text/logo/UI in the source image."
+    },
+    {
+      "id": "nebula",
+      "name": "星云幽境",
+      "prompt": "Use case: stylized-concept. Asset type: original bitmap background for an SSH terminal. Primary request: an immense calm interstellar nebula drifting like broad translucent clouds across deep blue-violet space, softly glowing dusty mauve and desaturated cobalt gas, subtle sense of depth. Style: tasteful cinematic astrophotography-inspired concept art, atmospheric and smooth, no science-fiction props. Composition: wide landscape1536x1024 or16:9, a few large diffuse curved gas formations around generous quiet center space, recognizable nebula rather than flat gradient. Lighting: dim luminous midtones, low contrast and no brilliant highlights; visible color that stays quiet beneath terminal characters. Constraints: absolutely no dense starfield, glitter, planets, spacecraft, beams, high contrast bright cores, lens flares, text, symbols, logos, watermark or interface. Single full bleed scene.",
+      "source": "/home/bitsflow/.codex/generated_images/01a096d2-ad5b-75d2-964e-c4cc8e5e1880/exec-c27380e2-46bc-4a96-a27b-b374ff36b8e5.png",
+      "destination": "/home/bitsflow/projects/cloudshell/web/assets/backgrounds/nebula.png",
+      "width": 1672,
+      "height": 940,
+      "bytes": 1697924,
+      "sha256": "93972eb31b0e56dd67d7713e7d54cc5147dde10e80c9b8ec74626bd9f6cf059e",
+      "inspection": "Original and actual dark-theme terminal at42% opacity inspected: recognizable scene, readable Chinese/English light text, no text/logo/UI in the source image."
+    },
+    {
+      "id": "basaltcoast",
+      "name": "玄岩静岸",
+      "prompt": "Use case: photorealistic-natural. Asset type: low-distraction terminal wallpaper. Primary request: a quiet volcanic basalt shoreline at overcast blue hour, a few massive smooth dark basalt rock forms and low sea stacks extending from one side into still mist-softened grey-green water; distant open sea horizon, no breaking surf. Composition: wide landscape1536x1024 or16:9; large simple rock silhouettes in the lower corners, broad smooth water and muted cloudy sky in the center. Style: refined long-exposure coastal photography, tactile but softly rendered stone, recognizable dramatic geology without tiny clutter. Lighting: gentle diffuse slate, desaturated marine green and charcoal midtones, subdued luminance but enough visible shape. Avoid dense pebbles, foamy white spray, bright sun, busy waves, people, boats, buildings, text, logos, UI or watermark. Single full bleed image suited to white terminal text over it.",
+      "source": "/home/bitsflow/.codex/generated_images/01a096d2-ad5b-75d2-964e-c4cc8e5e1880/exec-64c0143b-0d5f-4393-ac78-3ae789d076f2.png",
+      "destination": "/home/bitsflow/projects/cloudshell/web/assets/backgrounds/basaltcoast.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1853178,
+      "sha256": "9368e99811032b3e4f397814a181bce7822d3bbb44461128c1b5804f588089b1",
+      "inspection": "Original and actual dark-theme terminal at42% opacity inspected: recognizable scene, readable Chinese/English light text, no text/logo/UI in the source image."
+    },
+    {
+      "id": "bamboorain",
+      "name": "竹影听雨",
+      "prompt": "Use case: stylized-concept. Asset type: low-distraction bitmap wallpaper for a terminal. Primary request: tranquil bamboo grove in light rain, tall slender muted green bamboo stems softly framing the far edges, a few graceful bamboo leaf silhouettes, a spacious mist-filled clearing through the center with layered blue-green atmospheric depth. Style: elegant cinematic East Asian nature scene with subtle painterly softness, recognizable realistic bamboo, restrained texture. Composition: wide landscape1536x1024 or16:9, vertical bamboo mostly at sides with calm uninterrupted center; no path, person or architecture. Lighting: dim soft rainy daylight, sage, petrol and smoky jade palette, balanced visible midtones, never almost black. Rain should be felt as diffuse haze, not thousands of bright streaks or drops. No text, calligraphy, logos, watermark, interface, bright highlights, oversharp leaves or busy high-frequency texture. Single full bleed background.",
+      "source": "/home/bitsflow/.codex/generated_images/01a096d2-ad5b-75d2-964e-c4cc8e5e1880/exec-97968a1b-0870-456c-b140-7413069926da.png",
+      "destination": "/home/bitsflow/projects/cloudshell/web/assets/backgrounds/bamboorain.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 2343486,
+      "sha256": "7a2b60f7e999fd44fcd870fbf19af4b091d0eb09f37e1385e8f2a43fd0a4c38b",
+      "inspection": "Original and actual dark-theme terminal at42% opacity inspected: recognizable scene, readable Chinese/English light text, no text/logo/UI in the source image."
+    },
+    {
+      "id": "paperfolds",
+      "name": "折纸光影",
+      "prompt": "Use case: stylized-concept. Asset type: elegant low-distraction bitmap terminal wallpaper. Primary request: abstract architectural folded paper planes, three or four broad overlapping geometric folds with softly chamfered edges, sweeping diagonals and calm expanses; no literal object or scenery. Style: refined matte 3D paper sculpture with subtle physically believable soft shadows and surface, premium modern desktop wallpaper. Composition: wide landscape1536x1024 or16:9, large simple forms offset around spacious center, no repeating grid or pattern. Lighting: soft side light, muted steel blue, desaturated lavender and cool graphite, visible medium-value planes with gentle contrast and no bright white faces. Constraints: keep broad smooth readable areas for terminal text, no high-frequency grain, chrome, hard sharp contrast, text, logo, watermark, UI, icons or ornament. Single full bleed artwork.",
+      "source": "/home/bitsflow/.codex/generated_images/01a096d2-ad5b-75d2-964e-c4cc8e5e1880/exec-bf8c5581-d2d9-4e77-960c-fb93bb64824c.png",
+      "destination": "/home/bitsflow/projects/cloudshell/web/assets/backgrounds/paperfolds.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1769373,
+      "sha256": "f755a86b724d8fc5192277836a7f6d43e250e1c2e549b7be98200e6c590c684d",
+      "inspection": "Original and actual dark-theme terminal at42% opacity inspected: recognizable scene, readable Chinese/English light text, no text/logo/UI in the source image."
+    },
+    {
+      "id": "flowingsilk",
+      "name": "流绸夜色",
+      "prompt": "Use case: stylized-concept. Asset type: original understated bitmap wallpaper for a modern SSH terminal. Primary request: a broad flowing silk ribbon forming two slow elegant waves across a deep plum backdrop, the fabric appears soft and weightless with smooth satin shading; rich but restrained burgundy, smoky mauve and graphite purple. Style: high-end soft 3D material study, gracefully organic, distinctly fabric rather than clouds or hard folded paper. Composition: wide landscape1536x1024 or16:9, only a few large flowing folds, generous uncluttered dark-midvalue area through the center, cloth details softened. Lighting: diffuse grazing light, subdued satin luster, sufficient visible color and dimensionality, not near-black. Avoid metallic shine, tiny wrinkles, intricate patterns, harsh highlights, neon, text, logo, watermark, UI, people or objects. Single full bleed image intended to sit behind readable terminal text.",
+      "source": "/home/bitsflow/.codex/generated_images/01a096d2-ad5b-75d2-964e-c4cc8e5e1880/exec-cae3a1fd-3881-4776-85ba-176d21e93fca.png",
+      "destination": "/home/bitsflow/projects/cloudshell/web/assets/backgrounds/flowingsilk.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1457761,
+      "sha256": "410fc48bfea0d4e0c4bdbafbd2726f4db938338973f46176ce4d80cbc9a4419a",
+      "inspection": "Original and actual dark-theme terminal at42% opacity inspected: recognizable scene, readable Chinese/English light text, no text/logo/UI in the source image."
+    },
+    {
+      "id": "distantcity",
+      "name": "远城灯火",
+      "prompt": "Use case: photorealistic-natural. Asset type: tasteful bitmap terminal wallpaper. Primary request: a quiet modern city skyline viewed from far across a broad calm river at deep blue hour, small simplified building silhouettes in the distance, sparse warm amber windows and restrained blurred reflections, large expansive slate-blue sky. No famous landmark, no readable signage, no foreground street traffic. Composition: wide landscape1536x1024 or16:9, very distant low skyline along the lower third, smooth river and softly graded sky make most of the image; the city is recognizable but subtle. Style: atmospheric long-exposure architectural photography with gentle haze and low detail. Lighting: cool denim blue, charcoal and a few soft muted amber points, visible midtones and low contrast; no pure white lights or neon. Avoid busy starfields, dense dotted windows, crowds, cars, text, logos, watermark and interface. One full bleed image behind terminal text.",
+      "source": "/home/bitsflow/.codex/generated_images/01a096d2-ad5b-75d2-964e-c4cc8e5e1880/exec-70b42393-b7f6-42f2-a69e-48455ab2f29f.png",
+      "destination": "/home/bitsflow/projects/cloudshell/web/assets/backgrounds/distantcity.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1502565,
+      "sha256": "7c8724afa516baa29ada9d7f843d5963402699f4dee64784a72982fdb19af9d6",
+      "inspection": "Original and actual dark-theme terminal at42% opacity inspected: recognizable scene, readable Chinese/English light text, no text/logo/UI in the source image."
+    },
+    {
+      "id": "autumnhills",
+      "name": "秋丘余晖",
+      "prompt": "Use case: stylized-concept. Asset type: original bitmap wallpaper for an SSH terminal. Primary request: softly rolling hills covered in autumn woodland under an overcast late-afternoon sky, broad patches of muted burnt orange, moss brown and dusty ochre foliage separated by ribbons of cool haze, gentle layered contours stretching toward the horizon. Style: refined painterly landscape with a photographic sense of depth, foliage rendered as broad softly blended masses rather than countless sharp leaves. Composition: wide landscape1536x1024 or16:9, simple rolling hills along the lower half, generous smooth grey-lilac sky and hazy middle distance; no mountains with sharp snowy peaks, lake or dunes. Lighting: subdued diffuse light, warm visible earth colors balanced by cool blue-grey shadows, no harsh sun or glowing white clouds. Constraints: low distraction, readable central space, no people, houses, roads, isolated bright trees, text, logos, watermark or UI. Single full bleed landscape.",
+      "source": "/home/bitsflow/.codex/generated_images/01a096d2-ad5b-75d2-964e-c4cc8e5e1880/exec-94681afb-29a8-482b-a959-7f274eaabfe9.png",
+      "destination": "/home/bitsflow/projects/cloudshell/web/assets/backgrounds/autumnhills.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1846457,
+      "sha256": "7391bb13afe9a73d57c109f28ce4a5c0c4e92e1d93ec67cc930fc170e6ecf8ab",
+      "inspection": "Original and actual dark-theme terminal at42% opacity inspected: recognizable scene, readable Chinese/English light text, no text/logo/UI in the source image."
+    }
+  ]
+}

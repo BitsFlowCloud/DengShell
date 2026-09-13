@@ -1,0 +1,4 @@
+import {readFileSync} from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+const context={window:{}};vm.runInNewContext(readFileSync(new URL('../web/text-model.js',import.meta.url),'utf8'),context);const Model=context.window.DengTextModel;
+const m=new Model('首行\r\nnext\nlast\r');assert.equal(m.visible,'首行\nnext\nlast\n');m.replace(3,7,'粘贴\r\n  空格 \t\n');assert.equal(m.raw,'首行\r\n粘贴\r\n  空格 \t\n\nlast\r');const pasted=m.raw;m.undo();assert.equal(m.raw,'首行\r\nnext\nlast\r');m.redo();assert.equal(m.raw,pasted);m.edit(m.visible+'typed\n');assert.equal(m.raw,pasted+'typed\r\n');
+const n=new Model('a\r\nb\rc\nd');n.edit('a\nbX\nc\nd');assert.equal(n.raw,'a\r\nbX\rc\nd');n.replace(0,0,'🙂中文');assert.equal(n.raw,'🙂中文a\r\nbX\rc\nd');console.log('Text model: mixed newlines, raw paste, typing and undo/redo passed');

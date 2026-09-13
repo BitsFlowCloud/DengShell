@@ -1,0 +1,89 @@
+/* Window actions share the terminal glass, separate from the reconnect tools. */
+.terminal-meta .terminal-encoding{margin-left:auto;white-space:nowrap}
+.terminal-popout{flex:none;display:flex;align-items:center;gap:6px;height:24px;padding:3px 9px;border-radius:8px;color:#c1dbe8;background:#95bed519;font-size:10px;white-space:nowrap;--wails-draggable:no-drag;transition:background .18s,color .18s}
+.terminal-popout svg{width:13px;height:13px}
+.terminal-popout[hidden]{display:none!important}
+.terminal-popout:hover:enabled,.terminal-popout:focus-visible{background:#95bed538;color:#f0f8fb}
+.terminal-popout[aria-busy="true"] svg{opacity:.6;animation:detach-pulse 1.1s ease-in-out infinite}
+.terminal-meta>span:first-child{min-width:0;overflow:hidden;white-space:nowrap}
+#terminal-meta-host{overflow:hidden;text-overflow:ellipsis}
+[data-narrow="true"] .terminal-meta .terminal-encoding{display:none}
+[data-narrow="true"] .terminal-popout{margin-left:auto}
+@media(max-width:760px){.terminal-popout span{display:none}.terminal-popout{width:25px;padding:5px}.terminal-meta .terminal-encoding{display:none}}
+.session-tab-dragging,.session-tab-dragging *{cursor:grabbing!important;user-select:none!important}
+.session-drag-preview{position:fixed;left:0;top:0;z-index:100000;pointer-events:none;width:224px;max-width:calc(100vw - 16px);padding:13px 16px;border:1px solid var(--border);border-radius:16px;color:var(--text,#43576b);background:var(--surface,#fff);box-shadow:0 12px 36px #102e3b36;font-size:12px;backdrop-filter:blur(18px);will-change:transform;transition:border-color .16s,box-shadow .16s}
+.session-drag-heading{display:flex;gap:9px;align-items:center;margin-bottom:8px}
+.session-drag-heading svg{width:16px;height:16px;color:var(--accent)}
+.session-drag-heading strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:550}
+.session-drag-label{font-size:11px;color:var(--muted)}
+.session-drag-preview small{display:block;margin-top:8px;font-size:9px;color:var(--muted)}
+.session-drag-preview.will-detach{border-color:#70abbb;box-shadow:0 14px 38px #102e3b40,0 0 0 3px #75b8cd1f}
+.session-drag-preview.will-detach .session-drag-label{color:var(--text,#3c637b)}
+.session-tab-menu{position:fixed;z-index:100000;background:var(--surface,#fff);padding:6px;border:1px solid var(--border,#dce5eb);border-radius:13px;box-shadow:0 12px 35px #12253426;font:12px var(--font-ui,system-ui);color:var(--text,#355064)}
+.session-tab-menu button{display:flex;align-items:center;justify-content:space-between;gap:25px;width:100%;border:0;background:transparent;color:inherit;font:inherit;padding:10px 13px;border-radius:9px;cursor:pointer}
+.session-tab-menu button:hover,.session-tab-menu button:focus-visible{background:var(--surface-inset,#7899ac20)}
+.session-tab-menu svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.6}
+.session-tab[data-detaching="true"]{pointer-events:none}
+.session-tab[data-detaching="true"] .status-dot{background:transparent;box-shadow:none;width:9px;height:9px;border:1.5px solid var(--muted);border-right-color:transparent;animation:detach-spin .8s linear infinite}
+@keyframes detach-spin{to{transform:rotate(360deg)}}
+@keyframes detach-pulse{50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.session-tab[data-detaching="true"] .status-dot,.terminal-popout[aria-busy="true"] svg{animation:none}.session-drag-preview{transition:none}}
+
+/* Each SSH remains an independently selectable tab, including overflowing lists. */
+.session-tab{flex:0 0 auto;max-width:240px}
+.session-tab>button:first-child{min-width:0;overflow:hidden}
+.session-tab-text{display:flex;align-items:baseline;gap:8px;min-width:0;line-height:1.4}
+.session-tab-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.session-tab .status-dot,.session-tab .tab-close{flex-shrink:0}
+
+/* Defined outlines with a restrained selected fill, without a heavy bottom edge. */
+.session-tabs{gap:8px;padding:1px 0}
+.session-tab{position:relative;border:1px solid #afc1cec9;border-radius:12px;background:#e7eef4a6;color:#5a7284;box-shadow:none;transition:background .2s,border-color .2s,color .2s}
+.session-tab:hover{border-color:#8fabbf;background:#edf4f9}
+.session-tab.active{border-color:#86a7bb;background:#f8fbfd;color:#2e5269;box-shadow:0 1px 4px #304f6810}
+.session-tab.active>button:first-child{font-weight:600}
+[data-theme="dark"] .session-tab{border-color:#415865;background:#2335408c;color:#a4bac8;box-shadow:none}
+[data-theme="dark"] .session-tab:hover{border-color:#617c8c;background:#293e4a}
+[data-theme="dark"] .session-tab.active{border-color:#6b899a;background:#2c414f;color:#e1edf4;box-shadow:0 1px 4px #00000014}
+.session-tab:focus-within{outline:none}
+.session-tab>button:focus-visible{outline:2px solid #82b6cb80;outline-offset:-4px;border-radius:10px}
+.session-tab.current-session{max-width:300px}
+/* Share the actual text baseline, including CJK fallback glyphs at fractional zoom. */
+.session-current-badge{display:block;flex:none;padding:2px 6px;border-radius:6px;background:#5c927810;color:#4c7567;font-size:inherit;line-height:inherit;font-weight:500;letter-spacing:0;white-space:nowrap}
+[data-theme="dark"] .session-current-badge{background:#a1c9b612;color:#a7cbbd}
+.session-tab[data-connecting="true"] .status-dot{background:transparent;box-shadow:none;width:9px;height:9px;border:1.5px solid currentColor;border-right-color:transparent;animation:detach-spin .9s linear infinite}
+.session-tab[data-failed="true"] .status-dot{background:#c17d67;box-shadow:none}
+.terminal-connection-state{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;color:#c5d9e5;background:#142b376b;backdrop-filter:blur(12px)}
+.terminal-connection-state strong{font-size:18px;font-weight:550}
+.connection-progress-message{max-width:560px;font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+.terminal-connection-state small{font-size:12px;color:#a4bdce}
+.terminal-connection-state.failed .connection-progress-message{color:#e1b49d}
+@media(prefers-reduced-motion:reduce){.session-tab[data-connecting="true"] .status-dot{animation:none}}
+
+/* Small frosted window, shared by pointer drags and the one-click action. */
+.session-drag-preview{width:252px;padding:9px;border-radius:15px;background:#edf5f9d9;backdrop-filter:blur(22px) saturate(1.12);box-shadow:0 16px 40px #162f4540}
+[data-theme="dark"] .session-drag-preview{background:#203441d9}
+.window-miniature{overflow:hidden;border:1px solid #bdd4e33d;border-radius:10px;background:#19313ed9;color:#d9e8ef;box-shadow:inset 0 1px 0 #ffffff14}
+.window-miniature-bar{display:flex;align-items:center;gap:7px;height:27px;padding:0 9px;background:#9fbccb17;font-size:10px}
+.window-miniature-bar>svg{width:12px;height:12px;flex:none}
+.window-miniature-bar strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.window-miniature-dots{display:flex;gap:4px;margin-left:auto}
+.window-miniature-dots i{width:4px;height:4px;border-radius:50%;background:#a3bfcc88}
+.window-miniature-terminal{height:90px;overflow:hidden;margin:0;padding:8px 10px;white-space:pre;font:7px/1.4 var(--terminal-family,monospace);opacity:.65;filter:blur(.8px);user-select:none}
+.session-drag-label{display:block;margin:9px 3px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.session-drag-preview small{margin:5px 3px 0}
+.session-drag-preview.will-merge{border-color:#7dbaa2;box-shadow:0 14px 38px #102e3b40,0 0 0 3px #75cda81f}
+.window-opening-preview{position:fixed;inset:0;z-index:100001;display:grid;place-items:center;pointer-events:none;opacity:0;transition:opacity .2s ease}
+.window-opening-preview.visible{opacity:1}
+.window-opening-card{width:284px;max-width:calc(100vw - 32px);padding:11px;border:1px solid #aac6d990;border-radius:19px;background:#ecf4fbe0;backdrop-filter:blur(24px) saturate(1.1);box-shadow:0 20px 65px #102a4555;transform:translateY(12px) scale(.86);transition:transform .26s cubic-bezier(.2,.7,.25,1)}
+.window-opening-preview.visible .window-opening-card{transform:translateY(0) scale(1)}
+.window-opening-preview.completed .window-opening-card{transform:translateY(-7px) scale(1.04)}
+.window-opening-preview.failed .window-opening-card{transform:scale(.92)}
+[data-theme="dark"] .window-opening-card{background:#213746de;border-color:#7faec178}
+.window-opening-card .window-miniature-terminal{height:108px}
+.window-opening-label{display:block;padding:10px 4px 2px;color:var(--text,#456076);font:11px var(--font-ui,system-ui);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.session-tab-menu .merge-window-caption{padding:9px 13px 4px;color:var(--muted);font-size:10px;border-top:1px solid var(--border);margin-top:5px}
+.session-tab-menu .merge-window-option{max-width:310px;text-align:left}
+.session-tab-menu .merge-window-option span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.session-tab-menu .merge-window-empty{padding:8px 13px;color:var(--muted);font-size:10px}
+@media(prefers-reduced-motion:reduce){.window-opening-preview,.window-opening-card,.session-tab{transition:none}.window-opening-card{transform:none!important}}

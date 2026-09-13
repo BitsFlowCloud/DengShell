@@ -1,0 +1,73 @@
+.titlebar .help-pill { color:#71969c; background:#e4f0ee; --wails-draggable:no-drag; }
+.titlebar .help-pill:hover { color:#497880; background:#d9eae7; }
+.titlebar .help-pill svg { width:16px; height:16px; }
+[data-theme="dark"] .titlebar .help-pill { color:#a6c6c8; background:#294143; }
+[data-theme="dark"] .titlebar .help-pill:hover { color:#d0e7e7; background:#355256; }
+.help-guide-dialog,.help-manual-dialog { padding:0; color:var(--text,#415d70); border:0; border-radius:22px; background:var(--surface,#fff); box-shadow:0 22px 90px #18304338; }
+.help-guide-dialog::backdrop { background:#15263242; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.help-guide-dialog { width:610px; max-width:calc(var(--view-width,100vw) - 24px); max-height:calc(var(--view-height,100vh) - 24px); overflow:auto; }
+.help-guide-top { display:flex; align-items:center; gap:12px; padding:18px 24px 10px; }
+.help-eyebrow { color:var(--muted,#8099aa); font-size:10px; letter-spacing:1.4px; }
+#help-guide-step { margin-left:auto; font-size:12px; color:var(--muted,#8099aa); font-variant-numeric:tabular-nums; }
+.help-guide-top .icon-button { width:28px; height:28px; }
+#help-guide-progress { display:block; appearance:none; -webkit-appearance:none; height:4px; border:0; width:calc(100% - 48px); margin:0 24px; border-radius:4px; overflow:hidden; background:var(--surface-inset,#edf3f6); color:#79a7a1; }
+#help-guide-progress::-webkit-progress-bar { background:var(--surface-inset,#edf3f6); }
+#help-guide-progress::-webkit-progress-value { background:#79a7a1; border-radius:4px; }
+#help-guide-progress::-moz-progress-bar { background:#79a7a1; border-radius:4px; }
+.help-guide-body { padding:21px 28px 17px; }
+.help-guide-body #help-guide-location { font-size:11px; line-height:1.7; color:var(--muted,#8199aa); margin:0 0 9px; }
+.help-guide-body h2 { font-size:22px; line-height:1.4; font-weight:620; margin:0 0 16px; color:var(--text,#36556b); }
+.help-guide-body #help-guide-text { font-size:14px; color:var(--text-secondary,#536d80); line-height:1.85; margin:0 0 12px; }
+.help-guide-body ul { padding-left:19px; margin:0; color:var(--muted,#7990a1); font-size:12px; line-height:1.85; }
+.help-guide-body li + li { margin-top:7px; }
+.help-guide-footer { display:flex; gap:9px; align-items:center; flex-wrap:wrap; padding:15px 24px 19px; background:var(--surface-inset,#f5f8fa); }
+.help-guide-footer > button { color:var(--muted,#7d95a6); font-size:11px; padding:9px 2px; }
+.help-guide-footer > div { display:flex; gap:8px; margin-left:auto; }
+.help-guide-footer > div button { padding:10px 16px; font-size:12px; border-radius:10px; }
+.help-guide-footer .primary-button { width:auto; min-width:87px; }
+#help-guide-prev { background:var(--surface,#fff); color:var(--text-secondary,#637f92); }
+#help-guide-prev:disabled { opacity:.35; cursor:default; }
+.help-guide-target { position:fixed; z-index:100; pointer-events:none; border:2px solid #8cc6b9; border-radius:12px; box-shadow:0 0 0 4px #b9e4d83d,0 0 20px #96d8c14d; }
+.help-manual-dialog { width:920px; height:720px; max-width:calc(var(--view-width,100vw) - 24px); max-height:calc(var(--view-height,100vh) - 24px); overflow:hidden; }
+.help-manual-dialog[open] { display:flex; flex-direction:column; }
+.help-manual-heading { display:flex; justify-content:space-between; align-items:center; padding:22px 25px 13px; flex-shrink:0; }
+.help-manual-heading h2 { font-size:22px; font-weight:600; margin:5px 0 0; }
+.help-manual-search { display:flex; flex-direction:row; flex:none; align-items:center; gap:9px; border-radius:11px; margin:0 25px 15px; padding:5px 11px; background:var(--surface-inset,#f0f5f7); }
+.help-manual-search svg { width:16px; height:16px; flex-shrink:0; color:var(--muted,#8ba1b1); }
+.help-manual-search input { border:0; background:transparent; padding:7px 0; min-width:0; flex:1; font-size:12px; }
+#help-manual-results { color:var(--muted,#8ba1b1); font-size:10px; white-space:nowrap; }
+.help-manual-layout { flex:1; min-height:0; display:grid; grid-template-columns:190px minmax(0,1fr); padding:0 15px 0 18px; gap:17px; overflow:hidden; }
+#help-manual-nav { overflow:auto; padding:0 8px 15px 0; overscroll-behavior:contain; }
+#help-manual-nav button { display:block; width:100%; text-align:left; font-size:11px; line-height:1.6; color:var(--muted,#7b93a4); padding:9px 10px; border-radius:9px; margin-bottom:3px; }
+#help-manual-nav button:hover,#help-manual-nav button:focus-visible { color:var(--text,#425e73); background:var(--surface-inset,#eef4f7); }
+#help-manual-content { overflow:auto; overflow-x:hidden; padding:0 16px 20px 0; overscroll-behavior:contain; min-width:0; }
+.help-manual-section { padding:0 0 25px; }
+.help-manual-section + .help-manual-section { padding-top:18px; border-top:1px solid var(--border,#edf1f4); }
+.help-manual-section h3 { font-size:17px; line-height:1.6; color:var(--text,#3d5d73); margin:0 0 12px; font-weight:600; }
+.help-manual-section :is(p,li) { font-size:12px; line-height:1.9; color:var(--text-secondary,#607c8f); overflow-wrap:anywhere; }
+.help-manual-section p { margin:0 0 12px; }
+.help-manual-section :is(ol,ul) { margin:0 0 13px; padding-left:21px; }
+.help-manual-section li + li { margin-top:6px; }
+.help-manual-section strong { font-weight:600; color:var(--text,#435f74); }
+.help-manual-section :is(kbd,code) { border:0; border-radius:5px; padding:1px 4px; background:var(--surface-inset,#eff4f7); color:var(--text-secondary,#4d6e83); font-size:11px; font-family:ui-monospace,monospace; }
+#help-manual-empty { font-size:12px; color:var(--muted,#8ba1b1); padding-top:20px; line-height:1.8; }
+.help-manual-footer { display:flex; align-items:center; gap:12px; flex-shrink:0; padding:15px 25px; background:var(--surface-inset,#f5f8fa); }
+.help-manual-footer > button { font-size:12px; }
+.help-manual-footer > span { font-size:10px; color:var(--muted,#8ba1b1); margin-left:auto; }
+.help-manual-footer .primary-button { width:auto; min-width:90px; }
+.help-manual-dialog :is(#help-manual-nav,#help-manual-content),.help-guide-dialog { scrollbar-width:thin; scrollbar-color:#91a9b74d transparent; }
+[data-narrow="true"] .help-manual-layout { grid-template-columns:minmax(0,1fr); grid-template-rows:auto minmax(0,1fr); gap:10px; padding:0 18px; }
+[data-narrow="true"] #help-manual-nav { display:flex; flex-wrap:wrap; gap:4px; max-height:74px; padding:0; }
+[data-narrow="true"] #help-manual-nav button { width:auto; margin:0; padding:5px 8px; font-size:10px; background:var(--surface-inset,#f0f5f7); }
+[data-narrow="true"] #help-manual-content { padding-right:5px; }
+[data-short="true"] .help-guide-top { padding-top:11px; padding-bottom:7px; }
+[data-short="true"] .help-guide-body { padding-top:14px; padding-bottom:12px; }
+[data-short="true"] .help-guide-body h2 { margin-bottom:10px; font-size:20px; }
+[data-short="true"] .help-guide-body #help-guide-text { font-size:12px; }
+[data-short="true"] .help-guide-body ul { font-size:11px; }
+[data-short="true"] .help-guide-footer { padding-top:10px; padding-bottom:12px; }
+[data-short="true"] .help-manual-heading { padding:13px 20px 10px; }
+[data-short="true"] .help-manual-heading h2 { font-size:19px; margin-top:2px; }
+[data-short="true"] .help-manual-search { margin:0 20px 10px; }
+[data-short="true"] .help-manual-footer { padding:10px 20px; }
+@media (prefers-reduced-motion:reduce) { .help-guide-target { transition:none; } }

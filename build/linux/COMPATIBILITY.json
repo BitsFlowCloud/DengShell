@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "application": "DengShell v0.01 r20",
+  "testedExecutableSHA256": "8b7f9a7a9cc81761dfcdb32e7e2eb9aec22de9218ac85cd135122d3d7b0af01f",
+  "requiredGLIBC": "2.34",
+  "runtimeMatrix": [
+    {
+      "distribution": "Ubuntu 22.04.5 LTS",
+      "image": "dengshell-linux-builder:jammy-go1.27.1",
+      "imageId": "sha256:0c7bd7129371d3ea55cfeffc17419d66d37ed1aa93e849b92ae9f202d26d0be3",
+      "glibc": "glibc 2.35",
+      "nativeFrontendReady": true,
+      "allLibrariesResolved": true
+    },
+    {
+      "distribution": "Debian GNU/Linux 12 (bookworm)",
+      "image": "dengshell-compat:debian12",
+      "imageId": "sha256:536d8dd4082e6a3c8eb8361032bcb0079327294b38a7fc8ad456d28c5a6c341f",
+      "glibc": "glibc 2.36",
+      "nativeFrontendReady": true,
+      "allLibrariesResolved": true
+    },
+    {
+      "distribution": "Ubuntu 24.04.4 LTS",
+      "image": "dengshell-compat:ubuntu24",
+      "imageId": "sha256:542f28675ed7933df41bced725515a72e720e0dffabe34867c60649b1d1eba42",
+      "glibc": "glibc 2.39",
+      "nativeFrontendReady": true,
+      "allLibrariesResolved": true
+    },
+    {
+      "distribution": "Fedora Linux 43 (Container Image)",
+      "image": "dengshell-compat:fedora43",
+      "imageId": "sha256:f53d56272731307b9c7439f6e0ab6bf6caba17b6a3d7abc134f92c1f810b154f",
+      "glibc": "glibc 2.42",
+      "nativeFrontendReady": true,
+      "allLibrariesResolved": true
+    },
+    {
+      "distribution": "openSUSE Tumbleweed",
+      "image": "dengshell-compat:opensuse",
+      "imageId": "sha256:04009d782653f274413d474563177f452dbcb3ee43dfe73e636679f8c7eddd0b",
+      "glibc": "glibc 2.44",
+      "nativeFrontendReady": true,
+      "allLibrariesResolved": true
+    }
+  ],
+  "method": "Actual native GTK3/WebKitGTK 4.1 application in isolated containers with Xvfb and native frontend readiness marker. No browser mode.",
+  "limits": [
+    "Software rendering/X11 inside QA containers; physical GPU, Wayland, tray and DPI remain unverified.",
+    "WebKit sandbox/DMABUF overrides are limited to QA containers and are not shipped.",
+    "Other distributions/versions are dependency targets, not separately tested."
+  ]
+}
