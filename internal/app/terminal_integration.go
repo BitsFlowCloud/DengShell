@@ -70,6 +70,7 @@ func (s *Session) prepareTerminalIntegrationFiles(ctx context.Context, stagingRo
 	}
 	var shellPath, username, hostname string
 	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSuffix(line, "\r")
 		if strings.HasPrefix(line, "__DENGSHELL_USER__") {
 			username = strings.TrimPrefix(line, "__DENGSHELL_USER__")
 		}
@@ -84,7 +85,7 @@ func (s *Session) prepareTerminalIntegrationFiles(ctx context.Context, stagingRo
 		return terminalIntegration{}
 	}
 	shell := path.Base(shellPath)
-	if shell != "bash" && shell != "zsh" {
+	if shell != "bash" && shell != "zsh" && shell != "fish" {
 		return terminalIntegration{}
 	}
 	if ctx.Err() != nil {
@@ -152,7 +153,7 @@ func (s *Session) prepareTerminalIntegrationFiles(ctx context.Context, stagingRo
 		if err = write("bashrc", content); err == nil {
 			integration.command = "exec " + terminalQuote(shellPath) + " --noprofile --rcfile " + terminalQuote(path.Join(integration.directory, "bashrc")) + " -i"
 		}
-	} else {
+	} else if shell == "zsh" {
 		body, _ := shellIntegrationAssets.ReadFile("shell_integration/zshrc.zsh")
 		for _, name := range []string{".zshenv", ".zprofile", ".zshrc", ".zlogin"} {
 			content := ""
@@ -177,6 +178,17 @@ func (s *Session) prepareTerminalIntegrationFiles(ctx context.Context, stagingRo
 		if err == nil {
 			integration.command = "DENGSHELL_ORIGINAL_ZDOTDIR=\"${ZDOTDIR:-$HOME}\" ZDOTDIR=" + terminalQuote(integration.directory) + " exec " + terminalQuote(shellPath) + " -il"
 		}
+	} else {
+		body, _ := shellIntegrationAssets.ReadFile("shell_integration/fish.fish")
+		content := strings.ReplaceAll(string(body), "@DENGSHELL_NONCE@", integration.Nonce)
+		content = strings.ReplaceAll(content, "# @DENGSHELL_PROMPT_STYLE@", styleContent)
+		cleanup := "command rm -f -- " + loginShellQuote(path.Join(integration.directory, "init.fish")) + " 2>/dev/null\ncommand rmdir -- " + loginShellQuote(integration.directory) + " 2>/dev/null; or true"
+		content = strings.ReplaceAll(content, "# @DENGSHELL_CLEANUP@", cleanup)
+		if err = write("init.fish", content); err == nil {
+			// Fish reads its normal configuration first, then installs only these
+			// session-local hooks. No persistent config or universal variable changes.
+			integration.command = "exec " + terminalQuote(shellPath) + " -il --init-command " + terminalQuote("source "+loginShellQuote(path.Join(integration.directory, "init.fish")))
+		}
 	}
 	if err != nil {
 		s.cleanupTerminalIntegration(integration)
@@ -199,6 +211,7 @@ func (s *Session) prepareTerminalIntegrationFiles(ctx context.Context, stagingRo
 	}
 	s.promptStylePath, s.promptUsername, s.promptHostname = stylePath, username, hostname
 	s.promptStyleMu.Unlock()
+	integration.command = "exec " + posixShellCommand(integration.command)
 	return integration
 }
 

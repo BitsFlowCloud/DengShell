@@ -8,16 +8,47 @@ import (
 	"time"
 )
 
-// One awk process reads procfs directly. It does not fork a command for each
-// process. A per-PID /proc/uptime timestamp excludes SSH and collection delay
-// from CPU percentages; clock ticks and page size come from the remote host.
-// Hex-encoding comm preserves spaces, parentheses, tabs and newlines without
-// allowing process names to interfere with the monitor record framing.
+// A POSIX shell reads procfs with builtins and frames each line for one awk
+// parser. Unlike mawk getline, a failed read (ESRCH/EIO/permission/racing exit)
+// cannot abort all PIDs. No cat/awk subprocess is forked for each process.
 const processMonitorCommand = `
 printf '\n__CS_PROCESS__\n'
 dengshell_hz=$(getconf CLK_TCK 2>/dev/null)
 dengshell_pagesize=$(getconf PAGESIZE 2>/dev/null)
-for dengshell_proc in /proc/[0-9]*/stat; do printf '%s\n' "$dengshell_proc"; done |
+dengshell_process_file() {
+    dengshell_line=
+    while IFS= read -r dengshell_line || [ -n "$dengshell_line" ]; do
+        printf '%s\t%s\n' "$1" "$dengshell_line"
+        dengshell_line=
+    done < "$2"
+}
+dengshell_process_rss() {
+    dengshell_rss=
+    while read -r dengshell_key dengshell_value dengshell_unit dengshell_rest; do
+        if [ "$dengshell_key" = "$2" ] && [ "$dengshell_unit" = kB ]; then
+            case "$dengshell_value" in ''|*[!0-9]*) ;; *) dengshell_rss=$dengshell_value;; esac
+            break
+        fi
+    done < "$1"
+}
+for dengshell_proc in /proc/[0-9]*/stat; do
+    dengshell_dir=${dengshell_proc%/stat}
+    dengshell_pid=${dengshell_dir##*/}
+    case "$dengshell_pid" in ''|*[!0-9]*) continue;; esac
+    printf 'I\t%s\n' "$dengshell_pid"
+    dengshell_process_file A "$dengshell_proc" 2>/dev/null
+    dengshell_process_rss "$dengshell_dir/smaps_rollup" Rss: 2>/dev/null
+    dengshell_source=smaps_rollup
+    if [ -z "$dengshell_rss" ]; then
+        dengshell_process_rss "$dengshell_dir/status" VmRSS: 2>/dev/null
+        dengshell_source=status
+    fi
+    if [ -n "$dengshell_rss" ]; then printf 'R\t%s\t%s\n' "$dengshell_source" "$dengshell_rss"; fi
+    dengshell_process_file B "$dengshell_proc" 2>/dev/null
+    dengshell_uptime=
+    read -r dengshell_uptime dengshell_rest < /proc/uptime 2>/dev/null
+    printf 'E\t%s\n' "$dengshell_uptime"
+done |
 awk -v hz="$dengshell_hz" -v pages="$dengshell_pagesize" '
 function now( text, parts, value) {
     value = -1
@@ -27,15 +58,6 @@ function now( text, parts, value) {
     }
     close("/proc/uptime")
     return value
-}
-function readstat(path, text, line) {
-    text = ""
-    while ((getline line < path) > 0) {
-        if (text != "") text = text "\n"
-        text = text line
-    }
-    close(path)
-    return text
 }
 function fields(text, out, left, right, i, tail) {
     split("", out)
@@ -67,51 +89,24 @@ BEGIN {
         }
         close("/proc/stat")
     }
-    start = now()
-    printf "M\t%s\t%s\t%s\t%s\n", hz, pages, boot, start
+    printf "M\t%s\t%s\t%s\t%s\n", hz, pages, boot, now()
 }
-/^\/proc\/[0-9]+\/stat$/ {
-    path = $0
-    split(path, components, "/")
-    pid = components[3]
+/^I\t[0-9]+$/ { pid=$2; first_text=""; last_text=""; rss=-1; source="stat"; next }
+/^A\t/ { first_text=first_text (first_text=="" ? "" : "\n") substr($0,3); next }
+/^B\t/ { last_text=last_text (last_text=="" ? "" : "\n") substr($0,3); next }
+/^R\t(smaps_rollup|status)\t[0-9]+$/ { source=$2; rss=$3; next }
+/^E\t/ {
     visible++
-    if (!fields(readstat(path), first)) {
+    if (!fields(first_text, first) || !fields(last_text, last) || first[20] != last[20]) {
         unavailable++
         printf "U\t%s\n", pid
         next
     }
-    memory = first[22]
-    source = "stat"
-    rollup = "/proc/" pid "/smaps_rollup"
-    while ((getline line < rollup) > 0) {
-        if (line ~ /^Rss:[ \t]+[0-9]+[ \t]+kB/) {
-            split(line, values, " ")
-            memory = sprintf("%.0f", values[2] * 1024)
-            source = "smaps_rollup"
-            break
-        }
-    }
-    close(rollup)
-    if (source == "stat") {
-        status = "/proc/" pid "/status"
-        while ((getline line < status) > 0) {
-            if (line ~ /^VmRSS:[ \t]+[0-9]+[ \t]+kB/) {
-                split(line, values, " ")
-                memory = sprintf("%.0f", values[2] * 1024)
-                source = "status"
-                break
-            }
-        }
-        close(status)
-    }
-    if (!fields(readstat(path), last) || first[20] != last[20]) {
-        unavailable++
-        printf "U\t%s\n", pid
-        next
-    }
-    if (source == "stat") memory = last[22]
+    memory=last[22]
+    if (rss >= 0) memory=sprintf("%.0f", rss * 1024)
+    sampled=($2 ~ /^[0-9]+([.][0-9]+)?$/ ? $2 : -1)
     readable++
-    printf "P\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", pid, last[12], last[13], last[20], now(), memory, source, last[7], last[1], encode(last[0])
+    printf "P\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", pid, last[12], last[13], last[20], sampled, memory, source, last[7], last[1], encode(last[0])
 }
 END {
     printf "S\t%d\t%d\t%d\t%s\n", visible, readable, unavailable, now()

@@ -158,7 +158,7 @@ func (s *Session) runSSHChannel(ctx context.Context, channel *commandSSHSession,
 	go func() {
 		err := ctx.Err()
 		if err == nil {
-			err = channel.Run(command)
+			err = channel.Run("exec " + posixShellCommand(command))
 		}
 		_ = channel.Close()
 		<-channel.closed

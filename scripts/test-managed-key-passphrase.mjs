@@ -6,15 +6,16 @@ const appSource = readFileSync(new URL('../web/app.js', import.meta.url), 'utf8'
 const toolsSource = readFileSync(new URL('../web/workspace-tools.js', import.meta.url), 'utf8');
 const connectSource = appSource.slice(appSource.indexOf('async function connectProfile('), appSource.indexOf('\nfunction showConnectionProgress('));
 
-async function connectCase({ keyId = 'shared', hasSecret = false, failures = [], answer = 'typed-once' } = {}) {
-  const prompts = [], requests = [], messages = [];
-  const profile = { id: 'profile', name: 'fixture', auth: 'key', keyId, hasSecret };
+async function connectCase({ keyId = 'shared', keyPath = '/fixture/external-key', hasSecret = false, failures = [], answer = 'typed-once' } = {}) {
+  const prompts = [], requests = [], messages = [], forms = [];
+  const profile = { id: 'profile', name: 'fixture', auth: 'key', keyId, keyPath, hasSecret };
   const context = {
     profiles: [profile], managedKeys: [{ id: 'shared', encrypted: true, hasPassphrase: false }],
     sessions: new Map(), connecting: new Set(), connectionAttempts: new Map(), credentials: new Map(),
     nextSessionOrder: 0, activeID: null, AbortController, window: {},
     makeSessionState: info => ({ ...info, host: { dataset: {} }, openTerminalSocket() {} }),
     current: () => null, createTerminal() {}, activate() {}, setDrawer() {}, renderTabs() {}, renderConnections() {},
+    showConnectionForm(profile) { forms.push(profile.id); },
     showConnectionProgress(_state, message) { messages.push(message); }, toast() {}, updateStatus() {},
     navigate: async () => {}, closeSession: async () => {},
     ask: async options => { prompts.push(options); return answer; },
@@ -26,7 +27,7 @@ async function connectCase({ keyId = 'shared', hasSecret = false, failures = [],
   };
   vm.createContext(context); vm.runInContext(connectSource, context);
   const session = await context.connectProfile('profile', false, { refreshHistory: false });
-  return { session, prompts, requests, messages };
+  return { session, prompts, requests, messages, forms, sessions: context.sessions.size };
 }
 
 // Even a detached window whose old metadata says "no saved passphrase" must
@@ -51,6 +52,11 @@ for (const code of ['ssh_authentication_failed', 'ssh_managed_key_invalid', 'ssh
 }
 result = await connectCase({ keyId: '' });
 assert.equal(result.prompts.length, 1, 'external private key still uses connection credentials');
+result = await connectCase({ keyId: '', keyPath: '' });
+assert.deepEqual(result.forms, ['profile'], 'missing private key must open the connection editor');
+assert.equal(result.prompts.length, 0, 'missing private key must not ask for a passphrase');
+assert.equal(result.requests.length, 0, 'missing private key must not start SSH');
+assert.equal(result.sessions, 0, 'missing private key must not create an empty terminal');
 
 const nodes = new Map();
 const element = selector => {

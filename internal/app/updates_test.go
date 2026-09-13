@@ -1,7 +1,10 @@
 package app
 
 import (
+	"cloudshell/internal/updatetrust"
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -66,6 +69,12 @@ func TestUpdateReceiptHighWaterAndMalformedReceiptFailClosed(t *testing.T) {
 }
 
 func TestUpdateDescriptorIdentityAndValidation(t *testing.T) {
+	public, private, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	trusted := map[string]ed25519.PublicKey{updatetrust.KeyID(public): public}
+	now := time.Now()
 	hash := strings.Repeat("a", 64)
 	old := strings.Repeat("b", 64)
 	base := UpdateDescriptor{SchemaVersion: 2, Build: ApplicationBuild + 1, Product: "DengShell", Platform: "linux-amd64", Version: ApplicationVersion, Notes: "中文更新说明", SHA256: hash, ExecutableSHA256: old, Size: 12345}
@@ -96,9 +105,13 @@ func TestUpdateDescriptorIdentityAndValidation(t *testing.T) {
 			if tc.change != nil {
 				tc.change(&d)
 			}
+			d, err = updatetrust.Sign(d, private, now, 24*time.Hour)
+			if err != nil {
+				t.Fatal(err)
+			}
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { json.NewEncoder(w).Encode(d) }))
 			defer server.Close()
-			got := checkUpdate(context.Background(), server.Client(), server.URL, "linux-amd64", tc.current, tc.receipt)
+			got := checkUpdateTrusted(context.Background(), server.Client(), server.URL, "linux-amd64", tc.current, tc.receipt, trusted, now)
 			if got.Status != tc.want {
 				t.Fatalf("got %+v", got)
 			}
@@ -204,7 +217,7 @@ func TestDownloadMustMatchOfferAndBytes(t *testing.T) {
 			defer s.Close()
 			a.updateCheck.once.Do(func() {
 				a.updateCheck.done = make(chan struct{})
-				a.updateCheck.result = UpdateStatus{Status: "available", Package: &UpdatePackage{Build: ApplicationBuild + 1, Version: ApplicationVersion, URL: s.URL + "/up.deb", SHA256: hash, ExecutableSHA256: hash, Size: int64(len(payload))}}
+				a.updateCheck.result = UpdateStatus{Status: "available", Package: &UpdatePackage{Build: ApplicationBuild + 1, Version: ApplicationVersion, URL: s.URL + "/up.deb", SHA256: hash, ExecutableSHA256: hash, Size: int64(len(payload)), expiresAt: time.Now().Add(time.Hour).Unix()}}
 				close(a.updateCheck.done)
 			})
 			if _, e = a.StartUpdateDownload("wrong"); e == nil {

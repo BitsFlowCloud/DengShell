@@ -129,7 +129,7 @@ async function flushPromptColors() {
   }));
   const failed = results.find(result => result.status === 'rejected');
   const unsupported = results.some(result => result.status === 'fulfilled' && result.value?.supported === false);
-  if ($('#prompt-color-status')) $('#prompt-color-status').textContent = failed ? `颜色已保存；当前会话暂未应用：${failed.reason.message}` : unsupported ? '颜色已保存；当前 Shell 不支持提示符配色，支持 Bash / Zsh。' : targets.length ? '已保存；在下一次 Bash / Zsh 提示符出现时应用。' : '已保存，连接服务器后应用。';
+  if ($('#prompt-color-status')) $('#prompt-color-status').textContent = failed ? `颜色已保存；当前会话暂未应用：${failed.reason.message}` : unsupported ? '颜色已保存；当前 Shell 不支持提示符配色，支持 Bash / Zsh / Fish。' : targets.length ? '已保存；在下一次 Bash / Zsh / Fish 提示符出现时应用。' : '已保存，连接服务器后应用。';
 }
 function openPromptColors() {
   setSettingsMenu(false); let dialog = $('#prompt-color-dialog');
@@ -138,7 +138,7 @@ function openPromptColors() {
     const preview = node('pre', 'color-dialog-preview'); preview.id = 'prompt-color-preview'; preview.append(node('span', 'prompt-user'), document.createTextNode('@'), node('span', 'prompt-host'), document.createTextNode(':~$ '));
     const identity = node('p', 'color-dialog-note'); identity.id = 'prompt-color-identity';
     const fields = node('div', 'prompt-color-fields'); fields.append(createPromptColorField('用户名 · @ 前', 'promptUsernameColor'), createPromptColorField('主机名 · @ 后', 'promptHostnameColor'));
-    const note = node('p', 'color-dialog-note', '标准提示符按用户名和主机名分段着色；复杂主题可能临时使用 user@host:路径 格式。两项都选择“保持原样”可恢复原提示符。支持 Bash / Zsh。'), status = node('p', 'color-dialog-note'); status.id = 'prompt-color-status'; status.setAttribute('role', 'status');
+    const note = node('p', 'color-dialog-note', '标准提示符按用户名和主机名分段着色；复杂主题可能临时使用 user@host:路径 格式。两项都选择“保持原样”可恢复原提示符。支持 Bash / Zsh / Fish。'), status = node('p', 'color-dialog-note'); status.id = 'prompt-color-status'; status.setAttribute('role', 'status');
     parts.body.append(preview, identity, fields, note, status);
     dialog.addEventListener('close', () => { flushPromptColors().catch(error => toast(error.message)); $('#manage-prompt-colors').focus(); });
   }

@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const scripts = Object.freeze({
-    nq: { name:'NQ测试脚本', command:'bash <(curl -sL https://run.NodeQuality.com)' },
+    nq: { name:'NQ测试脚本', command:"bash -c 'bash <(curl -sL https://run.NodeQuality.com)'" },
     yabs: { name:'YABS测试脚本', command:'curl -sL https://yabs.sh | bash' },
     speed: { name:'国际测速', command:'curl -sL nws.sh | bash' },
   });

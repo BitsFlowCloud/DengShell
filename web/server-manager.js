@@ -162,7 +162,7 @@ function renderServerProfile(profile, tree, mode = 'servers', history = null) {
   button.dataset.selectable = String(!deleted);
   if (!deleted) { button.setAttribute('aria-pressed', String(serverManager.selectedProfiles.has(profile.id))); button.setAttribute('aria-describedby', 'server-selection-hint'); }
   const glyph = node('span', 'server-icon'); glyph.append(icon('server'));
-  const text = node('span', 'connection-card-text'); text.append(node('strong', '', profile.name), node('small', '', connecting.has(profile.id) ? '正在连接…' : `${profile.user}@${profile.host}:${profile.port}`));
+  const text = node('span', 'connection-card-text'); text.append(node('strong', '', profile.name), node('small', '', connecting.has(profile.id) ? '正在连接…' : `${profile.user}@${profile.host}:${profile.port}${profile.auth === 'key' && !profile.keyId && !profile.keyPath ? ' · 待配置私钥' : ''}`));
   button.append(glyph, text);
   if (!deleted) {
     const marker = node('span', 'server-selection-mark', '✓'); marker.setAttribute('aria-hidden','true'); marker.hidden = !serverManager.selectedProfiles.has(profile.id); button.append(marker);

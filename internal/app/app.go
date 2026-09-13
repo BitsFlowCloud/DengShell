@@ -15,6 +15,9 @@ import (
 )
 
 type App struct {
+	uiFontMu         sync.Mutex
+	uiFontsAtStartup map[string]bool
+	activeUIFontID   string
 	ctx              context.Context
 	cancel           context.CancelFunc
 	store            *Store
@@ -40,7 +43,9 @@ func New(configDir string) (*App, error) {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	return &App{ctx: ctx, cancel: cancel, store: s, sessions: map[string]*Session{}, transfers: map[string]*Transfer{}, token: randomID()}, nil
+	a := &App{ctx: ctx, cancel: cancel, store: s, sessions: map[string]*Session{}, transfers: map[string]*Transfer{}, token: randomID()}
+	a.initializeUIFonts()
+	return a, nil
 }
 func (a *App) URL() string   { return a.baseURL }
 func (a *App) Token() string { return a.token }
@@ -101,14 +106,16 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 				uiPreferences[key] = value
 			}
 		}
-		data, _ := json.Marshal(map[string]any{"base": a.baseURL, "token": a.token, "startupAnimation": preferences.StartupAnimation, "theme": preferences.Theme, "uiScale": preferences.UIScale, "uiPreferences": uiPreferences})
+		data, _ := json.Marshal(map[string]any{"base": a.baseURL, "token": a.token, "startupAnimation": preferences.StartupAnimation, "theme": preferences.Theme, "uiScale": preferences.UIScale, "uiPreferences": uiPreferences, "uiFontRuntime": a.uiFontRuntime()})
 		fmt.Fprintf(w, "window.CLOUDSHELL = %s;", data)
 	})
+	mux.HandleFunc("GET /api/ui-fonts/runtime", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, a.uiFontRuntime()) })
 	mux.HandleFunc("GET /api/config", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, a.store.List()) })
 	a.registerWindowHandoffHTTP(mux)
 	a.registerCommandHistoryHTTP(mux)
 	a.registerWindowViewsHTTP(mux)
 	a.registerConnectionManagementHTTP(mux)
+	a.registerFinalShellImportHTTP(mux)
 	a.registerSettingsHTTP(mux)
 	a.registerDiagnosticsHTTP(mux)
 	a.registerMTRInstallationHTTP(mux)
@@ -118,6 +125,9 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 	a.registerUtilitiesHTTP(mux)
 	mux.HandleFunc("POST /api/commands", a.saveCommandHTTP)
 	mux.HandleFunc("POST /api/command-groups", a.saveCommandGroupHTTP)
+	mux.HandleFunc("POST /api/commands/move", a.moveCommandHTTP)
+	mux.HandleFunc("POST /api/command-groups/move", a.moveCommandGroupHTTP)
+	mux.HandleFunc("POST /api/command-groups/rename", a.renameCommandGroupHTTP)
 	mux.HandleFunc("POST /api/keys", a.saveKeyHTTP)
 	mux.HandleFunc("DELETE /api/keys/{id}", func(w http.ResponseWriter, r *http.Request) {
 		respond(w, map[string]bool{"ok": true}, a.store.DeleteKey(r.PathValue("id")))

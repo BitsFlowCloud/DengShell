@@ -1,7 +1,9 @@
 package app
 
 import (
+	"cloudshell/internal/updatetrust"
 	"context"
+	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -24,24 +26,14 @@ const ApplicationVersion = "v0.01"
 
 // Increase this integer for every published build, including packaging-only
 // releases. Display versions alone do not distinguish the v0.01 revisions.
-const ApplicationBuild uint64 = 20260913020
+const ApplicationBuild uint64 = 20260914026
 const UpdateManifestURL = "https://ds.free-vps.org/up.deb.json"
 const updateTimeout = 3 * time.Second
 const maximumUpdateSize int64 = 1 << 30
 
 var updateHashPattern = regexp.MustCompile(`^[a-fA-F0-9]{64}$`)
 
-type UpdateDescriptor struct {
-	SchemaVersion    int    `json:"schemaVersion"`
-	Build            uint64 `json:"build"`
-	Product          string `json:"product"`
-	Platform         string `json:"platform"`
-	Version          string `json:"version"`
-	Notes            string `json:"notes"`
-	SHA256           string `json:"sha256"`
-	Size             int64  `json:"size"`
-	ExecutableSHA256 string `json:"executableSHA256"`
-}
+type UpdateDescriptor = updatetrust.Descriptor
 type UpdatePackage struct {
 	Build            uint64 `json:"build"`
 	Version          string `json:"version"`
@@ -49,6 +41,7 @@ type UpdatePackage struct {
 	SHA256           string `json:"sha256"`
 	Size             int64  `json:"size"`
 	ExecutableSHA256 string `json:"executableSHA256"`
+	expiresAt        int64
 }
 type UpdateStatus struct {
 	Status         string         `json:"status"`
@@ -202,6 +195,12 @@ func boundedUpdateProbe(ctx context.Context, probe func() UpdateStatus) UpdateSt
 	return noUpdate("timeout")
 }
 func checkUpdate(ctx context.Context, client *http.Client, address, platform, currentHash string, receipt UpdateReceipt) UpdateStatus {
+	return checkUpdateTrusted(ctx, client, address, platform, currentHash, receipt, updatetrust.PublisherKeys(), time.Now())
+}
+
+// The application always supplies its compiled publisher keys. Tests use an
+// independent key through this helper, never a production signing private key.
+func checkUpdateTrusted(ctx context.Context, client *http.Client, address, platform, currentHash string, receipt UpdateReceipt, trusted map[string]ed25519.PublicKey, now time.Time) UpdateStatus {
 	result := noUpdate("unavailable")
 	result.Source = address
 	result.Platform = platform
@@ -238,6 +237,12 @@ func checkUpdate(ctx context.Context, client *http.Client, address, platform, cu
 		result.Reason = "invalid"
 		return result
 	}
+	// Authenticate the original values before normalization or displaying notes.
+	// There is deliberately no unsigned/legacy fallback, even over valid HTTPS.
+	if updatetrust.Verify(descriptor, trusted, now) != nil {
+		result.Reason = "invalid-signature"
+		return result
+	}
 	descriptor.SHA256 = strings.ToLower(descriptor.SHA256)
 	descriptor.ExecutableSHA256 = strings.ToLower(descriptor.ExecutableSHA256)
 	if platform == "windows-amd64" && descriptor.SHA256 != descriptor.ExecutableSHA256 {
@@ -272,7 +277,7 @@ func checkUpdate(ctx context.Context, client *http.Client, address, platform, cu
 	result.InstallerReady = true
 	result.LatestVersion = descriptor.Version
 	result.Notes = descriptor.Notes
-	result.Package = &UpdatePackage{Build: descriptor.Build, Version: descriptor.Version, URL: artifact, SHA256: descriptor.SHA256, Size: descriptor.Size, ExecutableSHA256: descriptor.ExecutableSHA256}
+	result.Package = &UpdatePackage{Build: descriptor.Build, Version: descriptor.Version, URL: artifact, SHA256: descriptor.SHA256, Size: descriptor.Size, ExecutableSHA256: descriptor.ExecutableSHA256, expiresAt: descriptor.ExpiresAt}
 	return result
 }
 
@@ -428,6 +433,9 @@ func (a *App) StartUpdateDownload(hash string) (UpdateDownload, error) {
 	if offer.Status != "available" || offer.Package == nil || offer.Package.SHA256 != hash {
 		return UpdateDownload{}, errors.New("更新文件与本次检查结果不一致")
 	}
+	if offer.Package.expiresAt <= time.Now().Unix() {
+		return UpdateDownload{}, errors.New("更新签名已过期，请重新启动程序检查更新")
+	}
 	if err := ValidateUpdateBuild(a.store.dir, offer.Package.Build, offer.Package.Version); err != nil {
 		return UpdateDownload{}, err
 	}
@@ -461,6 +469,9 @@ func (a *App) PreparedUpdate(id string) (UpdateDownload, error) {
 	}
 	if job.Status != "ready" {
 		return job, errors.New("更新尚未下载完成")
+	}
+	if job.Package.expiresAt <= time.Now().Unix() {
+		return job, errors.New("更新签名已过期，请重新启动程序检查更新")
 	}
 	hash, e := FileSHA256(job.File)
 	if e != nil {

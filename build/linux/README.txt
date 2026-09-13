@@ -60,7 +60,7 @@ ICMP经过系统路由/TUN，不是SSH按键计时。进程仅在展开时采集
 原生程序和构建证据：build/linux/native/dengshell、build-info.json。
 镜像基础摘要和 Go1.27.1 的 SHA256 固定在 build/linux/Dockerfile；完整构建依赖版本和实际镜像ID记录在 build-info.json。apt安全更新会改变新建镜像的依赖版本；需要逐字节复现时应保存并复用记录的完整构建镜像，设置 DENGSHELL_LINUX_BUILDER 为其镜像ID。
 脚本强制 GOAMD64=v1、CGO原生编译并拒绝 GLIBC符号需求超过2.35、错误架构、缺少GTK/WebKit链接或含构建机RPATH的程序。
-构建后由 scripts/package-linux.py --stage <仅包含dengshell和data的发行资源目录> --release 20 生成 DEB、RPM、tar.gz 与 linux-packages.json。整体发布使用 scripts/package-release.py。
+构建后由 scripts/package-linux.py --stage <仅包含dengshell和data的发行资源目录> --release 26 生成 DEB、RPM、pacman .pkg.tar.zst、tar.gz 与 linux-packages.json。整体发布使用 scripts/package-release.py。
 
 官方依赖参考：
 https://v2.wails.io/docs/gettingstarted/installation/
@@ -70,3 +70,10 @@ https://packages.fedoraproject.org/pkgs/webkitgtk/webkit2gtk4.1/
 https://archlinux.org/packages/extra/x86_64/webkit2gtk-4.1/
 
 官网 https://ds.free-vps.org · 应用代码MIT开源，第三方许可证见 data/licenses（本文件位于data/docs时为../licenses）。详细功能见程序顶部说明书按钮。
+
+Arch Linux / 兼容 pacman 的 x86-64 桌面：
+  sudo pacman -U ./DengShell-linux-x64.pkg.tar.zst
+卸载：sudo pacman -R dengshell（用户配置目录保留）。
+Arch 依赖 gtk3、webkit2gtk-4.1、bash、iputils、glibc；托盘可选 libayatana-appindicator。
+Windows/Debian 的内置更新会退出并重启；Arch 请用新版 pacman 包升级。
+R20 至 R26 全部变化见 CHANGELOG.md；本轮验证边界见 FUNCTIONAL-AUDIT-r26.md。

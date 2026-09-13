@@ -15,21 +15,22 @@ import (
 )
 
 type Profile struct {
-	ID        string      `json:"id"`
-	Name      string      `json:"name"`
-	Host      string      `json:"host"`
-	Port      int         `json:"port"`
-	User      string      `json:"user"`
-	GroupID   string      `json:"groupId"`
-	DeletedAt *time.Time  `json:"deletedAt,omitempty"`
-	Group     string      `json:"group"`
-	Auth      string      `json:"auth"`
-	KeyPath   string      `json:"keyPath,omitempty"`
-	KeyID     string      `json:"keyId,omitempty"`
-	Secret    string      `json:"secret,omitempty"`
-	HasSecret bool        `json:"hasSecret,omitempty"`
-	Proxy     ProxyConfig `json:"proxy"`
-	ProxyID   string      `json:"proxyId,omitempty"`
+	FinalShellID string      `json:"finalShellId,omitempty"`
+	ID           string      `json:"id"`
+	Name         string      `json:"name"`
+	Host         string      `json:"host"`
+	Port         int         `json:"port"`
+	User         string      `json:"user"`
+	GroupID      string      `json:"groupId"`
+	DeletedAt    *time.Time  `json:"deletedAt,omitempty"`
+	Group        string      `json:"group"`
+	Auth         string      `json:"auth"`
+	KeyPath      string      `json:"keyPath,omitempty"`
+	KeyID        string      `json:"keyId,omitempty"`
+	Secret       string      `json:"secret,omitempty"`
+	HasSecret    bool        `json:"hasSecret,omitempty"`
+	Proxy        ProxyConfig `json:"proxy"`
+	ProxyID      string      `json:"proxyId,omitempty"`
 }
 
 type Config struct {
@@ -92,6 +93,7 @@ func (s *Store) List() Config {
 	return result
 }
 func publicProfile(p Profile) Profile {
+	p.FinalShellID = ""
 	p.HasSecret = p.Secret != ""
 	p.Secret = ""
 	p.Proxy = p.Proxy.public()
@@ -112,6 +114,7 @@ func (s *Store) Get(id string) (Profile, error) {
 	return Profile{}, errors.New("服务器配置不存在")
 }
 func (s *Store) Save(p Profile, clearSecret bool) (Profile, error) {
+	p.FinalShellID = ""
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	p.Name = strings.TrimSpace(p.Name)
@@ -185,6 +188,7 @@ func (s *Store) Save(p Profile, clearSecret bool) (Profile, error) {
 	index := -1
 	for i, entry := range s.config.Servers {
 		if entry.ID == p.ID {
+			p.FinalShellID = entry.FinalShellID
 			if entry.DeletedAt != nil {
 				return Profile{}, errors.New("服务器已在回收站，请先恢复")
 			}

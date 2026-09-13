@@ -86,7 +86,7 @@ func backgroundNetworkSSHFixture(t *testing.T, holdChannel bool, sample func(con
 						return
 					}
 					var command struct{ Value string }
-					if ssh.Unmarshal(request.Payload, &command) != nil || command.Value != networkMonitorCommand {
+					if ssh.Unmarshal(request.Payload, &command) != nil || command.Value != "exec "+posixShellCommand(networkMonitorCommand) {
 						request.Reply(false, nil)
 						return
 					}

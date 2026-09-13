@@ -8,27 +8,83 @@ function renderCommands() {
   if (!groups.includes(commandGroup)) commandGroup = '';
   $('#command-groups').replaceChildren(...[['', '全部'], ...groups.map(group => [group, group])].map(([value, label]) => {
     const button = node('button', value === commandGroup ? 'selected' : '', label);
-    button.type = 'button'; button.title = label; button.setAttribute('aria-pressed', String(value === commandGroup));
-    button.onclick = () => { commandGroup = value; renderCommands(); };
+    button.type = 'button'; button.title = value ? `${label} · 拖动排序，右键重命名` : label; button.setAttribute('aria-pressed', String(value === commandGroup));
+    button.dataset.commandGroup = value;
+    button.onclick = () => { if (performance.now() < commandDragUntil) return; commandGroup = value; renderCommands(); };
+    if (value) bindCommandDrag(button, 'group', value);
     return button;
   }));
   const state = current(), profile = profileFor(state);
-  $('#command-target').textContent = state?.ready ? `执行到 ${profile?.name || '当前会话'}` : '连接后点击命令执行';
+  $('#command-target').textContent = state?.ready ? `当前：${profile?.name || '当前会话'}` : '连接后可发送命令';
   const visible = commands.filter(command => !commandGroup || command.group === commandGroup);
   $('#commands-empty').hidden = visible.length > 0;
   $('#commands-empty').textContent = commandGroup ? `「${commandGroup}」还没有命令，点击「新建命令」添加。` : '把常用命令收在这里；右键可新建分组，点击「新建命令」开始。';
   $('#command-list').replaceChildren(...visible.map(command => {
-    const pill = node('div', 'command-pill'); pill.dataset.color = command.color;
-    const run = node('button', 'command-run', command.name); run.title = command.body; run.disabled = !state?.ready;
+    const pill = node('div', 'command-pill'); pill.dataset.color = command.color; pill.dataset.commandId = command.id;
+    bindCommandDrag(pill, 'command', command.id);
+    const run = node('button', 'command-run', command.name); run.type = 'button'; run.title = `${command.body}\n${command.appendCR ? '末尾回车：发送并执行' : '不加回车：仅填入终端'} · 右键编辑`;
     run.onclick = () => {
-      const active = current(); if (!active?.ready) return;
-      // xterm handles multiline and bracketed paste according to the live shell.
-      pasteTerminalText(active, command.body, { execute: true });
+      if (performance.now() < commandDragUntil) return;
+      window.DengCommandComposer.run(command);
     };
-    const edit = node('button', 'command-edit'); edit.append(icon('edit')); edit.title = `编辑 ${command.name}`; edit.setAttribute('aria-label', edit.title); edit.onclick = () => editCommand(command);
-    pill.append(run, edit); return pill;
+    pill.append(run); return pill;
   }));
   renderCommandGroupChoices();
+  window.DengCommandComposer?.reflect();
+}
+
+let commandDrag = null, commandDragUntil = 0, commandMoving = false;
+function clearCommandDrag() {
+  commandDrag = null;
+  document.querySelectorAll('.command-drop-before,.command-drop-after,.command-drop-group,.command-dragging').forEach(e => e.classList.remove('command-drop-before', 'command-drop-after', 'command-drop-group', 'command-dragging'));
+}
+async function moveCommandItem(type, id, target, after, group = '') {
+  if (commandMoving) return;
+  commandMoving = true;
+  try {
+    await post(type === 'group' ? '/api/command-groups/move' : '/api/commands/move', type === 'group' ? { name: id, target, after } : { id, targetId: target, after, group });
+    await loadProfiles();
+  } finally { commandMoving = false; }
+}
+function bindCommandDrag(element, type, id) {
+  element.draggable = true;
+  element.addEventListener('dragstart', event => {
+    if (commandMoving) { event.preventDefault(); return; }
+    closeCommandContextMenu(); commandDrag = { type, id }; commandDragUntil = Infinity;
+    event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('application/x-dengshell-command', type);
+    element.classList.add('command-dragging');
+  });
+  element.addEventListener('dragend', () => { clearCommandDrag(); commandDragUntil = performance.now() + 300; });
+  element.addEventListener('dragover', event => {
+    if (!commandDrag || (type === 'command' && commandDrag.type !== 'command')) return;
+    event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = 'move';
+    const rect = element.getBoundingClientRect(), after = event.clientX > rect.left + rect.width / 2;
+    element.classList.toggle('command-drop-before', !(type === 'group' && commandDrag.type === 'command') && !after);
+    element.classList.toggle('command-drop-after', !(type === 'group' && commandDrag.type === 'command') && after);
+    element.classList.toggle('command-drop-group', type === 'group' && commandDrag.type === 'command');
+  });
+  element.addEventListener('dragleave', event => { if (!element.contains(event.relatedTarget)) element.classList.remove('command-drop-before', 'command-drop-after', 'command-drop-group'); });
+  element.addEventListener('drop', safe(async event => {
+    if (!commandDrag || (type === 'command' && commandDrag.type !== 'command')) return;
+    event.preventDefault(); event.stopPropagation();
+    const drag = commandDrag, rect = element.getBoundingClientRect(), after = event.clientX > rect.left + rect.width / 2;
+    clearCommandDrag(); commandDragUntil = performance.now() + 300;
+    if (drag.type === 'command' && type === 'group') await moveCommandItem('command', drag.id, '', false, id);
+    else await moveCommandItem(type, drag.id, id, after);
+  }));
+}
+
+async function renameCommandGroup(name) {
+  const newName = await ask({ title: '重命名命令分组', input: true, value: name, confirm: '保存' });
+  if (newName === null) return;
+  await post('/api/command-groups/rename', { name, newName });
+  if (commandGroup === name) commandGroup = newName.trim();
+  await loadProfiles();
+}
+
+async function deleteQuickCommand(command) {
+  if (!await ask({ title: `删除命令「${command.name}」？`, confirm: '删除' })) return;
+  await remove(`/api/commands/${command.id}`); await loadProfiles();
 }
 
 function renderCommandGroupChoices(preferred) {
@@ -61,7 +117,21 @@ function showCommandContextMenu(event) {
   event.preventDefault(); event.stopPropagation(); closeCommandContextMenu();
   const menu = node('div', 'command-context-menu'); commandContextMenu = menu;
   menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', '快捷命令操作');
-  for (const [label, glyph, action] of [['新建分组', 'folder', createCommandGroup], ['新建命令', 'plus', () => editCommand()]]) {
+  const command = commands.find(c => c.id === event.target?.closest('[data-command-id]')?.dataset.commandId);
+  const group = event.target?.closest('[data-command-group]')?.dataset.commandGroup;
+  const actions = [['新建分组', 'folder', createCommandGroup], ['新建命令', 'plus', () => editCommand()]];
+  if (command) {
+    actions.unshift(['编辑命令', 'edit', () => editCommand(command)], ['调用前编辑', 'terminal', () => window.DengCommandComposer.open(command)], ['删除命令', 'close', () => deleteQuickCommand(command)]);
+    const visible = commands.filter(c => !commandGroup || c.group === commandGroup), index = visible.findIndex(c => c.id === command.id);
+    if (index > 0) actions.push(['向前移动', 'up', () => moveCommandItem('command', command.id, visible[index - 1].id, false)]);
+    if (index < visible.length - 1) actions.push(['向后移动', 'chevron', () => moveCommandItem('command', command.id, visible[index + 1].id, true)]);
+  } else if (group) {
+    actions.unshift(['重命名分组', 'edit', () => renameCommandGroup(group)]);
+    const index = commandGroups.indexOf(group);
+    if (index > 0) actions.push(['向前移动', 'up', () => moveCommandItem('group', group, commandGroups[index - 1], false)]);
+    if (index >= 0 && index < commandGroups.length - 1) actions.push(['向后移动', 'chevron', () => moveCommandItem('group', group, commandGroups[index + 1], true)]);
+  }
+  for (const [label, glyph, action] of actions) {
     const button = node('button', '', label); button.type = 'button'; button.setAttribute('role', 'menuitem'); button.prepend(icon(glyph));
     button.onclick = safe(async () => { closeCommandContextMenu(); await action(); }); menu.append(button);
   }
@@ -89,8 +159,9 @@ function editCommand(command = null) {
   for (const key of ['id', 'name', 'body']) form.elements[key].value = command?.[key] ?? '';
   renderCommandGroupChoices(command?.group || commandGroup);
   form.elements.color.value = command?.color || commandPalette[commands.length % commandPalette.length][0];
-  $('#command-dialog-title').textContent = command ? '编辑快捷命令' : '新建快捷命令';
-  $('#delete-command').hidden = !command; $('#command-dialog').showModal(); form.elements.name.focus();
+  form.elements.appendCR.checked = command?.appendCR === true;
+  $('#command-dialog-title').textContent = command?.id ? '编辑快捷命令' : '新建快捷命令';
+  $('#delete-command').hidden = !command?.id; $('#command-dialog').showModal(); form.elements.name.focus();
 }
 
 function renderKeyChoices() {
@@ -153,13 +224,13 @@ function initializeWorkspaceTools() {
   $('#commands-view').addEventListener('keydown', event => {
     if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) return;
     const rect = event.target.getBoundingClientRect();
-    showCommandContextMenu({ clientX: rect.left + 12, clientY: rect.top + 20, preventDefault: () => event.preventDefault(), stopPropagation: () => event.stopPropagation() });
+    showCommandContextMenu({ target: event.target, clientX: rect.left + 12, clientY: rect.top + 20, preventDefault: () => event.preventDefault(), stopPropagation: () => event.stopPropagation() });
   });
   document.addEventListener('pointerdown', event => { if (commandContextMenu && !commandContextMenu.contains(event.target)) closeCommandContextMenu(); });
   window.addEventListener('resize', () => closeCommandContextMenu());
   $('#quick-command-form').onsubmit = safe(async event => {
     event.preventDefault(); const button = $('#save-command'); if (button.disabled) return; button.disabled = true;
-    try { await post('/api/commands', Object.fromEntries(new FormData(event.currentTarget))); await loadProfiles(); $('#command-dialog').close(); } finally { button.disabled = false; }
+    try { await post('/api/commands', { ...Object.fromEntries(new FormData(event.currentTarget)), appendCR: event.currentTarget.elements.appendCR.checked }); await loadProfiles(); $('#command-dialog').close(); } finally { button.disabled = false; }
   });
   $('#delete-command').onclick = safe(async () => {
     const form = $('#quick-command-form');

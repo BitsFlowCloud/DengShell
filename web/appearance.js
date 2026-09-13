@@ -1,7 +1,7 @@
 'use strict';
 
-let appearance = { fontId: 'builtin:jetbrains-mono', fontColors: {}, fontBold: {}, chartStyles: {}, backgroundId: 'builtin:none', backgroundOpacity: .42, backgroundVersion: 2, uiScale: Number(window.CLOUDSHELL?.uiScale) || 1, terminalFontSize: 14, startupAnimation: window.DengShellSplash?.enabled !== false };
-const appearanceMapFields = new Set(['fontColors', 'fontBold', 'chartStyles']);
+let appearance = { uiFontId: 'builtin:ui-noto-sans', uiTextColors: {}, fontId: 'builtin:jetbrains-mono', fontColors: {}, fontBold: {}, chartStyles: {}, backgroundId: 'builtin:none', backgroundOpacity: .42, backgroundVersion: 2, uiScale: Number(window.CLOUDSHELL?.uiScale) || 1, terminalFontSize: 14, startupAnimation: window.DengShellSplash?.enabled !== false };
+const appearanceMapFields = new Set(['fontColors', 'fontBold', 'chartStyles', 'uiTextColors']);
 const appearanceOwnedElsewhere = new Set(['layout', 'windowWidth', 'windowHeight', 'windowMaximised', 'terminalBold']);
 let appearanceSaved = appearanceSnapshot(appearance);
 let managedAssets = [], managedProxies = [], fontCatalog = null, backgroundCatalog = [], assetKind = 'background';
@@ -167,12 +167,13 @@ function drawTerminalBoxGlyph(glyphs,width,height) {
   for(const [thickness,d]of paths){const stroke=path.cloneNode(false);stroke.setAttribute('d',d);stroke.setAttribute('stroke-width',thickness);svg.append(stroke);}return svg;
 }
 async function applyAppearance() {
+  const uiApplying = window.DengUIAppearance?.apply(appearance);
   window.DengChartStyles?.apply(appearance.chartStyles);
   const generation = ++mediaGeneration, next = { ...appearance };
   applyUIScale();
   document.documentElement.style.setProperty('--background-opacity', String(next.backgroundOpacity));
   applyTerminalAppearanceColors();
-  await initializeAppearanceCatalogs();
+  await Promise.all([initializeAppearanceCatalogs(), uiApplying]);
   if (generation !== mediaGeneration) return;
   const font = allFonts().find(item => item.id === next.fontId) || allFonts()[0];
   if (activeFontID !== font.id) {
@@ -210,6 +211,7 @@ async function acceptAppearanceConfig(config) {
     window.DengShellSplash?.accept(appearance.startupAnimation);
   }
   if ((appearance.backgroundVersion || 0) < 2) { if (Math.abs(appearance.backgroundOpacity - .18) < .000001) appearance.backgroundOpacity = .42; appearance.backgroundVersion = 2; }
+  await window.DengUIAppearance?.acceptConfig(config);
   try { await applyAppearance(); } catch (error) {
     toast(`外观资源暂时无法加载，已保留选择：${error.message}`);
     const selected = appearance;
@@ -317,7 +319,7 @@ async function openAppearance(kind) {
   setSettingsMenu(false); assetKind = kind;
   await initializeAppearanceCatalogs();
   const isFont = kind === 'font';
-  $('#appearance-title').textContent = isFont ? '字体管理器' : '背景管理器';
+  $('#appearance-title').textContent = isFont ? '终端字体' : '背景管理器';
   $('#appearance-description').textContent = isFont ? '每款字体单独设置加粗和颜色，点击字体即可应用。' : '背景立即生效，可拖动此面板观察终端。';
   $('#import-asset span').textContent = isFont ? '导入字体' : '导入背景';
   $('#asset-picker').accept = isFont ? '.ttf,.otf,.woff,.woff2' : '.png,.jpg,.jpeg,.webp';
@@ -545,6 +547,7 @@ function reflectWindowState(state) {
 }
 async function initializeWindowControls() { if (native()?.WindowState) reflectWindowState(await native().WindowState()); }
 function initializeAppearance() {
+  window.DengUIAppearance?.initialize();
   initializeAppearancePalette();
   $('#terminal-size').replaceChildren(...Array.from({ length: 65 }, (_, i) => { const value=8+i/2,option = node('option', '', `${value} px`); option.value = value; return option; }));
   $('#toggle-monitor').onclick = () => { const open = document.documentElement.dataset.monitorOpen !== 'true'; document.documentElement.dataset.monitorOpen = String(open); $('#monitor-backdrop').hidden = !open; $('#toggle-monitor').setAttribute('aria-expanded', String(open)); };

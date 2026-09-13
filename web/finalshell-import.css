@@ -1,0 +1,16 @@
+#finalshell-import-dialog { width: min(820px, calc(var(--view-width, 100vw) - 32px)); max-width: none; max-height: calc(var(--view-height, 100vh) - 32px); overflow: auto; padding: 24px; font-size: 14px; }
+#finalshell-import-dialog h2 { font-size: 21px; }
+#finalshell-import-dialog p { line-height: 1.7; font-size: 14px; }
+.finalshell-import-guide { padding-left: 24px; line-height: 1.9; color: var(--text-secondary); }
+.finalshell-directory { display: grid; grid-template-columns: 1fr auto; gap: 8px 14px; align-items: center; padding: 14px; border-radius: 12px; background: var(--surface-inset, #eef3f7); }
+.finalshell-directory > span { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+.finalshell-directory code { overflow-wrap: anywhere; white-space: normal; font-size: 13px; min-width: 0; }
+#finalshell-import-status { color: var(--text); padding: 12px 0; border-top: 1px solid var(--border); }
+.finalshell-import-item { display: flex; align-items: center; gap: 12px; padding: 16px 0; border-top: 1px solid var(--border); }
+.finalshell-import-item > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+#finalshell-import-dialog .finalshell-import-item p { margin: 6px 0; }
+.finalshell-import-item small { font-size: 12px; color: var(--muted); }
+.finalshell-import-label { white-space: nowrap; color: var(--muted); font-size: 13px; }
+.finalshell-import-item[data-status=failed] .finalshell-import-label { color: var(--danger, #a33d48); }
+#finalshell-import-dialog :is(.upload-button, .primary-button) { font-size: 13px; padding: 9px 14px; white-space: nowrap; }
+@media (max-width: 650px) { #finalshell-import-dialog { padding: 16px; } .finalshell-import-item { flex-wrap: wrap; } .finalshell-import-item > div { flex-basis: 100%; } .finalshell-directory { grid-template-columns: 1fr; } .finalshell-directory button { justify-self: start; } }

@@ -20,7 +20,7 @@
 body { margin: 0; height: 100vh; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; background: radial-gradient(ellipse at 15% 0%, #f9fafc, #f0f3f7 70%); }
 button, input { font: inherit; }
 button { color: inherit; cursor: pointer; border: 0; background: none; }
-button:hover { color: #527fa4; }
+button:hover { color: var(--accent, #527fa4); }
 button:disabled { opacity: .4; cursor: default; }
 button, input, textarea, select, summary, [tabindex] { outline: none; }
 :is(button, input, textarea, select, summary, [tabindex]):focus-visible { outline: none; }

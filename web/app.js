@@ -104,6 +104,11 @@ async function connect(profileID, force = false, options = {}) {
 async function connectProfile(profileID, force, { background = false, refreshHistory = true } = {}) {
   if (connecting.has(profileID)) return null;
   const profile = profiles.find(p => p.id === profileID); if (!profile) return;
+  if (profile.auth === 'key' && !profile.keyId && !profile.keyPath) {
+    toast(`「${profile.name}」需要补充私钥，请编辑此连接。`);
+    if (!background) showConnectionForm(profile);
+    return null;
+  }
   const matches = [...sessions.values()].filter(s => s.profileId === profileID);
   const existing = matches.find(s => s.id === activeID) || matches.find(s => s.connected) || matches[0];
   if (existing?.detaching || existing?.handoffProvisional || existing?.ownershipUncertain) { toast('此 SSH 正在交接窗口，请稍后再试'); return null; }
@@ -336,7 +341,7 @@ function renderTabs() {
     button.setAttribute('aria-busy', String(!!state.pendingConnection));
     if (state.localOnly) button.title += ` · ${state.connectionMessage}`;
     const close = node('button', 'tab-close'); close.append(icon('close')); close.title = state.pendingConnection ? '取消连接' : '关闭连接'; close.setAttribute('aria-label', `${state.pendingConnection ? '取消' : '关闭'} ${profile?.name || '会话'}`); close.onclick = safe(() => closeSession(state.id)); close.disabled = !!(state.detaching || state.handoffProvisional); tab.dataset.detaching = String(!!state.detaching); tab.append(button, close); window.DengSessionWindows.bindTab(tab, state); return tab;
-  })); updateStatus();
+  })); updateStatus(); window.DengTextEditors?.reflect(); window.DengCommandComposer?.reflect();
 }
 function activate(id) {
   if (!sessions.has(id)) return;
@@ -369,12 +374,13 @@ $('#font-up').onclick = () => changeFont(.5); $('#font-down').onclick = () => ch
 $('#follow-terminal').onchange = safe(async event => {
   const state = current(); if (!state?.connected) return;
   if (!event.target.checked) { state.follow = false; return; }
-  if (!await ask({ title: '跟随终端目录', description: '为当前 Bash / Zsh 会话添加目录提示钩子。只影响本次会话，不修改服务器配置文件。', confirm: '启用' })) { event.target.checked = false; return; }
-  state.follow = true;
-  if (!state.hookInstalled) {
-    const command = `__cloudshell_cwd(){ local p="$PWD"; p="\${p//%/%25}"; p="\${p//#/%23}"; p="\${p//\\?/%3F}"; p="\${p// /%20}"; printf '\\033]7;file://localhost%s\\007' "$p"; }; if [ -n "$BASH_VERSION" ]; then PROMPT_COMMAND="\${PROMPT_COMMAND:+$PROMPT_COMMAND; }__cloudshell_cwd"; elif [ -n "$ZSH_VERSION" ]; then precmd_functions+=(__cloudshell_cwd); fi; __cloudshell_cwd`;
-    sendInput(state, command + '\r'); state.hookInstalled = true;
+  if (!state.shellIntegration?.ready) {
+    event.target.checked = false;
+    toast('目录跟随需要 Bash / Zsh / Fish 提示符集成，请等待终端就绪或重新连接。');
+    return;
   }
+  state.follow = true;
+  if (state.terminalDirectory && state.terminalDirectory !== state.cwd) await navigate(state.terminalDirectory, state);
 });
 
 // SFTP browser. Only successful requests replace the current path and entries.

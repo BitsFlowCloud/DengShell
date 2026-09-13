@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "application": "DengShell v0.01 r20",
-  "testedExecutableSHA256": "8b7f9a7a9cc81761dfcdb32e7e2eb9aec22de9218ac85cd135122d3d7b0af01f",
+  "application": "DengShell v0.01 r26",
+  "testedExecutableSHA256": "6e62807e2543198e5f4566271a7f9a3061953c9aee49cee126beff51cdb80e80",
   "requiredGLIBC": "2.34",
   "runtimeMatrix": [
     {
@@ -40,6 +40,14 @@
       "distribution": "openSUSE Tumbleweed",
       "image": "dengshell-compat:opensuse",
       "imageId": "sha256:04009d782653f274413d474563177f452dbcb3ee43dfe73e636679f8c7eddd0b",
+      "glibc": "glibc 2.44",
+      "nativeFrontendReady": true,
+      "allLibrariesResolved": true
+    },
+    {
+      "distribution": "Arch Linux",
+      "image": "dengshell-arch-builder:r26",
+      "imageId": "sha256:9e1f564427b9894a326979af7fa0e8e2f1f2579a0c9d71f16d804d63ebc9c282",
       "glibc": "glibc 2.44",
       "nativeFrontendReady": true,
       "allLibrariesResolved": true

@@ -86,6 +86,48 @@ func TestPromptStyleValidationNeverExecutesFileContent(t *testing.T) {
 	}
 }
 
+func TestFishPromptColorsRestoreAndRejectExecutableData(t *testing.T) {
+	executable, args := testLoginShell(t, "fish")
+	dir := t.TempDir()
+	style := filepath.Join(dir, "style")
+	hook := filepath.Join(dir, "hook.fish")
+	marker := filepath.Join(dir, "must-not-exist")
+	body, err := shellIntegrationAssets.ReadFile("shell_integration/prompt-fish.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body = bytes.ReplaceAll(body, []byte("@DENGSHELL_STYLE_FILE@"), []byte(style))
+	if err := os.WriteFile(hook, body, 0600); err != nil {
+		t.Fatal(err)
+	}
+	for _, malicious := range []bool{false, true} {
+		data := "#112233\n#abcdef\n"
+		if malicious {
+			data = "(touch " + marker + ")\n#123456\n"
+		}
+		if err := os.WriteFile(style, []byte(data), 0600); err != nil {
+			t.Fatal(err)
+		}
+		script := "function fish_prompt; printf ORIGINAL_FISH; end; source " + loginShellQuote(hook) + "; __dengshell_apply_prompt_style; fish_prompt; printf '\\n\\n' > " + loginShellQuote(style) + "; __dengshell_apply_prompt_style; fish_prompt"
+		command := exec.Command(executable, append(args, "-c", script)...)
+		command.Env = append(os.Environ(), "TERM=xterm-256color")
+		output, err := command.CombinedOutput()
+		if err != nil || !strings.HasSuffix(string(output), "ORIGINAL_FISH") {
+			t.Fatal("Fish prompt restore failed", err, string(output))
+		}
+		if malicious {
+			if string(output) != "ORIGINAL_FISHORIGINAL_FISH" {
+				t.Fatal("untrusted color data changed prompt", string(output))
+			}
+		} else if !strings.Contains(string(output), "38;2;17;34;51m") || !strings.Contains(string(output), "38;2;171;205;239m") {
+			t.Fatal("independent RGB colors missing", string(output))
+		}
+		if _, err := os.Stat(marker); !os.IsNotExist(err) {
+			t.Fatal("style data was executed")
+		}
+	}
+}
+
 func TestPromptStyleLiveSSHUpdatesWithoutInjectedKeystrokes(t *testing.T) {
 	s := monitorFixtureSession(t)
 	s.promptUsernameColor, s.promptHostnameColor = "#112233", "#abcdef"

@@ -1,0 +1,12 @@
+{
+  "noto-sans.otf": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf",
+  "noto-serif.otf": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Serif/OTF/SimplifiedChinese/NotoSerifCJKsc-Regular.otf",
+  "noto-sans-license.txt": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/LICENSE",
+  "noto-serif-license.txt": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Serif/LICENSE",
+  "sarasa.7z": "https://github.com/be5invis/Sarasa-Gothic/releases/download/v1.0.41/SarasaUiSC-TTF-1.0.41.7z",
+  "sarasa-license.txt": "https://raw.githubusercontent.com/be5invis/Sarasa-Gothic/v1.0.41/LICENSE",
+  "wenkai.ttf": "https://github.com/lxgw/LxgwWenKai-Screen/releases/download/v1.522/LXGWWenKaiScreen.ttf",
+  "wenkai-license.txt": "https://raw.githubusercontent.com/lxgw/LxgwWenKai-Screen/v1.522/OFL.txt",
+  "maple.zip": "https://github.com/subframe7536/maple-font/releases/download/v7.9/MapleMono-CN.zip",
+  "maple-license.txt": "https://raw.githubusercontent.com/subframe7536/maple-font/v7.9/OFL.txt"
+}

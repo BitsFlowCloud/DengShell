@@ -131,6 +131,9 @@ func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret 
 		}
 		auth = []ssh.AuthMethod{ssh.Password(secret), ssh.KeyboardInteractive(passwordChallenge(secret))}
 	case "key":
+		if p.KeyID == "" && p.KeyPath == "" {
+			return nil, &AuthenticationError{code: "ssh_key_missing", message: "此连接尚未配置私钥，请在编辑连接中选择密钥管理器里的密钥或私钥文件。"}
+		}
 		var data []byte
 		var savedPassphrase string
 		if p.KeyID != "" {

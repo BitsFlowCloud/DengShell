@@ -14,11 +14,18 @@ function bindShellIntegration(state) {
       case 'prompt': integration.atPrompt = true; break;
       case 'busy': integration.atPrompt = false; break;
       case 'command':
+      case 'cwd':
         if (parts.length !== 4 || parts[3].length > 90000 || !/^[A-Za-z0-9+/]*={0,2}$/.test(parts[3])) return true;
         try {
           const bytes = Uint8Array.from(atob(parts[3]), character => character.charCodeAt(0));
           const command = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-          if (command.length <= 16384 && !command.includes('\0')) recordCommand(state, command);
+          if (command.length <= 16384 && !command.includes('\0')) {
+            if (parts[1] === 'command') recordCommand(state, command);
+            else if (command.startsWith('/')) {
+              state.terminalDirectory = command;
+              if (state.follow && command !== state.cwd) navigate(command, state).catch(error => toast(error?.message || String(error)));
+            }
+          }
         } catch {}
         break;
     }

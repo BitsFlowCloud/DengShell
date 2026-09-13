@@ -1,0 +1,24 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+
+const states = new Map(), sent = [];
+const a = { id: 'a', connected: true, ready: true, term: { modes: { bracketedPasteMode: false }, options: {} } };
+const b = { id: 'b', connected: true, ready: true, term: { modes: { bracketedPasteMode: true }, options: {} } };
+states.set('a', a); states.set('b', b); let active = b;
+const context = vm.createContext({ window: {}, document: { addEventListener() {} }, TextEncoder, sessions: states, current: () => active, activate: id => { active = states.get(id); }, pasteTerminalText: (state, text, options) => sent.push({ id: state.id, text, execute: options.execute }) });
+vm.runInContext(fs.readFileSync(new URL('../web/command-composer.js', import.meta.url), 'utf8'), context);
+const c = context.window.DengCommandComposer;
+assert.equal(c.parameters('docker logs [p#1 容器] [p#1 容器] [p#5 时间]').length, 2);
+assert.equal(c.resolve('echo [p#1 A] [p#1 A]', { 1: '$&; $(value)' }), 'echo $&; $(value) $&; $(value)');
+c.send(a, 'docker logs\r\n', false); assert.deepEqual(sent.pop(), { id: 'a', text: 'docker logs', execute: false }); assert.equal(active, a);
+c.send(a, 'pwd\n', true); assert.deepEqual(sent.pop(), { id: 'a', text: 'pwd', execute: true });
+assert.throws(() => c.send(a, 'echo a\necho b', false), /未发送/); assert.equal(sent.length, 0);
+c.send(b, 'echo a\necho b', false); assert.deepEqual(sent.pop(), { id: 'b', text: 'echo a\necho b', execute: false });
+b.term.options.ignoreBracketedPasteMode = true;
+assert.throws(() => c.send(b, 'echo a\necho b', false), /未发送/);
+for (const text of ['rm [p#1 路径]', 'echo [p#7 bad]', 'pwd\x1b[201~\n', 'pwd\x08', 'pwd\u009b', ' '.repeat(10), '中'.repeat(22000)]) assert.throws(() => c.send(a, text));
+a.connected = false; assert.throws(() => c.send(a, 'pwd'), /目标连接/);
+a.connected = true; states.set('a', { ...a }); assert.throws(() => c.send(a, 'pwd'), /目标连接/);
+assert.equal(sent.length, 0);
+console.log('PASS: parameters; no-CR; explicit CR; multiline/control/unresolved guards; pinned target; replaced/disconnected session rejected.');

@@ -22,7 +22,7 @@ func (s *Store) PatchAppearance(patch map[string]json.RawMessage) (Appearance, e
 		return value, nil
 	}
 	fields := map[string]any{
-		"fontId": &value.FontID, "backgroundId": &value.BackgroundID,
+		"uiFontId": &value.UIFontID, "fontId": &value.FontID, "backgroundId": &value.BackgroundID,
 		"backgroundOpacity": &value.BackgroundOpacity, "backgroundVersion": &value.BackgroundVersion,
 		"uiScale": &value.UIScale, "terminalFontSize": &value.TerminalFontSize,
 		"startupAnimation": &value.StartupAnimation, "theme": &value.Theme,
@@ -36,6 +36,8 @@ func (s *Store) PatchAppearance(patch map[string]json.RawMessage) (Appearance, e
 		switch key {
 		case "chartStyles":
 			err = mergePreferenceMap(value.ChartStyles, raw)
+		case "uiTextColors":
+			err = mergePreferenceMap(value.UITextColors, raw)
 		case "fontColors":
 			err = mergePreferenceMap(value.FontColors, raw)
 		case "fontBold":
@@ -99,5 +101,8 @@ func (a *App) patchAppearanceHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	value, err := a.store.PatchAppearance(patch)
+	if err == nil {
+		a.uiFontRuntime()
+	}
 	respond(w, value, err)
 }

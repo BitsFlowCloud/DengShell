@@ -1,0 +1,45 @@
+/* UI families are independent of the terminal's grid and per-font colors. */
+:root { --font-ui: "Deng UI Sans", "Deng UI", "Deng CJK", system-ui, sans-serif; font-family: var(--font-ui); }
+.welcome-state, .traffic-grid text, .traffic-empty, .latency-grid text, .latency-time, .latency-empty { font-family: var(--font-ui); }
+button, input, select { font-family: inherit; }
+:root[data-ui-text-custom] :is(.file-table td:first-child, .meter b, .meter em, .disk-percent) { color: var(--text); }
+#ui-appearance-dialog { width: min(820px, calc(var(--view-width, 100vw) - 32px)); max-width: none; max-height: calc(var(--view-height, 100vh) - 32px); padding: 24px; overflow: auto; font-size: 14px; }
+#ui-appearance-dialog h2 { font-size: 21px; }
+#ui-appearance-dialog h3 { margin: 0; font-size: 16px; }
+#ui-appearance-dialog p { line-height: 1.7; font-size: 13px; margin: 9px 0 14px; }
+#ui-appearance-dialog .dialog-heading { align-items: flex-start; }
+.ui-text-settings { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 20px; }
+.ui-color-row { display: grid; grid-template-columns: minmax(100px, 1fr) 40px 105px auto auto; align-items: center; gap: 10px; margin-top: 16px; }
+.ui-color-label { display: grid; gap: 3px; }
+.ui-color-state { font-size: 12px; color: var(--muted); }
+.ui-color-input > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+#ui-appearance-dialog .ui-color-input { margin: 0; display: block; }
+#ui-appearance-dialog input[type=color] { height: 36px; width: 40px; padding: 3px; cursor: pointer; }
+#ui-appearance-dialog input[type=text] { width: 105px; padding: 8px; margin: 0; font-size: 14px; }
+.ui-color-sample { grid-column: 1 / -1; padding: 10px 12px; border-radius: 9px; line-height: 1.6; }
+.ui-color-sample.light { background: #f4f7fa; }
+.ui-color-sample.dark { background: #1c2935; }
+.ui-font-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#ui-font-status { padding: 10px 12px; border-radius: 9px; background: var(--surface-inset, #eef3f7); color: var(--text-secondary); }
+#ui-font-status.pending { border: 1px solid var(--accent); }
+#ui-font-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ui-font-card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; min-width: 0; background: var(--surface); }
+.ui-font-card.selected { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+#ui-appearance-dialog .ui-font-choice { display: flex; flex-direction: column; align-items: flex-start; width: 100%; gap: 8px; padding: 16px; border-radius: 0; text-align: left; white-space: normal; color: var(--text); }
+.ui-font-choice strong { font-size: 15px; }
+.ui-font-detail, .ui-font-state { color: var(--muted); font-size: 12px; }
+.ui-font-sample { display: block; font-size: 16px; line-height: 1.8; overflow-wrap: anywhere; }
+.ui-font-actions { display: flex; flex-wrap: wrap; gap: 14px; padding: 0 16px 12px; }
+.ui-font-actions button { font-size: 13px; }
+#ui-appearance-dialog :is(.ui-color-save, .ui-color-reset, #import-ui-font) { font-size: 13px; padding: 8px 12px; }
+#ui-font-license { width: min(740px, calc(var(--view-width, 100vw) - 32px)); max-width: none; max-height: calc(var(--view-height, 100vh) - 32px); padding: 24px; overflow: auto; }
+#ui-font-license h2 { font-size: 19px; }
+#ui-font-license p { font-size: 14px; line-height: 1.7; }
+#ui-font-license pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.7 var(--font-ui); color: var(--text); }
+@media (max-width: 650px) {
+  #ui-appearance-dialog, #ui-font-license { padding: 16px; }
+  #ui-font-list { grid-template-columns: 1fr; }
+  .ui-color-row { grid-template-columns: 1fr 40px 105px; }
+  .ui-color-save { grid-column: 2; }
+  .ui-color-reset { grid-column: 3; }
+}

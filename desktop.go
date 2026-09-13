@@ -317,6 +317,8 @@ func (d *Desktop) ChooseAsset(kind string) (*app.ManagedAsset, error) {
 	switch kind {
 	case "font":
 		title, label, pattern = "添加终端字体", "字体文件", "*.ttf;*.otf;*.woff;*.woff2"
+	case "ui-font":
+		title, label, pattern = "导入界面字体（重启后生效）", "字体文件", "*.ttf;*.otf;*.woff;*.woff2"
 	case "background":
 		title, label, pattern = "添加终端背景", "背景图片", "*.png;*.jpg;*.jpeg;*.webp"
 	default:

@@ -107,7 +107,7 @@ func terminalStartupFixture(t *testing.T, blocked string) (*App, *Session, strin
 					case "exec":
 						var command struct{ Command string }
 						_ = ssh.Unmarshal(request.Payload, &command)
-						if blocked == "exec" && strings.HasPrefix(command.Command, "exec ") {
+						if blocked == "exec" && strings.Contains(command.Command, "--rcfile") {
 							mark()
 							continue
 						}

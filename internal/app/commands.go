@@ -10,11 +10,12 @@ import (
 )
 
 type QuickCommand struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Group string `json:"group"`
-	Body  string `json:"body"`
-	Color string `json:"color"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Group    string `json:"group"`
+	Body     string `json:"body"`
+	Color    string `json:"color"`
+	AppendCR bool   `json:"appendCR"`
 }
 
 // Groups have their own collection so an empty group survives command deletion
@@ -90,7 +91,7 @@ func (s *Store) SaveCommand(command QuickCommand) (QuickCommand, error) {
 		return QuickCommand{}, err
 	}
 	command.Body = strings.ReplaceAll(strings.ReplaceAll(command.Body, "\r\n", "\n"), "\r", "\n")
-	if command.Name == "" || len(command.Name) > 100 || strings.TrimSpace(command.Body) == "" || len(command.Body) > 65536 || strings.ContainsRune(command.Body, 0) {
+	if command.Name == "" || len(command.Name) > 100 || strings.TrimSpace(command.Body) == "" || len(command.Body) > 65536 || strings.ContainsFunc(command.Body, func(r rune) bool { return unicode.IsControl(r) && r != '\n' && r != '\t' }) {
 		return QuickCommand{}, errors.New("请填写名称和命令内容（命令最多 64 KB）")
 	}
 	switch command.Color {

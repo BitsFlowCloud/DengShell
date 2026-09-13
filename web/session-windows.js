@@ -40,7 +40,7 @@
    await waitForBarrier(state,id);
    await new Promise(resolve=>state.term.write('',resolve));
    await window.DengCommandHistory.flush();
-   const clientState={stats:state.stats,chart:state.chart,latency:state.latency,networkInterface:state.networkInterface,networkStats:state.networkStats,interfaceCharts:[...(state.interfaceCharts||new Map())],shellIntegration:state.shellIntegration,promptUsername:state.promptUsername,promptHostname:state.promptHostname,hookInstalled:state.hookInstalled,terminalRuntime:DengTerminalSnapshot.capture(state.term)};
+   const clientState={stats:state.stats,chart:state.chart,latency:state.latency,networkInterface:state.networkInterface,networkStats:state.networkStats,interfaceCharts:[...(state.interfaceCharts||new Map())],shellIntegration:state.shellIntegration,promptUsername:state.promptUsername,promptHostname:state.promptHostname,terminalDirectory:state.terminalDirectory,terminalRuntime:DengTerminalSnapshot.capture(state.term)};
    const snapshot={sessionId:state.id,nonce:id,terminal:state.serialize.serialize(),cols:state.term.cols,rows:state.term.rows,cwd:state.cwd,follow:state.follow,clientState};
    if(!target&&native()?.DetachWindow)await native().DetachWindow(snapshot);
    else {

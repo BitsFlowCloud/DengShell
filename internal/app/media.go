@@ -38,7 +38,7 @@ type AssetContent struct {
 
 func assetLimit(kind string) (int64, error) {
 	switch kind {
-	case "font":
+	case "font", "ui-font":
 		return maxFontBytes, nil
 	case "background":
 		return maxBackgroundBytes, nil
@@ -227,6 +227,9 @@ func (s *Store) DeleteAsset(id string) error {
 	s.config.Appearance = cloneAppearance(s.config.Appearance)
 	delete(s.config.Appearance.FontColors, id)
 	delete(s.config.Appearance.FontBold, id)
+	if s.config.Appearance.UIFontID == id {
+		s.config.Appearance.UIFontID = defaultUIFontID
+	}
 	if s.config.Appearance.FontID == id {
 		s.config.Appearance.FontID = defaultAppearance().FontID
 	}
@@ -291,7 +294,7 @@ func (a *App) importAssetHTTP(w http.ResponseWriter, r *http.Request) {
 
 func validateAsset(kind, filename string, data []byte) (string, error) {
 	ext := strings.ToLower(filepath.Ext(filename))
-	if kind == "font" {
+	if kind == "font" || kind == "ui-font" {
 		if ext != ".ttf" && ext != ".otf" && ext != ".woff" && ext != ".woff2" {
 			return "", errors.New("字体支持 TTF、OTF、WOFF、WOFF2 文件")
 		}

@@ -41,7 +41,7 @@ func (s *Session) savePromptStyle(ctx context.Context, style PromptStyle) (map[s
 	style.UsernameColor, style.HostnameColor = strings.ToLower(style.UsernameColor), strings.ToLower(style.HostnameColor)
 	if s.promptStylePath == "" {
 		s.promptUsernameColor, s.promptHostnameColor = style.UsernameColor, style.HostnameColor
-		return map[string]any{"supported": false, "deferred": true, "message": "颜色已保存；需要受支持的 Bash/Zsh 提示符集成，下次连接时应用"}, nil
+		return map[string]any{"supported": false, "deferred": true, "message": "颜色已保存；需要 Bash/Zsh/Fish 提示符集成，下次连接时应用"}, nil
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()

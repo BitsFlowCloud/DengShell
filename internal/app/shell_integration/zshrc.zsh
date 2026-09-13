@@ -1,6 +1,7 @@
 # Loaded from the session's temporary ZDOTDIR after the user's ordinary rc file.
 __dengshell_nonce='@DENGSHELL_NONCE@'
 __dengshell_can_encode=0
+__dengshell_last_cwd=''
 command -v base64 >/dev/null 2>&1 && __dengshell_can_encode=1
 __dengshell_before_command() {
     local ignore_space=${options[histignorespace]}
@@ -22,6 +23,15 @@ __dengshell_apply_prompt_style() { :; }
 
 __dengshell_prompt() {
     __dengshell_apply_prompt_style
+    if [[ "$__dengshell_last_cwd" != "$PWD" && "$__dengshell_can_encode" == 1 ]]; then
+        local encoded
+        encoded=$(builtin printf '%s' "$PWD" | command base64)
+        if [[ -n "$encoded" ]]; then
+            encoded=${encoded//$'\n'/}; encoded=${encoded//$'\r'/}
+            builtin printf '\033]777;DengShell;cwd;%s;%s\007' "$__dengshell_nonce" "$encoded"
+            __dengshell_last_cwd=$PWD
+        fi
+    fi
     builtin printf '\033]777;DengShell;prompt;%s\007' "$__dengshell_nonce"
 }
 preexec_functions+=(__dengshell_before_command)

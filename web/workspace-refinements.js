@@ -403,9 +403,11 @@ async function cancelDiagnostic() {
 function requestQuit() {
   if ($('#exit-dialog').open) return;
   if ([...sessions.values()].some(state=>state.detaching||state.handoffProvisional||state.ownershipUncertain)) { native()?.CancelQuit?.(); toast('正在交接终端，请待独立窗口打开后再关闭'); return; }
+  if (window.DengTextEditors?.savingCount()) { native()?.CancelQuit?.(); toast('远程文件正在保存，请等待完成后退出'); return; }
+  const unsaved = window.DengTextEditors?.unsavedCount() || 0;
   const count = [...sessions.values()].filter(state => state.connected).length;
   const transfers = [...localTasks.values()].filter(task => ['queued','uploading'].includes(task.status)).length;
-  $('#exit-description').textContent = [count ? `将关闭当前窗口，断开其中 ${count} 个 SSH 会话。其他独立窗口会保持运行。` : '确认关闭当前窗口。其他独立窗口会保持运行。', transfers ? `${transfers} 个传输任务尚未完成。` : ''].filter(Boolean).join(' ');
+  $('#exit-description').textContent = [count ? `将关闭当前窗口，断开其中 ${count} 个 SSH 会话。其他独立窗口会保持运行。` : '确认关闭当前窗口。其他独立窗口会保持运行。', transfers ? `${transfers} 个传输任务尚未完成。` : '', unsaved ? `${unsaved} 个远程文件有未保存的修改，退出会丢弃这些修改。` : ''].filter(Boolean).join(' ');
   $('#exit-dialog').showModal(); $('#cancel-exit').focus();
 }
 async function initializeQuitConfirmation() {

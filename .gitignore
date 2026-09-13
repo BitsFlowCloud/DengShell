@@ -45,3 +45,6 @@ __pycache__/
 *~
 .DS_Store
 Thumbs.db
+
+*.pkg.tar.zst
+/finalshell_oot_pot/

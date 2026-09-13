@@ -1,0 +1,68 @@
+{
+  "applicationBuild": 20260914026,
+  "windows": {
+    "machine": "x86_64",
+    "subsystem": "Windows GUI",
+    "portableArchiveIntegrity": true,
+    "installerExtractedExecutableMatches": true,
+    "upxIntegrity": true,
+    "realWindowsRuntimeTested": false
+  },
+  "cleanSourceAndDistribution": true,
+  "fontLicenseFiles": 5,
+  "embeddedAssetsMatchSource": true,
+  "checksumsPassed": true,
+  "nativeLinuxDistributions": 6,
+  "websiteLocalDownloadLinks": 7,
+  "updateSignaturesVerified": true,
+  "linuxPackageTests": [
+    {
+      "distribution": "ubuntu22",
+      "format": "deb",
+      "installedExecutableSHA256": "6e62807e2543198e5f4566271a7f9a3061953c9aee49cee126beff51cdb80e80",
+      "nativeFrontendReady": true,
+      "launcherHelpPassed": true,
+      "uninstallPreservesUserData": true
+    },
+    {
+      "distribution": "debian12",
+      "format": "deb",
+      "installedExecutableSHA256": "6e62807e2543198e5f4566271a7f9a3061953c9aee49cee126beff51cdb80e80",
+      "nativeFrontendReady": true,
+      "launcherHelpPassed": true,
+      "uninstallPreservesUserData": true
+    },
+    {
+      "distribution": "ubuntu24",
+      "format": "deb",
+      "installedExecutableSHA256": "6e62807e2543198e5f4566271a7f9a3061953c9aee49cee126beff51cdb80e80",
+      "nativeFrontendReady": true,
+      "launcherHelpPassed": true,
+      "uninstallPreservesUserData": true
+    },
+    {
+      "distribution": "fedora43",
+      "format": "rpm",
+      "installedExecutableSHA256": "6e62807e2543198e5f4566271a7f9a3061953c9aee49cee126beff51cdb80e80",
+      "nativeFrontendReady": true,
+      "launcherHelpPassed": true,
+      "uninstallPreservesUserData": true
+    },
+    {
+      "distribution": "opensuse",
+      "format": "rpm",
+      "installedExecutableSHA256": "6e62807e2543198e5f4566271a7f9a3061953c9aee49cee126beff51cdb80e80",
+      "nativeFrontendReady": true,
+      "launcherHelpPassed": true,
+      "uninstallPreservesUserData": true
+    },
+    {
+      "distribution": "arch",
+      "format": "arch",
+      "installedExecutableSHA256": "6e62807e2543198e5f4566271a7f9a3061953c9aee49cee126beff51cdb80e80",
+      "nativeFrontendReady": true,
+      "launcherHelpPassed": true,
+      "uninstallPreservesUserData": true
+    }
+  ]
+}

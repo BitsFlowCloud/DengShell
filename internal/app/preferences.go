@@ -12,6 +12,8 @@ import (
 // Appearance is stored alongside connection settings, so native and browser
 // windows use the same selection and custom assets survive application upgrades.
 type Appearance struct {
+	UIFontID            string                     `json:"uiFontId"`
+	UITextColors        map[string]string          `json:"uiTextColors"`
 	FontID              string                     `json:"fontId"`
 	FontColors          map[string]string          `json:"fontColors,omitempty"`
 	FontBold            map[string]bool            `json:"fontBold"`
@@ -38,7 +40,7 @@ type Appearance struct {
 }
 
 func defaultAppearance() Appearance {
-	return Appearance{FontID: "builtin:jetbrains-mono", FontColors: map[string]string{}, FontBold: map[string]bool{}, ChartStyles: map[string]ChartLineStyle{}, BackgroundID: "builtin:none", BackgroundOpacity: .42, BackgroundVersion: 2, UIScale: 1, TerminalFontSize: 14, StartupAnimation: true, Theme: "system", MonitorSide: "left", FilesPosition: "bottom", MinimizeAction: "ask", Layout: map[string]json.RawMessage{}}
+	return Appearance{UIFontID: defaultUIFontID, UITextColors: map[string]string{}, FontID: "builtin:jetbrains-mono", FontColors: map[string]string{}, FontBold: map[string]bool{}, ChartStyles: map[string]ChartLineStyle{}, BackgroundID: "builtin:none", BackgroundOpacity: .42, BackgroundVersion: 2, UIScale: 1, TerminalFontSize: 14, StartupAnimation: true, Theme: "system", MonitorSide: "left", FilesPosition: "bottom", MinimizeAction: "ask", Layout: map[string]json.RawMessage{}}
 }
 
 // Old releases combined 18% image opacity with a dark multiply tint. Keep
@@ -58,6 +60,12 @@ func (value *Appearance) UnmarshalJSON(data []byte) error {
 			next.BackgroundOpacity = .42
 		}
 		next.BackgroundVersion = 2
+	}
+	if next.UIFontID == "" {
+		next.UIFontID = defaultUIFontID
+	}
+	if next.UITextColors == nil {
+		next.UITextColors = map[string]string{}
 	}
 	if next.FontColors == nil {
 		next.FontColors = map[string]string{}
@@ -80,6 +88,11 @@ func (value *Appearance) UnmarshalJSON(data []byte) error {
 }
 
 func cloneAppearance(value Appearance) Appearance {
+	uiColors := make(map[string]string, len(value.UITextColors))
+	for key, color := range value.UITextColors {
+		uiColors[key] = color
+	}
+	value.UITextColors = uiColors
 	styles := make(map[string]ChartLineStyle, len(value.ChartStyles))
 	for id, style := range value.ChartStyles {
 		styles[id] = style
@@ -119,6 +132,12 @@ func (s *Store) SaveAppearance(value Appearance) (Appearance, error) {
 
 // Caller holds s.mu across reading, validation and committing the new value.
 func (s *Store) saveAppearanceLocked(value Appearance) (Appearance, error) {
+	if value.UIFontID == "" {
+		value.UIFontID = defaultUIFontID
+	}
+	if err := validateUIAppearance(value, s.config.Assets); err != nil {
+		return Appearance{}, err
+	}
 	if err := validateChartStyles(value.ChartStyles); err != nil {
 		return Appearance{}, err
 	}
@@ -174,6 +193,9 @@ func (s *Store) saveAppearanceLocked(value Appearance) (Appearance, error) {
 		return Appearance{}, errors.New("已保存的字体样式过多")
 	}
 	value = cloneAppearance(value)
+	for key, color := range value.UITextColors {
+		value.UITextColors[key] = strings.ToLower(color)
+	}
 	value.TerminalBold = false
 	value.BackgroundVersion = 2
 	for id, color := range value.FontColors {
@@ -291,6 +313,9 @@ func (a *App) registerSettingsHTTP(mux *http.ServeMux) {
 			return
 		}
 		value, err := a.store.saveFrontendAppearance(input)
+		if err == nil {
+			a.uiFontRuntime()
+		}
 		respond(w, value, err)
 	})
 	mux.HandleFunc("POST /api/proxies", func(w http.ResponseWriter, r *http.Request) {

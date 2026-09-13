@@ -81,7 +81,7 @@ def package(args):
     if any(p.name not in ['docs', 'licenses', 'support'] for p in (stage / 'data').iterdir()):
         raise SystemExit('打包输入含非发行资源；请排除用户配置、密钥与导入素材。')
     info = inspect(stage / 'dengshell')
-    build_info_path = ROOT / 'build/linux/native/build-info.json'
+    build_info_path = args.build_info or ROOT / 'build/linux/native/build-info.json'
     if not build_info_path.exists():
         raise SystemExit('缺少基线构建记录，请先运行 scripts/build-linux-release.sh。')
     build_info = json.loads(build_info_path.read_text())
@@ -104,7 +104,7 @@ def package(args):
         copy(ROOT / 'build/dengshell.png', support / 'dengshell.png')
         copy(ROOT / 'build/linux/README.txt', portable / 'data/docs/Linux-安装说明.txt')
         copy(build_info_path, portable / 'data/docs/linux-build-info.json')
-        if (ROOT / 'build/linux/COMPATIBILITY.json').exists():
+        if (ROOT / 'build/linux/COMPATIBILITY.json').exists() and json.loads((ROOT / 'build/linux/COMPATIBILITY.json').read_text()).get('testedExecutableSHA256') == info['sha256']:
             copy(ROOT / 'build/linux/COMPATIBILITY.json', portable / 'data/docs/Linux-兼容验证.json')
         if (ROOT / 'build/linux/WEBKIT-FONT-VALIDATION.json').exists() and json.loads((ROOT / 'build/linux/WEBKIT-FONT-VALIDATION.json').read_text()).get('testedExecutableSHA256') == info['sha256']:
             copy(ROOT / 'build/linux/WEBKIT-FONT-VALIDATION.json', portable / 'data/docs/WebKit-字体验证.json')
@@ -177,11 +177,14 @@ cp -a /work/rpmroot/. %{{buildroot}}/
                                    '-bb', '/work/rpmbuild/SPECS/dengshell.spec'], check=True)
         rpm = out / 'DengShell-linux-x64.rpm'
         copy(next((rpmdir / 'RPMS').rglob('*.rpm')), rpm)
-        artifacts = {p.name: {'bytes': p.stat().st_size, 'sha256': sha(p)} for p in [tar, deb, rpm]}
+        subprocess.run(['python3', str(ROOT / 'scripts/package-arch.py'), '--root', str(rpmroot), '--version', args.version, '--release', args.release, '--output', str(out)], check=True)
+        arch = out / 'DengShell-linux-x64.pkg.tar.zst'
+        artifacts = {p.name: {'bytes': p.stat().st_size, 'sha256': sha(p)} for p in [tar, deb, rpm, arch]}
         manifest = {'schemaVersion': 1, 'version': args.version, 'release': args.release,
                     'architecture': 'amd64', 'executable': info, 'artifacts': artifacts,
                     'formats': {'up.deb': 'Debian 12+, Ubuntu 22.04+ and compatible derivatives',
                                 'DengShell-linux-x64.rpm': 'Fedora/openSUSE with glibc >= 2.35 and WebKitGTK 4.1',
+                                'DengShell-linux-x64.pkg.tar.zst': 'Arch Linux / compatible pacman x86-64 desktops',
                                 'DengShell-linux-x64.tar.gz': 'glibc x86-64 desktops with GTK3 and WebKitGTK 4.1'},
                     'unsupported': ['ARM/32-bit', 'musl/Alpine', 'Ubuntu 20.04/Debian 11', 'RHEL/Rocky/AlmaLinux 8/9 default repositories']}
         (out / 'linux-packages.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')

@@ -160,6 +160,7 @@ func parseUtilityInspection(output string) (utilityInspection, error) {
 	section := ""
 	complete := false
 	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSuffix(line, "\r")
 		if strings.HasPrefix(line, "__DS_") && strings.HasSuffix(line, "__") {
 			section = strings.TrimSuffix(strings.TrimPrefix(line, "__DS_"), "__")
 			if section == "END" {
@@ -363,5 +364,5 @@ func utilitySwapFilesystemSupported(fs string) bool {
 
 func wrapUtilityScript(script string) string {
 	encoded := base64.StdEncoding.EncodeToString([]byte(script))
-	return "( dengshell_utility_script=$(printf '%s' " + terminalQuote(encoded) + " | base64 -d) || exit $?; if [ \"$(id -u)\" = 0 ]; then exec sh -c \"$dengshell_utility_script\"; elif command -v sudo >/dev/null 2>&1; then exec sudo sh -c \"$dengshell_utility_script\"; else printf '%s\\n' '需要 root 或 sudo 权限。' >&2; exit 1; fi )"
+	return posixShellCommand("dengshell_utility_script=$(printf '%s' " + terminalQuote(encoded) + " | base64 -d) || exit $?; if [ \"$(id -u)\" = 0 ]; then exec /bin/sh -c \"$dengshell_utility_script\"; elif command -v sudo >/dev/null 2>&1; then exec sudo /bin/sh -c \"$dengshell_utility_script\"; else printf '%s\\n' '需要 root 或 sudo 权限。' >&2; exit 1; fi")
 }
