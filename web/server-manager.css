@@ -106,3 +106,20 @@
 .server-folder-colored:hover{filter:brightness(.97)}
 .group-color-field{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:12px 0}
 .group-color-field label{margin:0}.group-color-field input[type=color]{width:36px;height:30px;padding:2px;flex:none}.group-color-field span{padding:5px 9px;border-radius:5px;font-size:12px}.group-color-field button{margin-left:auto;font-size:12px;padding:6px}
+
+/* Keep both scrolling panes usable in short windows and at enlarged UI scales. */
+.connections-drawer.server-manager-compact{padding:12px 12px 10px}
+.server-manager-compact .drawer-heading .eyebrow{display:none}
+.server-manager-compact .drawer-heading h2{font-size:18px;margin:4px 0 10px}
+.server-manager-compact .server-manager-tabs button{padding:5px 4px}
+.connections-drawer.server-manager-compact .connection-search{padding:6px 10px;margin:6px 0}
+.server-manager-compact .connection-search input{padding:0;min-height:20px}
+.server-manager-compact .server-selection-bar{padding-bottom:6px}
+.server-manager-compact .server-selection-bar button{padding:5px 8px}
+.server-manager-compact #server-explorer-heading{padding:7px 9px 5px}
+.server-manager-compact #server-explorer-path{max-height:36px;line-height:1.5;margin:3px 0 0}
+.server-manager-compact #server-descendants-label{margin-top:3px}
+.server-manager-compact .server-explorer-details{display:none}
+.server-manager-compact .server-manager-create{padding-top:6px;margin-top:0}
+.server-manager-compact .server-manager-create #new-connection{padding:7px 9px}
+.server-manager-compact .server-manager-create #new-group{padding:7px 5px}

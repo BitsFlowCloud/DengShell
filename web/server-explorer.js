@@ -124,6 +124,8 @@ function openServerProfileMenu(profile, actions, anchor) {
   menu.querySelector('button')?.focus();
 }
 function fitServerExplorer() {
+  const drawer = $('#connections-drawer');
+  if (drawer?.clientHeight) drawer.classList.toggle('server-manager-compact', drawer.clientHeight < 620);
   const body = $('#server-manager-body'); if (!body?.clientWidth || serverManager.tab !== 'servers') return;
   const maximum = Math.max(145, Math.min(520, body.clientWidth - 195)), width = Math.max(145, Math.min(serverManager.treeWidth, maximum));
   body.style.setProperty('--server-tree-width', `${width}px`);

@@ -31,6 +31,28 @@ try{
  await page.evaluate(()=>document.documentElement.dataset.theme='light');
  await page.evaluate(id=>openServerGroupEditor(id),groups[2].id);await page.$eval('#group-background-color',e=>{e.value='#b3d8e8';e.dispatchEvent(new Event('input',{bubbles:true}))});await page.click('#save-server-group');await page.waitForFunction(()=>!document.querySelector('#server-group-dialog').open);
  assert.equal((await api('/api/config')).groupNodes.find(g=>g.id===groups[2].id).backgroundColor,'#b3d8e8');checks.push('四级目录独立背景色、明暗主题对比度、选中边框、保存与 700px 窄列表');
+ // A short native window must leave real clickable space for connection rows.
+ await page.setViewport({width:768,height:560});
+ await page.waitForFunction(()=>innerHeight===560);
+ await page.evaluate(id=>chooseServerFolder(id),groups[2].id);
+ await page.waitForFunction(()=>document.querySelector('#server-explorer-title').textContent==='配置备份');
+ const listHeight=await page.$eval('#connection-groups',e=>e.getBoundingClientRect().height);
+ assert(listHeight>=120,`short window connection list has only ${listHeight}px`);
+ await page.click(`[data-profile-id="${profiles[0].id}"] .connection-card`);
+ assert.equal(await page.$eval('#open-selected-servers',e=>e.textContent),'打开所选 (1)');
+ await page.click(`[data-profile-id="${profiles[0].id}"] .server-profile-more`);
+ assert.equal(await page.$eval('#server-group-menu',e=>e.hidden),false);
+ await page.screenshot({path:stage+'/groups-short-window.png'});
+ await page.evaluate(()=>closeServerGroupMenu());
+ await page.setViewport({width:1280,height:900});
+ await page.evaluate(()=>{appearance.uiScale=1.6;applyUIScale()});
+ await page.waitForFunction(()=>document.querySelector('#connections-drawer').classList.contains('server-manager-compact'));
+ assert(await page.$eval('#connection-groups',e=>e.getBoundingClientRect().height)>=120);
+ await page.click(`[data-profile-id="${profiles[0].id}"] .connection-card`);
+ assert.equal(await page.$eval('#open-selected-servers',e=>e.textContent),'打开所选 (1)');
+ await page.evaluate(()=>{appearance.uiScale=1;applyUIScale()});
+ await page.setViewport({width:1440,height:1000});
+ checks.push('768×560 矮窗口保留可点击连接列表，单击选择和管理菜单正常');
  const startDelete=async()=>{await page.evaluate(id=>{window.qaDelete=deleteServerGroupTree(id).catch(e=>toast(e.message))},groups[0].id);await page.waitForSelector('#action-dialog[open]')};
  const confirm=async(step)=>{await page.waitForFunction(step=>document.querySelector('#action-title').textContent.includes(`${step} / 3`),{},step);await page.click('#action-confirm')};
  for(const step of [1,2,3]){await startDelete();for(let n=1;n<step;n++)await confirm(n);await page.waitForFunction(n=>document.querySelector('#action-title').textContent.includes(`${n} / 3`),{},step);await page.click('#action-cancel');await page.evaluate(()=>window.qaDelete);assert((await api('/api/config')).groupNodes.some(g=>g.id===groups[0].id))}
