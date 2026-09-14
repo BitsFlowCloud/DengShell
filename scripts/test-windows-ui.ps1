@@ -24,7 +24,7 @@ $menuType=New-Object System.Windows.Automation.PropertyCondition([System.Windows
 $actionType=New-Object System.Windows.Automation.OrCondition($buttonType,$menuType)
 function Buttons { @($root.FindAll([System.Windows.Automation.TreeScope]::Descendants,$actionType)) }
 function Find-Button([string]$Name){for($n=0;$n -lt 80;$n++){foreach($b in (Buttons)){if($b.Current.Name -eq $Name){return $b}};Start-Sleep -Milliseconds 100};throw "Native button unavailable: $Name"}
-function Invoke-Button([string]$Name){$b=Find-Button $Name;$r=$b.Current.BoundingRectangle;if($r.Width -le 0 -or $r.Height -le 0){throw "Button has no visible rectangle: $Name"};[DengMouse]::SetCursorPos([int]($r.X+$r.Width/2),[int]($r.Y+$r.Height/2))|Out-Null;[DengMouse]::mouse_event(2,0,0,0,[UIntPtr]::Zero);[DengMouse]::mouse_event(4,0,0,0,[UIntPtr]::Zero);Start-Sleep -Milliseconds 350}
+function Invoke-Button([string]$Name){$b=Find-Button $Name;$r=$b.Current.BoundingRectangle;if($r.Width -le 0 -or $r.Height -le 0){throw "Button has no visible rectangle: $Name"};Write-Host ("Native click: {0}; rectangle={1}; offscreen={2}; desktop={3}" -f $Name,$r,$b.Current.IsOffscreen,[System.Windows.Forms.SystemInformation]::VirtualScreen);[DengMouse]::SetCursorPos([int]($r.X+$r.Width/2),[int]($r.Y+$r.Height/2))|Out-Null;[DengMouse]::mouse_event(2,0,0,0,[UIntPtr]::Zero);[DengMouse]::mouse_event(4,0,0,0,[UIntPtr]::Zero);Start-Sleep -Milliseconds 350}
 try{
  Invoke-Button '管理服务器'
  Invoke-Button '1级目录，QA 一级目录，2个连接'
@@ -44,5 +44,8 @@ try{
  Write-Host 'PASS: native Windows directory navigation, single-click selection and context menu.'
 } catch {
  (Buttons)|ForEach-Object {$_.Current.Name}|Set-Content -Encoding UTF8 (Join-Path $Output 'windows-ui-controls.txt')
+ (Buttons)|ForEach-Object {@{name=$_.Current.Name;rect=$_.Current.BoundingRectangle.ToString();offscreen=$_.Current.IsOffscreen}}|ConvertTo-Json|Set-Content -Encoding UTF8 (Join-Path $Output 'windows-ui-geometry.json')
+ $r=[System.Windows.Forms.SystemInformation]::VirtualScreen;$bitmap=New-Object System.Drawing.Bitmap($r.Width,$r.Height);$g=[System.Drawing.Graphics]::FromImage($bitmap)
+ try{$g.CopyFromScreen($r.X,$r.Y,0,0,$bitmap.Size);$bitmap.Save((Join-Path $Output 'windows-failure-desktop.png'),[System.Drawing.Imaging.ImageFormat]::Png)}finally{$g.Dispose();$bitmap.Dispose()}
  throw
 }
