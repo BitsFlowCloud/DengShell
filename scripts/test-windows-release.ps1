@@ -44,10 +44,10 @@ try{
  $legacy=Join-Path $qaRoot 'legacy';Expand-Archive $LegacyZip $legacy;$oldExe=(Get-ChildItem $legacy -Filter DengShell.exe -Recurse|Select-Object -First 1).FullName
  $build=[uint64]([regex]::Match((Get-Content internal/app/updates.go -Raw),'const ApplicationBuild uint64 = (\d+)').Groups[1].Value)
  foreach($mode in @('legacy','current')){
-  $case=Join-Path $qaRoot $mode;New-Item -ItemType Directory $case | Out-Null;$target=Join-Path $case 'DengShell.exe';Copy-Item $(if($mode -eq 'legacy'){$oldExe}else{$exe}) $target
+  $case=Join-Path $qaRoot ('upgrade-'+$mode);New-Item -ItemType Directory $case | Out-Null;$target=Join-Path $case 'DengShell.exe';Copy-Item $(if($mode -eq 'legacy'){$oldExe}else{$exe}) $target
   $caseConfig=Join-Path $case 'data';Seed-QA $caseConfig;$running=Start-Native $target $caseConfig;Visible-QA $running "$mode initial frontend visible"
   $handle=[DengQA]::Find($running.Id);[DengQA]::ShowWindow($handle,6)|Out-Null;Wait-QA {![DengQA]::IsWindowVisible($handle) -or [DengQA]::IsIconic($handle)} 'minimized or hidden before update';Start-Sleep -Seconds 2
-  $wasTray=![DengQA]::IsWindowVisible($handle);$report["$mode-beforeUpdateHidden"]=$wasTray
+  $wasTray=![DengQA]::IsWindowVisible($handle);$report["$mode-beforeUpdateHidden"]=$wasTray;Check-QA $wasTray "$mode minimized into system tray before update"
   $job=Join-Path $case 'update-job';New-Item -ItemType Directory $job|Out-Null;$staged=Join-Path $job 'up.exe';Copy-Item $exe $staged;$helper=Join-Path $job 'helper.exe';Copy-Item $target $helper
   $plan=@{schema=2;build=$(if($mode -eq 'legacy'){$build}else{$build+1});version='v0.01';parentPID=$running.Id;target=$target;staged=$staged;configDir=$caseConfig;oldSHA256=(Get-FileHash $target).Hash.ToLowerInvariant();packageSHA256=$expected;executableSHA256=$expected;platform='windows-amd64'}
   $planFile=Join-Path $job 'plan.json';[IO.File]::WriteAllText($planFile,($plan|ConvertTo-Json),[Text.UTF8Encoding]::new($false))
@@ -55,6 +55,7 @@ try{
   Wait-QA {Test-Path (Join-Path $job 'ready')} "$mode helper validates actual packed update"
   Remove-Item (Join-Path $caseConfig 'runtime-success-v1-windows-amd64') -ErrorAction SilentlyContinue;Stop-QA $running
   Wait-QA {Test-Path (Join-Path $caseConfig 'update-result.json')} "$mode helper completes replacement"
+  Check-QA ((Get-Content (Join-Path $caseConfig 'update-result.json') -Raw | ConvertFrom-Json).status -eq 'installed') "$mode update reports successful installation"
   Wait-QA {Test-Path (Join-Path $caseConfig 'runtime-success-v1-windows-amd64')} "$mode updated native frontend ready"
   $running=Get-Process DengShell -ErrorAction SilentlyContinue|Where-Object {$_.Path -eq $target}|Select-Object -First 1;Check-QA ($null -ne $running) "$mode automatically restarts program";Visible-QA $running "$mode restarted main window visible and not minimized"
   Check-QA ((Get-FileHash $target).Hash.ToLowerInvariant() -eq $expected) "$mode update target hash matches release";Check-QA ((Get-Content (Join-Path $caseConfig 'keep-user-data.txt')).Trim() -eq 'preserve-local-fixture') "$mode update preserves config directory";Stop-QA $running
