@@ -59,15 +59,14 @@ window.DengUIAppearance = (() => {
   function renderStatus() {
     if (!dialog) return;
     const desired = appearance.uiFontId || defaultID, pending = !available(desired);
-    dialog.querySelector('#ui-font-status').textContent = pending
-      ? '已保存字体选择。请关闭并重新启动 DengShell 后使用；当前界面继续使用原字体。'
-      : `当前界面字体：${fonts().find(f => f.id === activeID)?.name || 'IBM Plex Sans SC'}。内置和已下载字体可直接切换并保存。`;
+    dialog.querySelector('#ui-font-status').hidden = !pending;
+    dialog.querySelector('#ui-font-status').textContent = pending ? '已保存选择，重启后启用；当前继续使用原字体。' : '';
     dialog.querySelector('#ui-font-status').classList.toggle('pending', pending);
     for (const card of dialog.querySelectorAll('[data-ui-font-id]')) {
       const selected = card.dataset.uiFontId === desired;
       card.querySelector('.ui-font-choice').setAttribute('aria-pressed', String(selected));
       card.classList.toggle('selected', selected);
-      card.querySelector('.ui-font-state').textContent = selected ? pending ? '已选择 · 重启后生效' : '已选择 ✓' : available(card.dataset.uiFontId) ? '点击使用' : '需重启';
+      card.querySelector('.ui-font-state').textContent = selected ? pending ? '重启后使用' : '正在使用 ✓' : available(card.dataset.uiFontId) ? '点击使用' : '需重启';
     }
   }
   async function selectFont(font, stillWanted = () => true) {
@@ -166,7 +165,7 @@ window.DengUIAppearance = (() => {
     dialog.innerHTML = `<div class="dialog-heading appearance-drag-handle" id="ui-font-drag-handle" tabindex="0" aria-label="拖动字体设置，方向键移动"><div><h2 id="ui-appearance-title">字体设置 · 界面字体</h2><p>调整软件界面的标题、正文和说明文字。</p></div><button type="button" class="icon-button" id="close-ui-appearance" aria-label="关闭界面外观设置"><svg><use href="#i-close"/></svg></button></div>
       <nav class="font-kind-tabs" aria-label="字体设置分类"><button type="button" aria-pressed="true">界面字体</button><button type="button" id="switch-shell-fonts" aria-pressed="false">Shell 字体</button></nav>
 
-      <div class="font-library-entry"><span>预览更多字体，下载后立即使用</span><button type="button" class="upload-button" id="online-ui-fonts">在线字体</button></div><div class="appearance-body"><section aria-labelledby="ui-font-title"><div class="ui-font-heading"><h3 id="ui-font-title">已安装字体</h3><button type="button" class="upload-button" id="import-ui-font">导入字体…</button></div><p>内置 IBM Plex Sans SC。在线下载后可直接切换；手动导入支持 TTF / OTF / WOFF / WOFF2（最大 64 MiB），重启软件后启用。</p><p id="ui-font-status" role="status"></p><div id="ui-font-list"></div><input type="file" id="ui-font-picker" accept=".ttf,.otf,.woff,.woff2" hidden></section><details class="ui-text-settings"><summary id="ui-text-title">文字颜色 · 浅色 / 深色</summary><p>颜色变化立即预览并自动保存。</p><div id="ui-text-colors"></div></details></div>`;
+      <div class="font-library-entry"><button type="button" class="upload-button" id="online-ui-fonts">在线字体</button></div><div class="appearance-body"><section aria-labelledby="ui-font-title"><div class="ui-font-heading"><h3 id="ui-font-title">已安装字体</h3><button type="button" class="upload-button" id="import-ui-font">导入字体…</button></div><p>下载后即用；手动导入需重启。支持 TTF / OTF / WOFF / WOFF2，最大 64 MiB。</p><p id="ui-font-status" role="status"></p><div id="ui-font-list"></div><input type="file" id="ui-font-picker" accept=".ttf,.otf,.woff,.woff2" hidden></section><details class="ui-text-settings"><summary id="ui-text-title">文字颜色 · 浅色 / 深色</summary><p>颜色变化立即预览并自动保存。</p><div id="ui-text-colors"></div></details></div>`;
     document.body.append(dialog);
     initializeAppearancePalette(dialog, dialog.querySelector('#ui-font-drag-handle'));
     licenseDialog = document.createElement('dialog'); licenseDialog.id = 'ui-font-license';

@@ -13,6 +13,8 @@ const (
 	networkSampleInterval = time.Second
 	networkHistoryWindow  = 60 * time.Second
 	networkHistoryLimit   = 62
+	networkReadTimeout    = 10 * time.Second
+	networkMaximumElapsed = 15 * time.Second
 )
 
 // History omits discovery metadata and retains only actual observations.
@@ -143,9 +145,9 @@ func applyNetworkSnapshotRates(current, previous *rawStats) float64 {
 		return 0
 	}
 	seconds := current.Uptime - previous.Uptime
-	// A stalled sampler or transport resumes with a fresh baseline rather than
-	// drawing a long-window average as a one-second observation.
-	if seconds <= 0 || seconds > 3*networkSampleInterval.Seconds() {
+	// A delayed but successful observation still measures a real counter delta.
+	// Expose its actual averaging interval; only a prolonged pause resets it.
+	if seconds <= 0 || seconds > networkMaximumElapsed.Seconds() {
 		return 0
 	}
 	applyInterfaceRates(current, previous, seconds)
@@ -227,7 +229,7 @@ func (s *Session) collectNetworkSnapshot(ctx context.Context, read func(context.
 	}
 	s.networkNextSampleAt = advanceSampleDue(s.networkNextSampleAt, now, networkSampleInterval)
 	s.networkMu.Unlock()
-	readCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	readCtx, cancel := context.WithTimeout(ctx, networkReadTimeout)
 	data, err := read(readCtx, networkMonitorCommand)
 	cancel()
 	at := time.Now()

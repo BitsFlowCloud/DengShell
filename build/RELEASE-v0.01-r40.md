@@ -1,6 +1,6 @@
 # DengShell v0.01 R40
 
-全部平台构建号：20260915041。累计更新见 [R30～R40 更新日志](../CHANGELOG.md)。
+全部平台构建号：20260915042。累计更新见 [R30～R40 更新日志](../CHANGELOG.md)。
 
 本次提供 Windows x64 安装版与绿色 ZIP，Linux x64 DEB、RPM、pacman 与通用安装包，以及源码 ZIP。应用内置 IBM Plex Sans SC 和五款 Shell 字体；官网提供 20/30 款在线字体库。
 

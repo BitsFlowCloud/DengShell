@@ -35,6 +35,15 @@ document.querySelector('#library-preview-bold').click();
 if(getComputedStyle(document.querySelector('.library-live-preview')).fontWeight!=='700')throw Error('Bold preview did not update');
 await wait(1500);const preview=[...document.querySelectorAll('.library-live-preview')].some(x=>!x.hidden&&x.style.fontFamily.includes('Deng online preview'));
 if(uiCount!==20||shellCount!==30||!uiActive||!preview||Math.abs(narrow.han-2*narrow.latin)>.2)throw Error(JSON.stringify({uiCount,shellCount,uiActive,preview,narrow}));
+for(const d of document.querySelectorAll('dialog[open]'))d.close();
+await openAppearance('font');
+if([...document.querySelectorAll('#asset-list .asset-card')].some(c=>c.offsetHeight>145||c.scrollWidth>c.clientWidth+1))throw Error('Font card layout overflow');
+const entry=document.querySelector('#shell-font-online-entry').getBoundingClientRect(),button=document.querySelector('#online-shell-fonts').getBoundingClientRect();
+if(Math.abs(entry.left+entry.right-button.left-button.right)>2)throw Error('Online button not centered');
+ask({title:'WebKit modal regression'});await wait(50);toast('模态提示保持清晰');await wait(50);
+if(document.querySelector('#toast').parentElement.id!=='action-dialog')throw Error('Toast behind modal');
+const rect=document.querySelector('#toast').getBoundingClientRect();if(!rect.width||rect.top<0||rect.bottom>innerHeight)throw Error('Toast outside viewport');
+document.querySelector('#action-cancel').click();await wait(50);if(document.querySelector('#toast').parentElement!==document.body)throw Error('Toast stranded in closed modal');
 window.webkit.messageHandlers.qa.postMessage(JSON.stringify({passed:true,uiCount,shellCount,uiActive,preview,widths,narrow}));
 }catch(error){window.webkit.messageHandlers.qa.postMessage(JSON.stringify({passed:false,error:String(error),stack:error.stack,errors:window.__qaErrors,scripts:[...document.scripts].map(s=>s.src),body:document.body?.innerText?.slice(0,1200),url:location.href.split('#')[0],ready:document.readyState}));}})();'''
 def message(manager,result):

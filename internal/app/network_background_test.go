@@ -273,6 +273,35 @@ func TestNetworkBackgroundContextCancellationInterruptsRead(t *testing.T) {
 	}
 }
 
+func TestNetworkDelayedSuccessfulReadKeepsActualRate(t *testing.T) {
+	t.Parallel()
+	session, _, _ := backgroundNetworkSSHFixture(t, false, func(ctx context.Context, n int) ([]byte, error) {
+		if n == 2 {
+			select {
+			case <-time.After(3200 * time.Millisecond):
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+		return networkCounterFixture(100+float64(n)*5, uint64(n*500), uint64(n*1000)), nil
+	})
+	for i := 0; i < 2; i++ {
+		session.networkNextSampleAt = time.Time{}
+		if _, err := session.collectNetworkSnapshot(session.ctx, session.runNetworkMonitor); err != nil {
+			t.Fatal("delayed successful observation discarded", err)
+		}
+	}
+	session.networkMu.Lock()
+	defer session.networkMu.Unlock()
+	last := session.networkHistory[len(session.networkHistory)-1]
+	if last.ElapsedMilliseconds != 5000 || !last.Interfaces[0].Ready || last.Interfaces[0].RX != 100 || last.Interfaces[0].TX != 200 {
+		t.Fatalf("actual five-second average lost: %+v", last)
+	}
+	if session.ctx.Err() != nil {
+		t.Fatal("network observation killed SSH")
+	}
+}
+
 func TestNetworkBackgroundFailureRetainsHistoryAndRequiresFreshBaseline(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())

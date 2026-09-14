@@ -127,6 +127,11 @@ function renderCommandHistory() {
 function resizeCommandInput() { const input = $('#command-input'); input.style.height = 'auto'; input.style.height = `${Math.min(76, input.scrollHeight)}px`; }
 function openCommandHistory() { historySession = current(); $('#history-filter').value = ''; renderCommandHistory(); $('#history-dialog').showModal(); $('#history-filter').focus(); refreshGlobalCommandHistory().catch(error => toast(`命令历史刷新失败：${error.message || error}`)); }
 function compactDiskSize(bytes) { const unit = bytes >= 1024 ** 4 ? 'T' : 'G'; return `${(bytes / 1024 ** (unit === 'T' ? 4 : 3)).toFixed(1)}${unit}`; }
+function processMemoryText(process) {
+  if (!process.memoryReady || process.memoryEstimated || !Number.isSafeInteger(process.memory) || process.memory < 0) return '—';
+  for (const [power,unit] of [[4,'TiB'],[3,'GiB'],[2,'MiB'],[1,'KiB']]) if (process.memory >= 1024 ** power) return `${(process.memory / 1024 ** power).toFixed(2)} ${unit}`;
+  return `${process.memory} B`;
+}
 function processOrder(state = current()) { const saved = state?.processSort || readSaved('dengshell.workspace', {}).processSort; return { key: saved?.key === 'memory' ? 'memory' : 'cpu', ascending: false }; }
 function rememberProcessSample(state, stats) {
   const sample = stats?.processSample;
@@ -156,6 +161,7 @@ function renderProcesses(stats) {
     `窗口可见时自动采集并常驻显示前 5 个；约每 ${interval} 秒更新一次`,
     sampledAt ? `最近采样：${sampledAt}` : '尚未采集进程列表',
     sample ? `已读取 ${sample.readable} / 可见 ${sample.visible} 个进程${sample.unreadable ? `；${sample.unreadable} 个无权限或已退出` : ''}${sample.elapsedSeconds ? `；CPU 采样间隔 ${sample.elapsedSeconds.toFixed(2)} 秒` : ''}` : '',
+    '内存先用内核计数筛选候选，再独立精读 RSS；悬停数值可查看字节数及精读时间。候选排名不是全机同一时刻的精确内存快照。',
     attempted?.error || sample?.error || '',
   ].filter(Boolean).join('\n');
   $('#monitor-state').textContent = state?.connected ? '' : '待连接';
@@ -168,10 +174,15 @@ function renderProcesses(stats) {
   }
   const scroll = $('.process-table'), previousTop = scroll.scrollTop;
   $('#process-list').replaceChildren(...items.map(process => {
-    const row = node('tr'), memory = node('td', '', process.memoryReady ? `${process.memoryEstimated ? '≈ ' : ''}${prettySize(process.memory)}` : '—'), cpu = node('td', '', process.cpuReady ? `${process.cpu.toFixed(1)}%` : '—'), name = node('td', '', process.name);
+    const row = node('tr'), memory = node('td', '', processMemoryText(process)), cpu = node('td', '', process.cpuReady ? `${process.cpu.toFixed(2)}%` : '—'), name = node('td', '', process.name);
     row.dataset.pid = process.pid;
-    memory.title = !process.memoryReady ? '无法读取此进程的驻留内存' : process.memoryEstimated ? '内核驻留内存估算值；使用轻量采样，避免遍历所有进程的内存页影响服务器' : '当前驻留内存 RSS，读取自 /proc 的内存页统计';
-    cpu.title = process.cpuReady ? '采样间隔内的 CPU 占用；单核满载为 100%，多线程可超过 100%' : '等待同一进程的下一次采样';
+    memory.title = memory.textContent === '—' ? process.memoryError || '等待精确内存采样' : [
+      `驻留内存 RSS：${process.memory.toLocaleString('en-US')} 字节`,
+      `读取来源：${process.memorySource}`,
+      process.memorySampledAt ? `采样时间：${new Date(process.memorySampledAt).toLocaleString()}` : '',
+      process.memoryError || '',
+    ].filter(Boolean).join('\n');
+    cpu.title = process.cpuReady ? `${process.cpu.toFixed(4)}% · 根据内核累计 CPU 时间差计算\n单核满载为 100%，多线程可超过 100%；显示采样间隔内的平均占用` : '等待同一进程的下一次采样';
     name.title = `${process.name}${process.pid ? ` · PID ${process.pid}` : ''}`;
     row.append(memory,cpu,name); return row;
   }));
@@ -238,10 +249,10 @@ function trafficChartModel(samples, now = Date.now(), scale = null) {
 }
 function trafficSamplesContinuous(previous, point) {
   const gap = point.time - previous.time;
-  if (gap <= 0 || gap > 4000) return false;
+  if (gap <= 0 || gap > 15500) return false;
   const elapsed = point.elapsedMilliseconds;
   if (!Number.isFinite(elapsed)) return gap <= 1800;
-  if (elapsed <= 0 || elapsed > 3000) return false;
+  if (elapsed <= 0 || elapsed > 15000) return false;
   // The backend calculates each rate from the preceding remote uptime/counter
   // pair. Matching those same counters proves no observation was skipped here,
   // without mistaking a slow SSH response for an absent measurement. Check both
@@ -254,7 +265,7 @@ function trafficSamplesContinuous(previous, point) {
   });
   // Older detached-window snapshots have no counters. Allow bounded delivery
   // jitter only around an explicitly measured interval; never bridge long gaps.
-  return gap <= elapsed + 500;
+  return elapsed <= 3000 && gap <= elapsed + 500;
 }
 function trafficChartRuns(points, key, x, y) {
   const runs = []; let run = [], previous;
@@ -279,7 +290,7 @@ function renderTrafficChart(host, samples) {
   const element = (tag,attrs = {},text) => { const node = document.createElementNS('http://www.w3.org/2000/svg',tag); for (const [key,value] of Object.entries(attrs)) node.setAttribute(key,String(value)); if (text != null) node.textContent = text; return node; };
   host.setAttribute('viewBox',`0 0 ${width} ${height}`); host.replaceChildren(); host.dataset.scaleMax = axis?.max ?? ''; host.dataset.trafficUnit = axis?.unit || '';
   host.setAttribute('aria-label',`最近60秒网卡流量，上行和下行使用各自设定的线条样式，两者使用同一刻度${axis ? `，零至${labels[0]} ${axis.unit}` : ''}；点击运行 MTR 路径诊断`);
-  host.setAttribute('title','刻度单位 B/s、KiB/s、MiB/s、GiB/s（1024进位）；最近60秒真实采样；新峰立即扩大刻度，旧峰移出后稳定5秒再缩小。上传和下载共用零起点刻度；点击运行 MTR 路径诊断');
+  host.setAttribute('title','刻度单位 B/s、KiB/s、MiB/s、GiB/s（1024进位）；最近60秒真实采样；延迟返回的计数按实际间隔求平均，真实失败保留缺口；新峰立即扩大刻度，旧峰移出后稳定5秒再缩小。上传和下载共用零起点刻度；点击运行 MTR 路径诊断');
   const grid = element('g',{class:'traffic-grid'});
   grid.append(element('text',{x:left-8,y:9,'text-anchor':'end',class:'traffic-unit'},axis?.unit || 'B/s'));
   [top,(top+bottom)/2,bottom].forEach((y,index) => { grid.append(element('line',{x1:left,y1:y,x2:right,y2:y}),element('text',{x:left-8,y:y+3,'text-anchor':'end'},labels[index])); });
@@ -349,7 +360,7 @@ function renderNetwork(stats) {
   const selected = interfaces.find(iface => iface.name === state?.networkInterface);
   select.title = selected ? `${selected.name}${selected.addresses?.length ? '\n' + selected.addresses.join('\n') : ''}` : '选择服务器网卡';
   const fresh = state?.connected && !state.networkError && Date.now() - Date.parse(state.networkStats?.sampledAt) < 2500;
-  for (const [selector,key,label] of [['.upload-color','tx','上行'],['.download-color','rx','下行']]) { const ready = fresh && selected?.ready && Number.isFinite(selected[key]) && selected[key] >= 0; const value = ready ? compactTrafficSize(selected[key]) : '—'; $(selector).textContent = `${label} ${value}`; $(selector).title = `${label} · ${ready ? compactTrafficSize(selected[key]) : state?.networkError || '等待有效采样'}\n每秒独立采样，按实际计数差和时间间隔计算`; $(selector).setAttribute('aria-label', `${label} ${ready ? compactTrafficSize(selected[key]) : '暂无有效采样'}`); }
+  for (const [selector,key,label] of [['.upload-color','tx','上行'],['.download-color','rx','下行']]) { const ready = fresh && selected?.ready && Number.isFinite(selected[key]) && selected[key] >= 0; const value = ready ? compactTrafficSize(selected[key]) : '—'; $(selector).textContent = `${label} ${value}`; $(selector).title = `${label} · ${ready ? compactTrafficSize(selected[key]) : state?.networkError || '等待有效采样'}\n每秒尝试独立采样，按实际计数差和远端时间间隔计算${ready && state.networkStats?.elapsedMilliseconds ? `；本次为 ${(state.networkStats.elapsedMilliseconds / 1000).toFixed(2)} 秒内的平均速度` : ''}`; $(selector).setAttribute('aria-label', `${label} ${ready ? compactTrafficSize(selected[key]) : '暂无有效采样'}`); }
   $('#network-chart').setAttribute('aria-disabled', String(!state?.ready));
   drawCharts(selected ? state?.interfaceCharts?.get(selected.name) || [] : []);
 

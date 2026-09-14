@@ -38,11 +38,13 @@ button,input,select,textarea { font-family:inherit; }
 .process-card summary #monitor-state { margin-left:4px; }
 .process-card summary #process-count { margin-left:auto; min-width:0; overflow:hidden; text-overflow:ellipsis; text-align:right; font-size:11px; color:var(--muted); white-space:nowrap; }
 .process-card summary > svg { flex-shrink:0; margin-left:0; }
-.process-card .process-table { margin-top:9px; }
+.process-card .process-table { margin-top:7px; max-height:none; overflow:visible; }
 .process-card .process-table table { font-size:11px; }
 .process-card .process-table th,.process-card .process-table th button { font-size:10px; }
-.process-card .process-table td { height:29px; font-size:11px; }
-.process-card .process-table th:first-child { width:68px; }
+.process-card .process-table td { height:27px; font-size:11px; letter-spacing:normal; padding:0 3px; }
+.process-card .process-table th:first-child { width:31%; }
+.process-card .process-table th:nth-child(2) { width:24%; }
+.process-card .process-table th:last-child { width:45%; }
 /* Thin inset scrollbars across dialogs, while terminal/file surfaces retain theirs. */
 dialog,dialog :is(div,section,nav,pre,textarea,ul) { scrollbar-width:thin; scrollbar-color:#91a8b44d transparent; }
 dialog::-webkit-scrollbar,dialog ::-webkit-scrollbar { width:5px; height:5px; }

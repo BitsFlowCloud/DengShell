@@ -94,7 +94,7 @@ def package(args):
     for p in sorted(set(sourcefiles)):copy(p,source/p.relative_to(ROOT))
     copy(linuxbinary.parent/'build-info.json',source/'build/linux/native/build-info.json')
     zip_tree(source,out/'DengShell-source.zip',Path('DengShell'))
-    notes=f'R30 至 R{RELEASE} 累计更新：精简内置字体并加入在线字体库，分组颜色、递归删除与跨服务器编辑；修复 SSH 误断线和重连记录丢失，常驻资源前五进程，网速图延长至 60 秒，统一字体设置并支持在线加粗预览。'
+    notes=f'R30 至 R{RELEASE} 累计更新：精简内置字体并加入在线字体库，分组颜色、递归删除与跨服务器编辑；修复 SSH 误断线和重连记录丢失，常驻资源前五进程，网速图延长至 60 秒，精读显示进程的 RSS，精简字体面板，修复模态提示遮挡与延迟网速采样断点。'
     for binary,artifact,platform,name in [(winbinary,winbinary,'windows-amd64','up.exe'),(linuxbinary,out/'up.deb','linux-amd64','up.deb'),(linuxbinary,out/'DengShell-linux-x64.pkg.tar.zst','linux-amd64-pacman','up.pkg.tar.zst')]:
         copy(artifact,site/name)
         info={'schemaVersion':2,'build':BUILD,'product':'DengShell','platform':platform,'version':'v0.01','notes':notes,'sha256':digest(artifact),'size':artifact.stat().st_size,'executableSHA256':digest(binary)}

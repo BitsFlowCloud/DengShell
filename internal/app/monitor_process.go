@@ -98,15 +98,19 @@ END {
 `
 
 type Process struct {
-	PID             int     `json:"pid"`
-	Name            string  `json:"name"`
-	Memory          uint64  `json:"memory"`
-	MemoryReady     bool    `json:"memoryReady"`
-	MemorySource    string  `json:"memorySource"`
-	MemoryEstimated bool    `json:"memoryEstimated"`
-	CPU             float64 `json:"cpu"`
-	CPUReady        bool    `json:"cpuReady"`
-	State           string  `json:"state"`
+	PID             int       `json:"pid"`
+	Name            string    `json:"name"`
+	Memory          uint64    `json:"memory"`
+	MemoryReady     bool      `json:"memoryReady"`
+	MemorySource    string    `json:"memorySource"`
+	MemoryEstimated bool      `json:"memoryEstimated"`
+	MemorySampledAt time.Time `json:"memorySampledAt,omitempty"`
+	MemoryError     string    `json:"memoryError,omitempty"`
+	CPU             float64   `json:"cpu"`
+	CPUReady        bool      `json:"cpuReady"`
+	State           string    `json:"state"`
+	startTicks      uint64
+	bootID          string
 }
 
 // Keep full lightweight counters in the backend for correct interval CPU/PID
@@ -217,6 +221,7 @@ func parseProcessStats(r *rawStats, lines []string) {
 						process.Name = strings.ToValidUTF8(string(name), "�")
 					}
 					process.State = f[9]
+					process.startTicks, process.bootID = start, r.processBootID
 					r.processes[pid] = processCounters{user, system, start, uptime}
 					memory, mErr := strconv.ParseUint(f[6], 10, 64)
 					flags, _ := strconv.ParseUint(f[8], 10, 64)

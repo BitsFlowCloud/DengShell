@@ -7,7 +7,43 @@ function icon(name, className = '') { const el = document.createElementNS('http:
 function readSaved(key, fallback) { return window.DengPortablePreferences.read(key, fallback); }
 function save(key, value) { window.DengPortablePreferences.write(key, value); }
 let toastTimer;
-function toast(message) { clearTimeout(toastTimer); $('#toast').textContent = message; $('#toast').hidden = false; toastTimer = setTimeout(() => { $('#toast').hidden = true; }, 4500); }
+let toastLayerObserver;
+const toastModalOrder = [];
+function placeToast(force = false) {
+  const notice = $('#toast'); if (!notice || notice.hidden) return;
+  const isModal = dialog => { try { return dialog?.isConnected && dialog.matches('dialog:modal'); } catch { return dialog?.open && dialog.getAttribute('aria-modal') !== 'false'; } };
+  const focused = document.activeElement?.closest('dialog');
+  const modal = [...toastModalOrder].reverse().find(isModal) || (isModal(focused) ? focused : [...document.querySelectorAll('dialog[open]')].reverse().find(isModal));
+  const parent = modal || document.body, moved = notice.parentElement !== parent;
+  // A high z-index cannot rise above a native dialog backdrop. Keep the live
+  // region inside its focus owner; a manual popover escapes scroll clipping.
+  if (moved || force) {
+    if (typeof notice.hidePopover === 'function' && notice.matches(':popover-open')) notice.hidePopover();
+    if (moved) parent.append(notice);
+  }
+  if (typeof notice.showPopover === 'function') {
+    notice.setAttribute('popover', 'manual');
+    if (!notice.matches(':popover-open')) notice.showPopover();
+  }
+}
+function toast(message) {
+  clearTimeout(toastTimer);
+  if (!toastLayerObserver) {
+    toastLayerObserver = new MutationObserver(records => {
+      for (const {target} of records) if (target.tagName === 'DIALOG') {
+        const index = toastModalOrder.indexOf(target); if (index >= 0) toastModalOrder.splice(index, 1);
+        if (target.open) toastModalOrder.push(target);
+      }
+      placeToast(true);
+    });
+    toastLayerObserver.observe(document.body, {subtree:true, attributes:true, attributeFilter:['open']});
+  }
+  const notice = $('#toast'); notice.textContent = message; notice.hidden = false; placeToast(true);
+  toastTimer = setTimeout(() => {
+    if (typeof notice.hidePopover === 'function' && notice.matches(':popover-open')) notice.hidePopover();
+    notice.hidden = true; document.body.append(notice);
+  }, 4500);
+}
 const safe = fn => (...args) => { try { return Promise.resolve(fn(...args)).catch(error => toast(error?.message || String(error))); } catch (error) { toast(error?.message || String(error)); } };
 const native = () => window.go?.main?.Desktop;
 function syncDesktopTheme() {

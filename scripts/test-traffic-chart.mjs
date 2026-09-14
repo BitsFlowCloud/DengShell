@@ -45,14 +45,18 @@ const nextCounter={time:3300,rx:150,tx:250,rxBytes:1350,txBytes:2650,elapsedMill
 for(const key of ['rx','tx']){
  assert.equal(trafficChartRuns([firstCounter,jitteredCounter,nextCounter],key,x=>x,y=>y).length,1,'valid two-second remote counter interval stays connected despite SSH delivery jitter');
  assert.equal(trafficChartRuns([firstCounter,{...jitteredCounter,elapsedMilliseconds:1000}],key,x=>x,y=>y).length,2,'skipping a real backend observation breaks both series instead of inventing a sample');
- assert.equal(trafficChartRuns([firstCounter,{...jitteredCounter,time:4500}],key,x=>x,y=>y).length,2,'a long unobserved wall-clock period is not silently filled');
+ assert.equal(trafficChartRuns([firstCounter,{...jitteredCounter,time:16000}],key,x=>x,y=>y).length,2,'a long unobserved wall-clock period is not silently filled');
  assert.equal(trafficChartRuns([firstCounter,{...jitteredCounter,rx:null,tx:null},nextCounter],key,x=>x,y=>y).length,2,'counter reset or hidden-window baseline stays visibly missing');
 }
 assert.equal(trafficSamplesContinuous(firstCounter,{...jitteredCounter,time:1900,elapsedMilliseconds:1000,rxBytes:1100,txBytes:2200}),true,'a one-second observation with delayed delivery does not create a false gap');
 assert.equal(trafficSamplesContinuous(firstCounter,{...jitteredCounter,rxBytes:900}),false,'counter rollback never connects');
 assert.equal(trafficSamplesContinuous(firstCounter,{...jitteredCounter,time:0}),false,'duplicate or out-of-order timestamps never connect');
 assert.equal(trafficSamplesContinuous(firstCounter,{...jitteredCounter,time:3200,elapsedMilliseconds:3000,rxBytes:1300,txBytes:2600}),true,'the backend maximum valid three-second interval remains continuous');
-assert.equal(trafficSamplesContinuous(firstCounter,{...jitteredCounter,time:3200,elapsedMilliseconds:3100,rxBytes:1310,txBytes:2620}),false,'invalid remote sampling intervals are not treated as observations');
+assert.equal(trafficSamplesContinuous(firstCounter,{...jitteredCounter,time:16000,elapsedMilliseconds:15100,rxBytes:2510,txBytes:5020}),false,'invalid remote sampling intervals are not treated as observations');
+assert.equal(trafficSamplesContinuous(firstCounter,{...jitteredCounter,time:5500,elapsedMilliseconds:5000,rxBytes:1500,txBytes:3000}),true,'a delayed but fully observed five-second average does not become a false gap');
+assert.equal(trafficSamplesContinuous(firstCounter,{...jitteredCounter,time:5500,elapsedMilliseconds:5000,rxBytes:1400,txBytes:3000}),false,'a missing counter interval still breaks the line');
+assert.equal(context.processMemoryText({memory:7.8125*1024**3,memoryReady:true,memoryEstimated:false}),'7.81 GiB');
+assert.equal(context.processMemoryText({memory:123456,memoryReady:true,memoryEstimated:true}),'—','old estimated snapshots never appear as precise RSS');
 assert.equal(trafficSamplesContinuous(firstCounter,{...jitteredCounter,time:1000,elapsedMilliseconds:0}),false,'a new baseline is not a valid sampled interval');
 assert.equal(trafficSamplesContinuous({time:0,rx:1,tx:1},{time:2200,rx:1,tx:1,elapsedMilliseconds:2000}),true,'legacy snapshots use the supplied sampling interval with bounded jitter');
 assert.equal(trafficSamplesContinuous({time:0,rx:1,tx:1},{time:1000,rx:1,tx:1}),true,'older snapshots without interval metadata retain ordinary one-second continuity');

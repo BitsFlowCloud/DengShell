@@ -267,6 +267,7 @@ func (s *Session) statsForDisplay(ctx context.Context, processes bool) (Stats, e
 	if err == nil && processes {
 		value.ProcessMemoryTop = topProcesses(value.Processes, "memory")
 		value.Processes = topProcesses(value.Processes, "cpu")
+		s.refineDisplayedProcessMemory(&value)
 	}
 	return value, err
 }

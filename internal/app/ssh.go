@@ -49,6 +49,7 @@ type Session struct {
 	coreCollector       monitorCommandRunner
 	commandCollector    monitorCommandRunner
 	processCollector    monitorCommandRunner
+	preciseMemory       preciseProcessMemory
 	networkCollector    monitorCommandRunner
 	statsNextSampleAt   time.Time
 	statsLastError      error

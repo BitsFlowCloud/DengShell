@@ -43,7 +43,7 @@ func TestNetworkSamplerUsesRemoteElapsedAndResetsBaseline(t *testing.T) {
 		{"counter-reset", 102.2, 3, 4},
 		{"reboot", 2, 999, 999},
 		{"same-remote-tick", 101.2, 999, 999},
-		{"resume-after-pause", 106.2, 999, 999},
+		{"resume-after-pause", 121.2, 999, 999},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			value, _ := parseNetworkSnapshot(networkCounterFixture(tc.up, tc.rx, tc.tx), at.Add(3*time.Second))

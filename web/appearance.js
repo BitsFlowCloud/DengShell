@@ -351,7 +351,7 @@ async function openAppearance(kind) {
 }
 function renderAssets() {
   const isFont = assetKind === 'font', assets = isFont ? allFonts() : allBackgrounds(), list = $('#asset-list');
-  $('#asset-count').textContent = `${assets.length} ${isFont ? '款字体' : '种背景'} · ${isFont ? '支持 TTF / OTF / WOFF / WOFF2' : '支持 PNG / JPG / WebP'}`;
+  $('#asset-count').textContent = isFont ? '已安装字体' : `${assets.length} 种背景 · 支持 PNG / JPG / WebP`;
   if (list.dataset.kind !== assetKind) { list.replaceChildren(); list.dataset.kind = assetKind; }
   const existing = new Map([...list.children].map(card => [card.dataset.assetId, card]));
   const wanted = new Set(assets.map(asset => asset.id));
@@ -381,9 +381,14 @@ function createAssetCard(asset, isFont) {
     assetURL(asset).then(url => { if (thumb.isConnected) thumb.style.backgroundImage = `url(${JSON.stringify(url)})`; }).catch(() => { if (thumb.isConnected) thumb.textContent = '无法读取'; });
   } else thumb.append(icon('terminal'));
   const caption = node('div', 'asset-caption'); caption.append(node('strong'), node('span'));
-  choose.append(thumb, caption); choose.onclick = safe(() => chooseAppearance(isFont ? { fontId: asset.id } : { backgroundId: asset.id }));
+  choose.append(...(isFont ? [caption] : [thumb, caption])); choose.onclick = safe(() => chooseAppearance(isFont ? { fontId: asset.id } : { backgroundId: asset.id }));
   card.append(choose);
-  if (isFont) createFontCardControls(card, asset);
+  if (isFont) {
+    createFontCardControls(card, asset);
+    const sampleChoice = node('button', 'font-sample-choice'); sampleChoice.type = 'button';
+    sampleChoice.setAttribute('aria-label', `使用 ${asset.name}`); sampleChoice.onclick = choose.onclick;
+    sampleChoice.append(thumb); card.querySelector('.font-card-toolbar').prepend(sampleChoice);
+  }
   if (!asset.id.startsWith('builtin:')) {
     const actions = node('div', 'asset-actions'), rename = node('button', '', '改名'), del = node('button', 'danger-button', '删除'); rename.type = del.type = 'button';
     rename.onclick = safe(async () => { const name = await ask({ title: '修改名称', input: true, value: card._asset.name }); if (!name?.trim()) return; await flushFontStyleSave(); await post(`/api/assets/${asset.id}`, { name }); await loadProfiles(); });

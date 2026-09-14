@@ -50,7 +50,7 @@ button, input, select { font-family: inherit; }
 #ui-appearance-dialog .dialog-heading h2, #appearance-dialog[data-kind="font"] .dialog-heading h2 { font-size:21px; margin:0; }
 #ui-appearance-dialog .dialog-heading p, #appearance-dialog[data-kind="font"] .dialog-heading p { font-size:13px; line-height:1.6; margin:8px 0 0; }
 #ui-appearance-dialog .font-kind-tabs, #appearance-dialog[data-kind="font"] .font-kind-tabs { flex:none; margin:0 20px 12px; }
-#ui-appearance-dialog .font-library-entry, #appearance-dialog[data-kind="font"] .font-library-entry { flex:none; margin:0 20px 16px; font-size:13px; }
+#ui-appearance-dialog .font-library-entry, #appearance-dialog[data-kind="font"] .font-library-entry { flex:none; justify-content:center; margin:0 20px 12px; font-size:13px; }
 #ui-appearance-dialog .appearance-body, #appearance-dialog[data-kind="font"] .appearance-body { min-height:0; overflow:auto; padding:0 20px 20px; overscroll-behavior:contain; }
 :is(#online-ui-fonts, #online-shell-fonts) { padding:11px 16px!important; color:#fff!important; background:#315f7a!important; border:1px solid #315f7a; border-radius:10px; font-size:14px!important; font-weight:600; box-shadow:0 3px 9px #183c521f; }
 :is(#online-ui-fonts, #online-shell-fonts):hover { background:#23485f!important; }
@@ -67,3 +67,24 @@ button, input, select { font-family: inherit; }
 .library-toolbar { flex-wrap:wrap; gap:10px; }
 .library-toolbar .library-search { flex-basis:180px; }
 @media(max-width:650px) { #ui-font-list, #appearance-dialog[data-kind="font"] .asset-list { grid-template-columns:1fr; } .font-library-entry { flex-wrap:wrap; } #ui-appearance-dialog .ui-color-row { grid-template-columns:1fr 40px 105px; } }
+
+/* Installed fonts use two compact rows: name/state, then sample/style. */
+#appearance-dialog[data-kind="font"] .font-list .asset-card { padding:10px 12px; border-radius:12px; }
+#appearance-dialog[data-kind="font"] .font-list .asset-caption { flex-direction:row; align-items:center; justify-content:space-between; padding:0; gap:8px; min-height:30px; }
+#appearance-dialog[data-kind="font"] .font-list .asset-caption strong { min-width:0; padding:3px 7px; border:1px solid var(--border); border-radius:7px; white-space:normal; overflow-wrap:anywhere; line-height:1.35; }
+#appearance-dialog[data-kind="font"] .font-list .asset-caption span { flex:none; font-size:11px; }
+#appearance-dialog[data-kind="font"] .font-list .font-card-toolbar { padding:7px 0 0; gap:8px; }
+#appearance-dialog[data-kind="font"] .font-list .font-sample-choice { flex:1; min-width:0; text-align:left; border-radius:7px; }
+#appearance-dialog[data-kind="font"] .font-list .font-sample { justify-content:flex-start; margin:0; padding:5px 6px; min-height:30px; border-radius:7px; font-size:13px; line-height:1.4; white-space:nowrap; overflow:hidden; }
+#appearance-dialog[data-kind="font"] .font-list .font-card-bold { font-size:12px; white-space:nowrap; gap:4px; }
+#appearance-dialog[data-kind="font"] .font-list .font-card-color-button { padding:5px 6px; font-size:12px; }
+#appearance-dialog[data-kind="font"] .font-list .asset-actions { padding:7px 0 0; }
+#ui-appearance-dialog .ui-font-choice { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:7px 10px; padding:12px; }
+.ui-font-choice strong { grid-column:1; grid-row:1; justify-self:start; padding:3px 7px; border:1px solid var(--border); border-radius:7px; overflow-wrap:anywhere; }
+.ui-font-choice .ui-font-state { grid-column:2; grid-row:1; align-self:center; font-size:11px; }
+.ui-font-choice :is(.ui-font-detail,.ui-font-sample) { grid-column:1/-1; line-height:1.5; }
+.ui-font-actions { padding:0 12px 10px; }
+/* Native popovers use UA centering by default; notifications retain one fixed
+   screen position and never take focus or intercept dialog controls. */
+#toast { inset:auto auto 24px 50%; margin:0; width:max-content; max-width:calc(var(--view-width,100vw) - 32px); max-height:calc(var(--view-height,100vh) - 48px); overflow:auto; transform:translateX(-50%); pointer-events:none; font:13px/1.6 var(--font-ui); white-space:pre-wrap; overflow-wrap:anywhere; }
+#toast::backdrop { background:transparent; backdrop-filter:none; }
