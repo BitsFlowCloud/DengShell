@@ -80,7 +80,7 @@ def package(args):
     sourcefiles=[]
     for pattern in ['*.go','go.mod','go.sum','package.json','package-lock.json','*.sh','*.ps1','*.syso','README.md','CHANGELOG.md','LICENSE','.gitignore']:
         sourcefiles += list(ROOT.glob(pattern))
-    for folder in ['web','internal','scripts','cmd']:
+    for folder in ['web','internal','scripts','cmd','.github']:
         sourcefiles += [p for p in (ROOT/folder).rglob('*') if p.is_file() and '__pycache__' not in p.parts]
     sourcefiles += [p for p in (ROOT/'docs').rglob('*') if p.is_file()]
     for name in ['dengshell.png','dengshell.svg','dengshell.ico','CONNECTION-CONFIG.md','config.example.json','COMMON-APPS.md',f'RELEASE-v0.01-r{RELEASE}.md','ONLINE-UPDATE-DESIGN.md','UPDATER-CONTRACT.md','SIGNED-UPDATES.md','FONT-VALIDATION.md','BACKGROUND-PROMPTS-v0.01.json','windows/app.manifest','windows/README.txt','linux/README.txt','linux/Dockerfile','linux/.dockerignore','linux/COMPATIBILITY.json']:
@@ -92,7 +92,7 @@ def package(args):
     for p in sorted(set(sourcefiles)):copy(p,source/p.relative_to(ROOT))
     copy(linuxbinary.parent/'build-info.json',source/'build/linux/native/build-info.json')
     zip_tree(source,out/'DengShell-source.zip',Path('DengShell'))
-    notes=f'R20 至 R{RELEASE} 累计更新：Bash/Zsh/Fish 兼容、签名更新、界面字体与颜色、FinalShell 导入、命令参数与回车选项、分组拖动、跨服务器多标签文本编辑；新增 Arch pacman 包及内置自动更新，修复最小化选项弹窗错位。'
+    notes=f'R20 至 R{RELEASE} 累计更新：服务器目录分栏与多级导航、FinalShell 私钥自动关联、命令参数与排序、多窗口文本编辑、字体与文字颜色、Bash/Zsh/Fish 兼容和 Arch 自动更新；修复 Windows 更新文件误判及重启后窗口隐藏。'
     for binary,artifact,platform,name in [(winbinary,winbinary,'windows-amd64','up.exe'),(linuxbinary,out/'up.deb','linux-amd64','up.deb'),(linuxbinary,out/'DengShell-linux-x64.pkg.tar.zst','linux-amd64-pacman','up.pkg.tar.zst')]:
         copy(artifact,site/name)
         info={'schemaVersion':2,'build':BUILD,'product':'DengShell','platform':platform,'version':'v0.01','notes':notes,'sha256':digest(artifact),'size':artifact.stat().st_size,'executableSHA256':digest(binary)}

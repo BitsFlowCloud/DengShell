@@ -8,7 +8,8 @@ import (
 	"time"
 )
 
-func prepareUpdaterProcess(*exec.Cmd) {}
+func prepareUpdaterProcess(*exec.Cmd)       {}
+func prepareRestartedApplication(*exec.Cmd) {}
 func waitForUpdateParent(int, time.Duration) error {
 	return errors.New("此平台不支持在线安装")
 }

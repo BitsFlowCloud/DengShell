@@ -78,6 +78,12 @@ func finalizeInitialPlatformWindow(ctx context.Context, logical initialWindowBou
 		}
 	}
 	runtime.WindowShow(ctx)
+	// A legacy updater may launch this process with SW_HIDE. Its first show
+	// call can therefore be ignored; explicitly restore before the tray watcher
+	// interprets a startup minimisation as a user request. Saved maximisation is
+	// applied by the caller after this initial restoration.
+	runtime.WindowUnminimise(ctx)
+	platformRaiseWindow()
 }
 
 func platformRuntimeDescription() string {

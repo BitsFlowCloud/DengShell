@@ -19,7 +19,8 @@ import (
 	"time"
 )
 
-func prepareUpdaterProcess(cmd *exec.Cmd) { cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true} }
+func prepareUpdaterProcess(cmd *exec.Cmd)       { cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true} }
+func prepareRestartedApplication(cmd *exec.Cmd) { prepareUpdaterProcess(cmd) }
 func waitForUpdateParent(pid int, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {

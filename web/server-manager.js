@@ -101,7 +101,7 @@ function persistGroupCollapse() { save('dengshell.server-groups.collapsed', [...
 function toggleServerGroup(id, force) {
   const collapsed = force ?? !serverManager.collapsed.has(id);
   if (collapsed) serverManager.collapsed.add(id); else serverManager.collapsed.delete(id);
-  serverManager.selectedGroup = id; persistGroupCollapse(); renderConnections();
+  persistGroupCollapse(); renderConnections();
 }
 function setServerManagerTab(tab) {
   if (!['servers', 'history', 'trash'].includes(tab)) return;
@@ -118,13 +118,14 @@ function reflectServerSelection() {
     if (button?.dataset.selectable === 'true') button.setAttribute('aria-pressed', String(chosen));
     const marker = row.querySelector('.server-selection-mark'); if (marker) marker.hidden = !chosen;
   }
+  reflectServerExplorerDetails();
   const bar = $('#server-selection-bar'); if (!bar) return;
   bar.hidden = serverManager.tab === 'trash';
   const open = $('#open-selected-servers'), clear = $('#clear-selected-servers'), hint = $('#server-selection-hint');
   open.textContent = batch ? `正在打开 ${batch.completed}/${batch.total}` : `打开所选 (${selected.size})`;
   open.disabled = !!batch || !selected.size; open.setAttribute('aria-busy', String(!!batch));
   clear.hidden = !selected.size;
-  hint.textContent = selected.size ? `已选 ${selected.size} 台 · Enter 打开` : 'Ctrl / ⌘ + 单击多选';
+  hint.textContent = selected.size ? `已选 ${selected.size} 台 · Enter 打开` : '单击选择 · 双击打开 · Ctrl / ⌘ 多选';
 }
 function clearServerSelection() { serverManager.selectedProfiles.clear(); reflectServerSelection(); }
 function toggleServerSelection(profile) {
@@ -156,9 +157,9 @@ async function openSelectedServers() {
 function renderServerProfile(profile, tree, mode = 'servers', history = null) {
   const row = node('div', 'server-profile-row'); row.dataset.profileId = profile.id;
   const deleted = mode === 'trash' || !!profile.deletedAt;
-  const button = node('button', `connection-card${current()?.profileId === profile.id ? ' selected' : ''}`);
+  const button = node('button', 'connection-card');
   button.type = 'button'; button.disabled = deleted || connecting.has(profile.id);
-  button.setAttribute('aria-label', `${deleted ? '已删除' : '连接'} ${profile.name}`);
+  button.setAttribute('aria-label', `${deleted ? '已删除' : '选择'} ${profile.name}`);
   button.dataset.selectable = String(!deleted);
   if (!deleted) { button.setAttribute('aria-pressed', String(serverManager.selectedProfiles.has(profile.id))); button.setAttribute('aria-describedby', 'server-selection-hint'); }
   const glyph = node('span', 'server-icon'); glyph.append(icon('server'));
@@ -170,8 +171,10 @@ function renderServerProfile(profile, tree, mode = 'servers', history = null) {
   }
   button.onclick = safe(event => {
     if (event.ctrlKey || event.metaKey) { event.preventDefault(); toggleServerSelection(profile); return; }
-    clearServerSelection(); return connect(profile.id);
+    serverManager.selectedProfiles.clear(); serverManager.selectedProfiles.add(profile.id); serverManager.focusedProfile = profile.id; reflectServerSelection();
   });
+  button.ondblclick = safe(event => { if (!deleted && !event.ctrlKey && !event.metaKey) { clearServerSelection(); return connect(profile.id); } });
+  button.title = `${profile.name}\n${profile.user}@${profile.host}:${profile.port}\n${serverGroupPath(profile, tree)}`;
   button.onkeydown = event => {
     if ((event.ctrlKey || event.metaKey) && event.key === ' ') { event.preventDefault(); event.stopPropagation(); toggleServerSelection(profile); }
   };
@@ -200,13 +203,16 @@ function renderServerProfile(profile, tree, mode = 'servers', history = null) {
     }));
   }
   if (meta.childNodes.length) row.append(meta);
-  row.append(actions); return row;
+  const more = serverManagerButton('⋯', event => openServerProfileMenu(profile, actions, event.currentTarget), 'server-profile-more');
+  more.setAttribute('aria-label', `管理连接 ${profile.name}`); more.setAttribute('aria-haspopup', 'menu');
+  row.append(more); row.oncontextmenu = event => { event.preventDefault(); openServerProfileMenu(profile, actions, row); };
+  return row;
 }
 
 function renderServerManager() {
   initializeServerManager();
   const target = $('#connection-groups'), scroll = target.scrollTop;
-  const focused = target.contains(document.activeElement) ? document.activeElement : null;
+  const focused = $('#server-manager-body').contains(document.activeElement) ? document.activeElement : null;
   const focusGroup = focused?.closest('[data-group-id]')?.dataset.groupId, focusAction = focused?.dataset.groupAction;
   const tree = serverGroupTree(), query = $('#connection-search').value.trim().toLocaleLowerCase();
   const fragment = document.createDocumentFragment();
@@ -218,44 +224,10 @@ function renderServerManager() {
   }
   $('#server-manager-create').hidden = serverManager.tab !== 'servers';
   target.setAttribute('aria-labelledby', `server-tab-${serverManager.tab}`);
+  renderServerExplorer(tree, query);
   if (serverManager.tab === 'servers') {
-    const matches = new Set();
-    if (query) {
-      for (const group of tree.flat) if (tree.paths.get(group.id).toLocaleLowerCase().includes(query) || (tree.members.get(group.id) || []).some(profile => serverMatches(profile, query, tree))) {
-        let ancestor = group;
-        while (ancestor && !matches.has(ancestor.id)) { matches.add(ancestor.id); ancestor = tree.byID.get(ancestor.parentId); }
-      }
-    }
-    let hiddenBelow = Infinity;
-    for (const group of tree.flat) {
-      const depth = tree.depths.get(group.id);
-      if (depth <= hiddenBelow) hiddenBelow = Infinity;
-      if (depth > hiddenBelow || query && !matches.has(group.id)) continue;
-      const collapsed = !query && serverManager.collapsed.has(group.id);
-      const heading = node('div', 'server-group-row'); heading.dataset.groupId = group.id;
-      heading.style.setProperty('--group-indent', `${Math.min(depth, 6) * 9}px`);
-      const toggle = node('button', 'server-group-toggle'); toggle.type = 'button'; toggle.dataset.groupAction = 'toggle';
-      toggle.setAttribute('aria-expanded', String(!collapsed)); toggle.title = tree.paths.get(group.id);
-      const caret = icon('chevron', 'server-group-caret');
-      const label = node('span', 'server-group-label'); label.append(node('strong', '', group.name));
-      if (depth > 0) { const path = node('small', '', tree.paths.get(group.parentId)); label.append(path); }
-      toggle.append(caret, serverGroupIcon(group.emoji), label, node('span', 'server-group-count', String(tree.counts.get(group.id))));
-      toggle.onclick = () => toggleServerGroup(group.id);
-      toggle.onkeydown = event => {
-        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); toggleServerGroup(group.id, event.key === 'ArrowLeft'); }
-      };
-      const tools = serverManagerButton('⋯', event => openServerGroupMenu(group.id, event.currentTarget), 'server-group-more');
-      tools.dataset.groupAction = 'menu'; tools.setAttribute('aria-label', `管理分组 ${group.name}`); tools.setAttribute('aria-haspopup', 'menu');
-      heading.append(toggle, tools); fragment.append(heading);
-      if (collapsed) { hiddenBelow = depth; continue; }
-      const members = (tree.members.get(group.id) || []).filter(profile => serverMatches(profile, query, tree));
-      for (const profile of members) { const row = renderServerProfile(profile, tree); row.style.setProperty('--group-indent', `${Math.min(depth, 6) * 9}px`); fragment.append(row); }
-      if (!members.length && !query && !(tree.children.get(group.id) || []).length) {
-        const empty = serverManagerButton('＋ 添加服务器', () => showConnectionForm(null, group.id), 'server-group-empty');
-        empty.style.setProperty('--group-indent', `${Math.min(depth, 6) * 9}px`); fragment.append(empty);
-      }
-    }
-    if (!fragment.childNodes.length) fragment.append(node('p', 'server-manager-empty', query ? '没有匹配的服务器或分组' : '创建分组，添加第一台服务器。'));
+    for (const profile of serverExplorerProfiles(tree, query)) fragment.append(renderServerProfile(profile, tree));
+    if (!fragment.childNodes.length) fragment.append(node('p', 'server-manager-empty', query ? '没有匹配的连接；可搜索名称、地址或分组。' : '此分组暂无连接，可新建连接或选择包含子分组。'));
   } else {
     const allProfiles = new Map([...profiles, ...serverManager.trash].map(profile => [profile.id, profile]));
     if (serverManager.tab === 'trash') {
@@ -269,7 +241,7 @@ function renderServerManager() {
     if (!fragment.childNodes.length) fragment.append(node('p', 'server-manager-empty', query ? '没有匹配的连接' : serverManager.tab === 'trash' ? '暂无已删除的连接' : '连接成功后会显示在这里。'));
   }
   target.replaceChildren(fragment); target.scrollTop = scroll; reflectServerSelection();
-  if (focusGroup && focusAction) [...target.querySelectorAll('[data-group-id]')].find(row => row.dataset.groupId === focusGroup)?.querySelector(`[data-group-action="${focusAction}"]`)?.focus({ preventScroll: true });
+  if (focusGroup !== undefined && focusAction) [...$('#server-manager-body').querySelectorAll('[data-group-id]')].find(row => row.dataset.groupId === focusGroup)?.querySelector(`[data-group-action="${focusAction}"]`)?.focus({ preventScroll: true });
 }
 
 function renderServerGroupChoices(selected = '', target = $('#profile-group'), exclude = '') {
@@ -299,11 +271,11 @@ function openServerGroupEditor(id = '', parentID = '') {
   $('#group-emoji-search').value = ''; $('#group-emoji-picker').open = !group;
   renderGroupEmojiPicker(); updateGroupEmojiPreview(); $('#server-group-dialog').showModal(); form.elements.name.focus();
 }
-function closeServerGroupMenu() { const menu = $('#server-group-menu'); if (menu) menu.hidden = true; serverManager.menuGroup = ''; }
+function closeServerGroupMenu() { const menu = $('#server-group-menu'); if (menu) menu.hidden = true; serverManager.menuGroup = ''; serverManager.menuProfile = ''; }
 function openServerGroupMenu(id, anchor) {
   if (serverManager.menuGroup === id && !$('#server-group-menu').hidden) { closeServerGroupMenu(); return; }
   const tree = serverGroupTree(), group = tree.byID.get(id); if (!group) return;
-  serverManager.selectedGroup = id; serverManager.menuGroup = id;
+  serverManager.menuGroup = id; serverManager.menuProfile = '';
   const menu = $('#server-group-menu');
   const erase = serverManagerButton('删除空分组', async () => {
     closeServerGroupMenu();
@@ -343,11 +315,12 @@ function initializeServerManager() {
   if (serverManager.initialized) return;
   serverManager.initialized = true;
   initializeSavedGroupCollapse();
+  initializeServerExplorer();
   const bar = node('div', 'server-selection-bar'); bar.id = 'server-selection-bar';
   const hint = node('span', 'server-selection-hint'); hint.id = 'server-selection-hint'; hint.setAttribute('aria-live','polite');
   const clear = serverManagerButton('取消选择', clearServerSelection, 'server-selection-clear'); clear.id = 'clear-selected-servers';
   const open = serverManagerButton('打开所选 (0)', openSelectedServers, 'server-selection-open'); open.id = 'open-selected-servers'; open.disabled = true;
-  bar.append(hint,clear,open); $('#connection-groups').before(bar);
+  bar.append(hint,clear,open); $('#server-manager-body').before(bar);
   $('#connections-drawer').addEventListener('keydown', event => {
     if (event.key === 'Escape' && serverManager.selectedProfiles.size) { event.preventDefault(); event.stopPropagation(); clearServerSelection(); }
     else if (event.key === 'Enter' && !event.repeat && serverManager.selectedProfiles.size && event.target.closest('.connection-card,#connection-search,#open-selected-servers')) { event.preventDefault(); event.stopPropagation(); safe(openSelectedServers)(); }
@@ -372,18 +345,18 @@ function initializeServerManager() {
     try {
       const group = await post('/api/group-nodes', values); serverManager.selectedGroup = group.id;
       if (values.parentId) serverManager.collapsed.delete(values.parentId);
-      persistGroupCollapse(); await loadProfiles();
+      persistGroupCollapse(); saveServerExplorer(); await loadProfiles();
       if ($('#connection-dialog').open) renderServerGroupChoices(group.id);
       $('#server-group-dialog').close();
     } catch (error) { $('#server-group-error').textContent = error.message || String(error); $('#server-group-error').hidden = false; }
     finally { button.disabled = false; }
   });
-  document.addEventListener('pointerdown', event => { if (!event.target.closest('#server-group-menu,.server-group-more')) closeServerGroupMenu(); });
+  document.addEventListener('pointerdown', event => { if (!event.target.closest('#server-group-menu,.server-group-more,.server-profile-more')) closeServerGroupMenu(); });
   $('#connection-groups').addEventListener('scroll', closeServerGroupMenu, { passive: true });
   window.addEventListener('resize', closeServerGroupMenu);
   $('#server-group-menu').onkeydown = event => {
     const buttons = [...event.currentTarget.querySelectorAll('button:not(:disabled)')], index = buttons.indexOf(document.activeElement);
-    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); const id = serverManager.menuGroup; closeServerGroupMenu(); [...$('#connection-groups').querySelectorAll('[data-group-id]')].find(row => row.dataset.groupId === id)?.querySelector('.server-group-more').focus(); }
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); const id = serverManager.menuGroup, profile = serverManager.menuProfile; closeServerGroupMenu(); const row = [...$('#server-manager-body').querySelectorAll(profile ? '[data-profile-id]' : '[data-group-id]')].find(row => profile ? row.dataset.profileId === profile : row.dataset.groupId === id); row?.querySelector(profile ? '.server-profile-more' : '.server-group-more')?.focus(); }
     else if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) { event.preventDefault(); buttons[event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : buttons.length - 1)) % buttons.length]?.focus(); }
   };
   fetch('assets/group-emoji/catalog.json').then(response => { if (!response.ok) throw new Error('图标目录不可用'); return response.json(); }).then(catalog => {

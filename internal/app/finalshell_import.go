@@ -31,6 +31,7 @@ type finalShellConnection struct {
 	Auth             int                        `json:"authentication_type"`
 	Type             int                        `json:"conection_type"`
 	Password         string                     `json:"password"`
+	SecretKeyID      string                     `json:"secret_key_id"`
 	ProxyID          string                     `json:"proxy_id"`
 	Encoding         string                     `json:"terminal_encoding"`
 	Deleted          int64                      `json:"delete_time"`
@@ -47,19 +48,26 @@ type FinalShellImportItem struct {
 	NeedsPassword bool   `json:"needsPassword,omitempty"`
 }
 type FinalShellImportResult struct {
-	Directory     string                 `json:"directory"`
-	Found         bool                   `json:"found"`
-	Imported      int                    `json:"imported"`
-	Skipped       int                    `json:"skipped"`
-	Failed        int                    `json:"failed"`
-	NeedsKey      int                    `json:"needsKey"`
-	NeedsPassword int                    `json:"needsPassword"`
-	Items         []FinalShellImportItem `json:"items"`
+	Directory      string                 `json:"directory"`
+	Found          bool                   `json:"found"`
+	Imported       int                    `json:"imported"`
+	Updated        int                    `json:"updated"`
+	KeysImported   int                    `json:"keysImported"`
+	KeysSkipped    int                    `json:"keysSkipped"`
+	KeysFailed     int                    `json:"keysFailed"`
+	KeysAssociated int                    `json:"keysAssociated"`
+	KeyItems       []FinalShellKeyItem    `json:"keyItems"`
+	Skipped        int                    `json:"skipped"`
+	Failed         int                    `json:"failed"`
+	NeedsKey       int                    `json:"needsKey"`
+	NeedsPassword  int                    `json:"needsPassword"`
+	Items          []FinalShellImportItem `json:"items"`
 }
 type finalShellCandidate struct {
-	profile Profile
-	folders []string
-	item    int
+	profile      Profile
+	keyReference string
+	folders      []string
+	item         int
 }
 
 func finalShellImportDirectory() (string, error) {
@@ -124,7 +132,7 @@ func parseFinalShellProfile(data []byte) (Profile, string, error) {
 		// secret_key_id is an identifier, not private-key material. The password
 		// field can be a leftover account password and must not become a key passphrase.
 		p.Auth = "key"
-		message = "已保留密钥登录方式；导出 JSON 不含私钥，请补充私钥"
+		message = "未找到匹配私钥；连接时将提示重新配置密钥"
 	default:
 		return Profile{}, "", errors.New("不支持此认证方式，请手动建立连接")
 	}
@@ -132,7 +140,7 @@ func parseFinalShellProfile(data []byte) (Profile, string, error) {
 	if identity == "" {
 		identity = fmt.Sprintf("%s\x00%s\x00%d\x00%s\x00%s", p.Name, p.Host, p.Port, p.User, p.Auth)
 	}
-	if len(identity) > 1024 {
+	if len(identity) > 1024 || len(input.SecretKeyID) > 1024 {
 		return Profile{}, "", errors.New("连接标识过长")
 	}
 	digest := sha256.Sum256([]byte(identity))
@@ -144,7 +152,7 @@ func parseFinalShellProfile(data []byte) (Profile, string, error) {
 }
 
 func (s *Store) importFinalShell(ctx context.Context, directory string) (FinalShellImportResult, error) {
-	result := FinalShellImportResult{Directory: directory, Items: []FinalShellImportItem{}}
+	result := FinalShellImportResult{Directory: directory, Items: []FinalShellImportItem{}, KeyItems: []FinalShellKeyItem{}}
 	info, err := os.Lstat(directory)
 	if os.IsNotExist(err) {
 		return result, nil
@@ -172,6 +180,9 @@ func (s *Store) importFinalShell(ctx context.Context, directory string) (FinalSh
 			return errors.New("部分导入目录无法读取，请检查权限后重试")
 		}
 		if entry.IsDir() {
+			if name == "key" {
+				return fs.SkipDir
+			}
 			if strings.Count(name, "/") > 16 {
 				return errors.New("导入目录层级过深")
 			}
@@ -215,6 +226,12 @@ func (s *Store) importFinalShell(ctx context.Context, directory string) (FinalSh
 			return errors.New("本批导入数据超过 32 MiB，请分批导入")
 		}
 		p, message, err := parseFinalShellProfile(data)
+		var reference struct {
+			ID string `json:"secret_key_id"`
+		}
+		if err == nil {
+			_ = json.Unmarshal(bytes.TrimPrefix(data, []byte{0xef, 0xbb, 0xbf}), &reference)
+		}
 		clear(data)
 		if err != nil {
 			appendFailure(err.Error())
@@ -235,7 +252,7 @@ func (s *Store) importFinalShell(ctx context.Context, directory string) (FinalSh
 				folders = append(folders, folder)
 			}
 		}
-		candidates = append(candidates, finalShellCandidate{profile: p, folders: folders, item: len(result.Items)})
+		candidates = append(candidates, finalShellCandidate{profile: p, keyReference: strings.TrimSpace(reference.ID), folders: folders, item: len(result.Items)})
 		result.Items = append(result.Items, item)
 		return nil
 	})
@@ -245,21 +262,45 @@ func (s *Store) importFinalShell(ctx context.Context, directory string) (FinalSh
 	if err = ctx.Err(); err != nil {
 		return FinalShellImportResult{}, err
 	}
-	if len(candidates) == 0 {
+	keys, err := readFinalShellKeys(ctx, root, &result, &total)
+	if err != nil {
+		return FinalShellImportResult{}, err
+	}
+	defer func() {
+		for _, key := range keys {
+			clear(key.data)
+		}
+	}()
+	if len(candidates) == 0 && len(keys) == 0 {
 		return result, nil
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	old := cloneConnectionConfig(s.config)
+	old.Keys = append([]ManagedKey{}, s.config.Keys...)
+	var created []string
 	committed := false
 	defer func() {
 		if !committed {
 			s.config = old
+			for _, filename := range created {
+				_ = os.Remove(filename)
+			}
 		}
 	}()
+	matched, err := s.importFinalShellKeysLocked(keys, &result, &created)
+	if err != nil {
+		return FinalShellImportResult{}, err
+	}
 	for _, candidate := range candidates {
+		if err = ctx.Err(); err != nil {
+			return FinalShellImportResult{}, err
+		}
 		p := candidate.profile
 		item := &result.Items[candidate.item]
+		if p.Auth == "key" && candidate.keyReference != "" {
+			p.KeyID = matched[candidate.keyReference]
+		}
 		var existing *Profile
 		for i := range s.config.Servers {
 			other := &s.config.Servers[i]
@@ -280,16 +321,26 @@ func (s *Store) importFinalShell(ctx context.Context, directory string) (FinalSh
 			} else {
 				item.NeedsKey = existing.Auth == "key" && existing.KeyID == "" && existing.KeyPath == ""
 				item.NeedsPassword = existing.Auth == "password" && existing.Secret == ""
+				if item.NeedsKey && existing.FinalShellID == p.FinalShellID && p.KeyID != "" {
+					existing.KeyID = p.KeyID
+					item.NeedsKey = false
+					item.Status = "updated"
+					item.Message = "已自动关联私钥，保留其他连接设置"
+					result.Updated++
+					result.KeysAssociated++
+				}
 				if item.NeedsKey {
 					result.NeedsKey++
-					item.Message += "；仍需补充私钥"
+					item.Message += "；连接时将提示重新配置密钥"
 				}
 				if item.NeedsPassword {
 					result.NeedsPassword++
 					item.Message += "；仍需补充密码"
 				}
 			}
-			result.Skipped++
+			if item.Status == "skipped" {
+				result.Skipped++
+			}
 			continue
 		}
 		parent := ""
@@ -307,6 +358,11 @@ func (s *Store) importFinalShell(ctx context.Context, directory string) (FinalSh
 			}
 			parent = id
 		}
+		if p.Auth == "key" && p.KeyID != "" {
+			item.NeedsKey = false
+			item.Message = strings.Replace(item.Message, "未找到匹配私钥；连接时将提示重新配置密钥", "私钥已自动导入密钥管理器并关联", 1)
+			result.KeysAssociated++
+		}
 		p.ID = randomID()
 		p.GroupID = parent
 		s.config.Servers = append(s.config.Servers, p)
@@ -323,7 +379,7 @@ func (s *Store) importFinalShell(ctx context.Context, directory string) (FinalSh
 			item.Message = "已导入，密码已保存在本机加密配置中"
 		}
 	}
-	if result.Imported > 0 {
+	if result.Imported > 0 || result.Updated > 0 || result.KeysImported > 0 {
 		s.refreshLegacyGroupsLocked()
 		if err = ctx.Err(); err != nil {
 			return FinalShellImportResult{}, err

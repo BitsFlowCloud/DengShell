@@ -101,7 +101,7 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 		w.Header().Set("Cache-Control", "no-store")
 		preferences := a.Appearance()
 		uiPreferences := map[string]json.RawMessage{}
-		for _, key := range []string{"cloudshell.layout", "dengshell.appearance-palette", "dengshell.server-groups.collapsed", "dengshell.workspace"} {
+		for _, key := range []string{"cloudshell.layout", "dengshell.appearance-palette", "dengshell.server-groups.collapsed", "dengshell.server-manager", "dengshell.workspace"} {
 			if value, ok := preferences.Layout[key]; ok {
 				uiPreferences[key] = value
 			}

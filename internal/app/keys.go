@@ -55,6 +55,8 @@ func readPrivateKey(path string) ([]byte, error) {
 	return data, err
 }
 
+var errManagedKeyMissing = errors.New("密钥不存在，请重新配置密钥")
+
 func (s *Store) KeyData(id string) ([]byte, error) {
 	data, _, err := s.keyMaterial(id)
 	return data, err
@@ -70,7 +72,7 @@ func (s *Store) keyMaterial(id string) ([]byte, string, error) {
 			return data, key.Passphrase, err
 		}
 	}
-	return nil, "", errors.New("密钥不存在，请重新选择")
+	return nil, "", errManagedKeyMissing
 }
 
 func (s *Store) SaveKey(input KeyInput) (ManagedKey, error) {
@@ -95,10 +97,14 @@ func (s *Store) SaveKey(input KeyInput) (ManagedKey, error) {
 				if err != nil {
 					return ManagedKey{}, fmt.Errorf("读取私钥：%w", err)
 				}
-				if _, err := ssh.ParsePrivateKeyWithPassphrase(data, []byte(input.Passphrase)); err != nil {
+				signer, err := ssh.ParsePrivateKeyWithPassphrase(data, []byte(input.Passphrase))
+				clear(data)
+				if err != nil {
 					return ManagedKey{}, fmt.Errorf("私钥格式或口令不正确：%w", err)
 				}
 				updated.Passphrase = input.Passphrase
+				updated.PublicKey = strings.TrimSpace(string(ssh.MarshalAuthorizedKey(signer.PublicKey())))
+				updated.Fingerprint = ssh.FingerprintSHA256(signer.PublicKey())
 			}
 			s.config.Keys[i] = updated
 			if err := s.writeLocked(); err != nil {

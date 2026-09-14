@@ -96,7 +96,7 @@ func runUpdateHelper(file string) error {
 	}
 	cmd := exec.Command(target, "--config", plan.ConfigDir)
 	cmd.Dir = filepath.Dir(target)
-	prepareUpdaterProcess(cmd)
+	prepareRestartedApplication(cmd)
 	if e = startUpdateWithReceipt(plan, cmd.Start); e != nil {
 		_ = rollbackPlatformUpdate(plan)
 		restartPreviousUpdate(plan)
@@ -239,7 +239,7 @@ func restartPreviousUpdate(plan updatePlan) {
 	}
 	cmd := exec.Command(plan.Target, "--config", plan.ConfigDir)
 	cmd.Dir = filepath.Dir(plan.Target)
-	prepareUpdaterProcess(cmd)
+	prepareRestartedApplication(cmd)
 	_ = cmd.Start()
 }
 

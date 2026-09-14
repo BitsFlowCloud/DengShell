@@ -14,6 +14,12 @@ import (
 func prepareUpdaterProcess(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x00000008 | 0x00000200}
 }
+
+// Hide only the helper, never the GUI it launches after installation/rollback.
+// STARTF_USESHOWWINDOW + SW_HIDE otherwise overrides the child's first ShowWindow.
+func prepareRestartedApplication(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x00000008 | 0x00000200}
+}
 func waitForUpdateParent(pid int, timeout time.Duration) error {
 	h, e := windows.OpenProcess(windows.SYNCHRONIZE, false, uint32(pid))
 	if e != nil {

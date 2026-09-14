@@ -155,9 +155,6 @@ func (s *Store) Save(p Profile, clearSecret bool) (Profile, error) {
 	if p.Auth != "password" && p.Auth != "key" && p.Auth != "agent" {
 		return Profile{}, errors.New("不支持的认证方式")
 	}
-	if p.Auth == "key" && p.KeyPath == "" && p.KeyID == "" {
-		return Profile{}, errors.New("请选择私钥文件")
-	}
 	if p.Auth != "key" {
 		p.KeyID = ""
 		p.KeyPath = ""
@@ -203,6 +200,13 @@ func (s *Store) Save(p Profile, clearSecret bool) (Profile, error) {
 				p.Proxy.Password = entry.Proxy.Password
 			}
 			break
+		}
+	}
+	if p.Auth == "key" && p.KeyPath == "" && p.KeyID == "" {
+		// An imported draft may be renamed or regrouped before its key is
+		// supplied. Only a pre-existing incomplete import qualifies.
+		if index < 0 || s.config.Servers[index].FinalShellID == "" || s.config.Servers[index].Auth != "key" || s.config.Servers[index].KeyID != "" || s.config.Servers[index].KeyPath != "" {
+			return Profile{}, errors.New("请选择私钥文件")
 		}
 	}
 	if p.ID == "" {

@@ -105,7 +105,7 @@ async function connectProfile(profileID, force, { background = false, refreshHis
   if (connecting.has(profileID)) return null;
   const profile = profiles.find(p => p.id === profileID); if (!profile) return;
   if (profile.auth === 'key' && !profile.keyId && !profile.keyPath) {
-    toast(`「${profile.name}」需要补充私钥，请编辑此连接。`);
+    toast(`「${profile.name}」未找到私钥，请重新配置密钥。`);
     if (!background) showConnectionForm(profile);
     return null;
   }
@@ -191,7 +191,10 @@ async function connectProfile(profileID, force, { background = false, refreshHis
     if (refreshHistory) safe(refreshServerManagerHistory)();
     return state;
   } catch (error) {
-    if (alive()) { showConnectionProgress(state, error.message || String(error), true); toast(`${profile.name}：${error.message || error}`); }
+    if (alive()) {
+      showConnectionProgress(state, error.message || String(error), true); toast(`${profile.name}：${error.message || error}`);
+      if (!background && ['ssh_key_missing', 'ssh_key_unavailable', 'ssh_private_key_invalid'].includes(error.code)) showConnectionForm(profile);
+    }
     return null;
   } finally {
     if (connectionAttempts.get(profileID) === state) { connectionAttempts.delete(profileID); connecting.delete(profileID); }

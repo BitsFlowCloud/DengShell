@@ -4,7 +4,7 @@
 
 DengShell 是一款中文界面的开源 SSH 桌面工具，适合日常管理 VPS、维护 Linux 服务器、编辑远程配置和排查网络问题。支持 Windows 与 Linux 桌面，可同时连接多台服务器，并按自己的习惯调整字体、背景、布局和监控曲线。
 
-本说明对应 **v0.01 r28**。从 R20 升级的全部变化一次汇总在 [更新日志](CHANGELOG.md)。
+本说明对应 **v0.01 r30**。从 R20 升级的全部变化一次汇总在 [更新日志](CHANGELOG.md)。
 
 ## 内容导航
 
@@ -63,8 +63,8 @@ Linux 版本使用 GTK3 和 WebKitGTK 4.1，发行构建以 Ubuntu 22.04 / glibc
 
 **测试情况：**
 
-- **Linux：已测试通过。** 已在 Ubuntu 22.04、Ubuntu 24.04、Debian 12、Fedora 43 和 openSUSE Tumbleweed 和 Arch Linux 容器中通过安装、原生界面启动及卸载保留配置测试。具体范围见 [功能审查与验证](build/FUNCTIONAL-AUDIT-r28.md)。
-- **Windows：此前版本用户实机使用正常；本次 R28 已通过构建、压缩及安装包静态检查，尚未做 Windows 实机安装／卸载回归。**
+- **Linux：已测试通过。** 已在 Ubuntu 22.04、Ubuntu 24.04、Debian 12、Fedora 43 、openSUSE Tumbleweed 和 Arch Linux 容器中通过安装、原生界面启动及卸载保留配置测试。具体范围见 [功能审查与验证](build/FUNCTIONAL-AUDIT-r30.md)。
+- **Windows：** 发布验证覆盖原生 WebView2 启动、安装／卸载保留配置、压缩程序及从最小化状态升级后显示窗口。自动验证使用 GitHub Windows 运行器，结果见 [Windows 验证记录](https://github.com/BitsFlowCloud/DengShell/actions/workflows/windows-release-validation.yml)；不等同于全部 Windows 10／11 实体设备、显卡和托盘组合已验证。
 
 ### Linux 安装示例
 
@@ -110,7 +110,13 @@ bash data/support/install.sh
 
 ## 从 FinalShell 导入
 
-在 FinalShell 导出当前或全部 SSH 连接，将 JSON 放入名为 `finalshell_oot_pot` 的文件夹，再放到 DengShell 程序旁。点击 **设置 → 从 FinalShell 导入**，自动扫描并导入。密码会自动解析并加密保存，无需安装 Python 插件；密钥记录若只有引用，点击“补充私钥”关联密钥。重复导入保留已有连接和手动修改。详见 [导入说明](build/FINALSHELL-IMPORT.md)。
+在 FinalShell 导出当前或全部 SSH 连接，将 JSON 放入名为 `finalshell_oot_pot` 的文件夹，再放到 DengShell 程序旁。点击 **设置 → 从 FinalShell 导入**，自动扫描并导入。密码会自动解析并加密保存，无需安装 Python 插件；将私钥放入 `finalshell_oot_pot/key`，以连接的 `secret_key_id` 命名（可带 .pem 后缀），或提供包含 ID 和私钥内容的密钥 JSON，即可自动导入密钥管理器并关联。重复导入可补齐此前缺失的关联，保留已配置的密钥和其他手动修改；仍缺失时在连接时提示重新配置。详见 [导入说明](build/FINALSHELL-IMPORT.md)。
+
+## 服务器与多级目录
+
+服务器管理左侧显示分组目录，右侧显示紧凑连接列表。各级目录以缩进、连线和级别标识区分，选中后整行突出显示。单击选择、双击连接，Ctrl / ⌘ 可多选后批量打开；右键或“⋯”可编辑、删除、定位分组和复制地址。
+
+搜索覆盖全部分组；点击路径返回上级，“包含子分组”控制当前列表范围。两栏独立滚动，目录栏可拖动调整宽度，深层目录可横向滚动。栏宽、所选目录及子分组选项会保存。
 
 ## 第一次连接服务器
 

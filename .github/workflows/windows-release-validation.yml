@@ -1,0 +1,49 @@
+name: Windows release validation
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Draft or published release tag to validate
+        required: true
+        default: v0.01-r30
+  push:
+    branches: [qa/r30-validation]
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+      - name: Go backend and Windows platform tests
+        shell: pwsh
+        run: |
+          go test -timeout 12m ./...
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go test -tags desktop,production -timeout 5m .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Download exact release artifacts
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QA_RELEASE: ${{ inputs.release || 'v0.01-r30' }}
+        run: |
+          New-Item -ItemType Directory -Force qa-artifacts,qa-legacy | Out-Null
+          gh release download $env:QA_RELEASE --pattern DengShell-Setup-x64.exe --pattern DengShell-windows-x64.zip --dir qa-artifacts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          gh release download v0.01-r28 --pattern DengShell-windows-x64.zip --dir qa-legacy
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Native launch, installer and restart after update
+        shell: pwsh
+        run: ./scripts/test-windows-release.ps1 -Artifacts qa-artifacts -LegacyZip qa-legacy/DengShell-windows-x64.zip -Output qa-results
+      - name: Retain validation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-validation
+          path: qa-results
+          retention-days: 14

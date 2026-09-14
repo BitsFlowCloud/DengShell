@@ -147,8 +147,12 @@ func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret 
 			data, err = readPrivateKey(p.KeyPath)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("读取私钥：%w", err)
+			if errors.Is(err, errManagedKeyMissing) || os.IsNotExist(err) {
+				return nil, &AuthenticationError{code: "ssh_key_missing", message: "此连接的私钥已缺失，请重新配置密钥。"}
+			}
+			return nil, &AuthenticationError{code: "ssh_key_unavailable", message: "无法读取此连接的私钥，请检查文件权限或重新配置密钥。"}
 		}
+		defer clear(data)
 		var signer ssh.Signer
 		signer, err = ssh.ParsePrivateKey(data)
 		var passphraseRequired *ssh.PassphraseMissingError

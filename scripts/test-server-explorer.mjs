@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+const context=vm.createContext({Intl,Map,Set,console,profiles:[],readSaved:(_key,fallback)=>fallback});
+vm.runInContext(readFileSync(new URL('../web/server-manager.js',import.meta.url),'utf8')+'\n'+readFileSync(new URL('../web/server-explorer.js',import.meta.url),'utf8')+'\nthis.manager=serverManager;',context);
+const groups=[{id:'root',name:'导入',parentId:''},{id:'child',name:'日常',parentId:'root'},{id:'deep',name:'备份',parentId:'child'},{id:'other',name:'其他',parentId:''}];
+const profiles=[{id:'one',name:'主节点',groupId:'root',host:'192.0.2.1'},{id:'two',name:'日常 2',groupId:'child',host:'192.0.2.2'},{id:'three',name:'归档',groupId:'deep',host:'192.0.2.3'},{id:'four',name:'其他节点',groupId:'other',host:'192.0.2.4'}];
+context.profiles=profiles;context.acceptServerManagerConfig({servers:profiles,groupNodes:groups});context.manager.includeChildren=true;context.manager.selectedGroup='root';
+let tree=context.serverGroupTree();const list=(query='')=>Array.from(context.serverExplorerProfiles(tree,query),p=>p.id).sort();
+assert.deepEqual(list(),['one','three','two']);context.manager.includeChildren=false;assert.deepEqual(list(),['one']);
+context.manager.selectedGroup='deep';assert.deepEqual(list(),['three']);assert.deepEqual(list('192.0.2.4'),['four'],'search spans all folders even when descendants are disabled');assert.deepEqual(list('日常'),['three','two'],'search includes the full ancestor path');
+context.manager.collapsed.add('root');assert.deepEqual(list(),['three'],'collapsing a folder must not hide the right-hand selected folder contents');
+context.manager.selectedProfiles.add('three');context.acceptServerManagerConfig({servers:profiles.filter(p=>p.id!=='three'),groupNodes:groups.filter(g=>g.id!=='deep')});assert.equal(context.manager.selectedGroup,'');assert.equal(context.manager.selectedProfiles.size,0,'deleted connections must leave the selection');
+const deepGroups=[];for(let n=0;n<1200;n++)deepGroups.push({id:`g${n}`,name:`目录 ${n}`,parentId:n?`g${n-1}`:''});context.profiles=[{id:'last',name:'末级连接',groupId:'g1199'}];context.acceptServerManagerConfig({servers:context.profiles,groupNodes:deepGroups});context.manager.selectedGroup='g0';context.manager.includeChildren=true;tree=context.serverGroupTree();assert.equal(tree.depths.get('g1199'),1199);assert.equal(tree.counts.get('g0'),1);assert.equal(context.serverFolderAncestors(tree,'g1199').length,1200);assert.deepEqual(list(),['last']);
+console.log('PASS: directory filtering, global search, collapse independence, deletion cleanup and 1,200-level traversal.');

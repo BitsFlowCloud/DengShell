@@ -3,7 +3,7 @@
   'use strict';
   let entries = { ...(window.CLOUDSHELL?.uiPreferences || {}) }, ready = false, timer;
   const dirty = new Map(); let revision = 0;
-  const allowed = key => ['cloudshell.layout', 'dengshell.appearance-palette', 'dengshell.server-groups.collapsed', 'dengshell.workspace'].includes(key) || /^dengshell\.(history|nic)\.[A-Za-z0-9_-]{1,128}$/.test(key);
+  const allowed = key => ['cloudshell.layout', 'dengshell.appearance-palette', 'dengshell.server-groups.collapsed', 'dengshell.server-manager', 'dengshell.workspace'].includes(key) || /^dengshell\.(history|nic)\.[A-Za-z0-9_-]{1,128}$/.test(key);
   function read(key, fallback) { return Object.hasOwn(entries, key) ? structuredClone(entries[key]) : fallback; }
   function write(key, value) {
     if (!allowed(key) || key.startsWith('dengshell.history.')) return;

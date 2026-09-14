@@ -6,7 +6,7 @@ const appSource = readFileSync(new URL('../web/app.js', import.meta.url), 'utf8'
 const toolsSource = readFileSync(new URL('../web/workspace-tools.js', import.meta.url), 'utf8');
 const connectSource = appSource.slice(appSource.indexOf('async function connectProfile('), appSource.indexOf('\nfunction showConnectionProgress('));
 
-async function connectCase({ keyId = 'shared', keyPath = '/fixture/external-key', hasSecret = false, failures = [], answer = 'typed-once' } = {}) {
+async function connectCase({ keyId = 'shared', keyPath = '/fixture/external-key', hasSecret = false, failures = [], answer = 'typed-once', background = false } = {}) {
   const prompts = [], requests = [], messages = [], forms = [];
   const profile = { id: 'profile', name: 'fixture', auth: 'key', keyId, keyPath, hasSecret };
   const context = {
@@ -26,7 +26,7 @@ async function connectCase({ keyId = 'shared', keyPath = '/fixture/external-key'
     },
   };
   vm.createContext(context); vm.runInContext(connectSource, context);
-  const session = await context.connectProfile('profile', false, { refreshHistory: false });
+  const session = await context.connectProfile('profile', false, { refreshHistory: false, background });
   return { session, prompts, requests, messages, forms, sessions: context.sessions.size };
 }
 
@@ -57,6 +57,14 @@ assert.deepEqual(result.forms, ['profile'], 'missing private key must open the c
 assert.equal(result.prompts.length, 0, 'missing private key must not ask for a passphrase');
 assert.equal(result.requests.length, 0, 'missing private key must not start SSH');
 assert.equal(result.sessions, 0, 'missing private key must not create an empty terminal');
+
+for (const code of ['ssh_key_missing', 'ssh_key_unavailable', 'ssh_private_key_invalid']) {
+  result = await connectCase({ failures: [code] });
+  assert.deepEqual(result.forms, ['profile'], `${code} must open reconfiguration`);
+  assert.equal(result.prompts.length, 0, 'missing or broken key must not ask for a password');
+  result = await connectCase({ failures: [code], background: true });
+  assert.equal(result.forms.length, 0, 'background connections must not pile up edit dialogs');
+}
 
 const nodes = new Map();
 const element = selector => {
