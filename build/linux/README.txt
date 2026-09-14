@@ -76,4 +76,4 @@ Arch Linux / 兼容 pacman 的 x86-64 桌面：
 卸载：sudo pacman -R dengshell（用户配置目录保留）。
 Arch 依赖 gtk3、webkit2gtk-4.1、bash、iputils、glibc；托盘可选 libayatana-appindicator。
 Windows/Debian 的内置更新会退出并重启；Arch 请用新版 pacman 包升级。
-R20 至 R26 全部变化见 CHANGELOG.md；本轮验证边界见 FUNCTIONAL-AUDIT-r26.md。
+R20 至 R27 全部变化见 CHANGELOG.md；本轮验证边界见 FUNCTIONAL-AUDIT-r27.md。

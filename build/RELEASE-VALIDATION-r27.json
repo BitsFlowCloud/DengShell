@@ -1,0 +1,123 @@
+{
+  "applicationBuild": 20260914027,
+  "windows": {
+    "machine": "x86_64",
+    "subsystem": "Windows GUI",
+    "portableArchiveIntegrity": true,
+    "installerExtractedExecutableMatches": true,
+    "upxIntegrity": true,
+    "realWindowsRuntimeTested": false
+  },
+  "cleanSourceAndDistribution": true,
+  "fontLicenseFiles": 5,
+  "embeddedAssetsMatchSource": true,
+  "checksumsPassed": true,
+  "nativeLinuxDistributions": 6,
+  "websiteLocalDownloadLinks": 7,
+  "trayLayout": {
+    "actualChromium": true,
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "zoom": [
+      1,
+      1.25,
+      1.5,
+      2
+    ],
+    "narrowWidth": 360,
+    "checkboxAndButtonAlignment": true,
+    "actionsAndRememberChoice": true
+  },
+  "linuxPackageTests": [
+    {
+      "distribution": "ubuntu22",
+      "format": "deb",
+      "installedExecutableSHA256": "f8b1510ab8b487efb960dde13cef97661c84deb8d401ce65897669df0a97c8c3",
+      "nativeFrontendReady": true,
+      "launcherHelpPassed": true,
+      "uninstallPreservesUserData": true
+    },
+    {
+      "distribution": "debian12",
+      "format": "deb",
+      "installedExecutableSHA256": "f8b1510ab8b487efb960dde13cef97661c84deb8d401ce65897669df0a97c8c3",
+      "nativeFrontendReady": true,
+      "launcherHelpPassed": true,
+      "uninstallPreservesUserData": true
+    },
+    {
+      "distribution": "ubuntu24",
+      "format": "deb",
+      "installedExecutableSHA256": "f8b1510ab8b487efb960dde13cef97661c84deb8d401ce65897669df0a97c8c3",
+      "nativeFrontendReady": true,
+      "launcherHelpPassed": true,
+      "uninstallPreservesUserData": true
+    },
+    {
+      "distribution": "fedora43",
+      "format": "rpm",
+      "installedExecutableSHA256": "f8b1510ab8b487efb960dde13cef97661c84deb8d401ce65897669df0a97c8c3",
+      "nativeFrontendReady": true,
+      "launcherHelpPassed": true,
+      "uninstallPreservesUserData": true
+    },
+    {
+      "distribution": "opensuse",
+      "format": "rpm",
+      "installedExecutableSHA256": "f8b1510ab8b487efb960dde13cef97661c84deb8d401ce65897669df0a97c8c3",
+      "nativeFrontendReady": true,
+      "launcherHelpPassed": true,
+      "uninstallPreservesUserData": true
+    },
+    {
+      "distribution": "arch",
+      "format": "arch",
+      "installedExecutableSHA256": "f8b1510ab8b487efb960dde13cef97661c84deb8d401ce65897669df0a97c8c3",
+      "nativeFrontendReady": true,
+      "launcherHelpPassed": true,
+      "uninstallPreservesUserData": true
+    }
+  ],
+  "legacyUpgradeProbes": {
+    "actualR20Source": true,
+    "actualR26Source": true,
+    "completeWindowsAndLinuxDownloads": true,
+    "R27DoesNotRepeatUpdate": true
+  },
+  "nativeLegacyUpgrades": [
+    {
+      "oldBuild": 20260913020,
+      "newBuild": 20260914027,
+      "oldNativeFrontendReady": true,
+      "exactR20UpdateHelper": true,
+      "parentExitWait": true,
+      "actualDpkgUpgrade": true,
+      "newExecutableSHA256": "f8b1510ab8b487efb960dde13cef97661c84deb8d401ce65897669df0a97c8c3",
+      "restartedR27NativeFrontendReady": true,
+      "originalConfigKeyPreserved": true,
+      "fontAndBackgroundMarkersPreserved": true,
+      "installedReceiptVerified": true,
+      "systemAuthorizationPromptTested": false,
+      "environment": "isolated Ubuntu 22.04 container; root; Xvfb software rendering; no network"
+    },
+    {
+      "oldBuild": 20260914026,
+      "newBuild": 20260914027,
+      "oldNativeFrontendReady": true,
+      "exactR26UpdateHelper": true,
+      "parentExitWait": true,
+      "actualDpkgUpgrade": true,
+      "newExecutableSHA256": "f8b1510ab8b487efb960dde13cef97661c84deb8d401ce65897669df0a97c8c3",
+      "restartedR27NativeFrontendReady": true,
+      "originalConfigKeyPreserved": true,
+      "fontAndBackgroundMarkersPreserved": true,
+      "installedReceiptVerified": true,
+      "systemAuthorizationPromptTested": false,
+      "environment": "isolated Ubuntu 22.04 container; root; Xvfb software rendering; no network"
+    }
+  ],
+  "updateSignaturesVerified": true,
+  "websiteDeployedOnline": false
+}

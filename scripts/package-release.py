@@ -84,7 +84,7 @@ def package(args):
         sourcefiles.append(ROOT/'build'/name)
     for p in sorted(set(sourcefiles)):copy(p,source/p.relative_to(ROOT))
     zip_tree(source,out/'DengShell-source.zip',Path('DengShell'))
-    notes='R20 至 R26 累计更新：Bash/Zsh/Fish 兼容、签名更新、界面字体与颜色、FinalShell 导入、命令参数与回车选项、分组拖动、跨服务器多标签文本编辑；新增 Arch pacman 包。'
+    notes=f'R20 至 R{RELEASE} 累计更新：Bash/Zsh/Fish 兼容、签名更新、界面字体与颜色、FinalShell 导入、命令参数与回车选项、分组拖动、跨服务器多标签文本编辑；新增 Arch pacman 包，修复最小化选项弹窗按钮和复选框错位。'
     for binary,artifact,platform,name in [(winbinary,winbinary,'windows-amd64','up.exe'),(linuxbinary,out/'up.deb','linux-amd64','up.deb')]:
         copy(artifact,site/name)
         info={'schemaVersion':2,'build':BUILD,'product':'DengShell','platform':platform,'version':'v0.01','notes':notes,'sha256':digest(artifact),'size':artifact.stat().st_size,'executableSHA256':digest(binary)}
