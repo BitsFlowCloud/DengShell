@@ -6,10 +6,14 @@ on:
         description: Draft or published release tag to validate
         required: true
         default: v0.01-r30
+      legacy_release:
+        description: Older release for an actual upgrade check
+        required: true
+        default: v0.01-r20
   push:
     branches: [qa/r30-validation]
 permissions:
-  contents: read
+  contents: write # GitHub restricts draft release visibility to users/apps with push access.
 jobs:
   windows:
     runs-on: windows-2022
@@ -31,15 +35,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           QA_RELEASE: ${{ inputs.release || 'v0.01-r30' }}
+          QA_LEGACY: ${{ inputs.legacy_release || 'v0.01-r28' }}
         run: |
           New-Item -ItemType Directory -Force qa-artifacts,qa-legacy | Out-Null
           gh release download $env:QA_RELEASE --pattern DengShell-Setup-x64.exe --pattern DengShell-windows-x64.zip --dir qa-artifacts
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          gh release download v0.01-r28 --pattern DengShell-windows-x64.zip --dir qa-legacy
+          gh release download $env:QA_LEGACY --pattern DengShell-windows-x64.zip --dir qa-legacy
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Native launch, installer and restart after update
         shell: pwsh
-        run: ./scripts/test-windows-release.ps1 -Artifacts qa-artifacts -LegacyZip qa-legacy/DengShell-windows-x64.zip -Output qa-results
+        env:
+          QA_LEGACY: ${{ inputs.legacy_release || 'v0.01-r28' }}
+        run: ./scripts/test-windows-release.ps1 -Artifacts qa-artifacts -LegacyZip qa-legacy/DengShell-windows-x64.zip -Output qa-results -LegacyRelease $env:QA_LEGACY
       - name: Retain validation evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

@@ -1,9 +1,9 @@
-param([Parameter(Mandatory=$true)][string]$Artifacts,[Parameter(Mandatory=$true)][string]$LegacyZip,[string]$Output='qa-results')
+param([Parameter(Mandatory=$true)][string]$Artifacts,[Parameter(Mandatory=$true)][string]$LegacyZip,[string]$Output='qa-results',[string]$LegacyRelease='legacy')
 $ErrorActionPreference='Stop'
 $Artifacts=(Resolve-Path $Artifacts).Path; $LegacyZip=(Resolve-Path $LegacyZip).Path
 New-Item -ItemType Directory -Force $Output | Out-Null; $Output=(Resolve-Path $Output).Path
 $qaRoot=Join-Path $env:RUNNER_TEMP ('DengShell QA '+[guid]::NewGuid().ToString('N')); New-Item -ItemType Directory $qaRoot | Out-Null
-$report=[ordered]@{os=(Get-CimInstance Win32_OperatingSystem).Caption;architecture=$env:PROCESSOR_ARCHITECTURE;checks=@();passed=$false}
+$report=[ordered]@{os=(Get-CimInstance Win32_OperatingSystem).Caption;architecture=$env:PROCESSOR_ARCHITECTURE;checks=@();legacyRelease=$LegacyRelease;passed=$false}
 Add-Type @'
 using System;
 using System.Text;
@@ -30,7 +30,7 @@ try{
  $exe=(Get-ChildItem $portable -Filter DengShell.exe -Recurse | Select-Object -First 1).FullName
  $expected=(Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant();$report.executableSHA256=$expected
  $report.installerSHA256=(Get-FileHash (Join-Path $Artifacts 'DengShell-Setup-x64.exe')).Hash.ToLowerInvariant()
- $config=Join-Path $qaRoot 'portable config';Seed-QA $config;$running=Start-Native $exe $config $true;Visible-QA $running 'packed portable EXE launches visibly even with SW_HIDE';Stop-QA $running
+ $config=Join-Path $qaRoot 'portable config';Seed-QA $config;$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS='--remote-debugging-port=19223';$running=Start-Native $exe $config $true;Visible-QA $running 'packed portable EXE launches visibly even with SW_HIDE';node scripts/test-windows-webview.mjs 19223 $Output;if($LASTEXITCODE -ne 0){throw 'Native WebView2 interaction check failed'};Stop-QA $running;Remove-Item Env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
  $install=Join-Path $qaRoot 'installed';$installer=Start-Process (Join-Path $Artifacts 'DengShell-Setup-x64.exe') -ArgumentList ('/S /D='+$install) -PassThru -Wait;Check-QA ($installer.ExitCode -eq 0) 'silent installer returns success'
  Check-QA ((Get-FileHash (Join-Path $install 'DengShell.exe')).Hash.ToLowerInvariant() -eq $expected) 'installer contains exact portable executable'
  $uninstallKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell';Check-QA ((Get-ItemProperty $uninstallKey).DisplayName -eq 'DengShell') 'registered in Windows uninstall control panel'
@@ -38,13 +38,13 @@ try{
  $uninstaller=Start-Process (Join-Path $install 'data/support/Uninstall.exe') -ArgumentList '/S' -PassThru -Wait;Wait-QA {!(Test-Path (Join-Path $install 'DengShell.exe'))} 'uninstall removes executable';Check-QA (!(Test-Path $uninstallKey)) 'uninstall registration removed';Check-QA ((Get-Content (Join-Path $installedConfig 'keep-user-data.txt')).Trim() -eq 'preserve-local-fixture') 'uninstall preserves user data'
  $legacy=Join-Path $qaRoot 'legacy';Expand-Archive $LegacyZip $legacy;$oldExe=(Get-ChildItem $legacy -Filter DengShell.exe -Recurse|Select-Object -First 1).FullName
  $build=[uint64]([regex]::Match((Get-Content internal/app/updates.go -Raw),'const ApplicationBuild uint64 = (\d+)').Groups[1].Value)
- foreach($mode in @('legacy-r28','current')){
-  $case=Join-Path $qaRoot $mode;New-Item -ItemType Directory $case | Out-Null;$target=Join-Path $case 'DengShell.exe';Copy-Item $(if($mode -eq 'legacy-r28'){$oldExe}else{$exe}) $target
+ foreach($mode in @('legacy','current')){
+  $case=Join-Path $qaRoot $mode;New-Item -ItemType Directory $case | Out-Null;$target=Join-Path $case 'DengShell.exe';Copy-Item $(if($mode -eq 'legacy'){$oldExe}else{$exe}) $target
   $caseConfig=Join-Path $case 'data';Seed-QA $caseConfig;$running=Start-Native $target $caseConfig;Visible-QA $running "$mode initial frontend visible"
   $handle=[DengQA]::Find($running.Id);[DengQA]::ShowWindow($handle,6)|Out-Null;Wait-QA {![DengQA]::IsWindowVisible($handle) -or [DengQA]::IsIconic($handle)} 'minimized or hidden before update';Start-Sleep -Seconds 2
   $wasTray=![DengQA]::IsWindowVisible($handle);$report["$mode-beforeUpdateHidden"]=$wasTray
   $job=Join-Path $case 'update-job';New-Item -ItemType Directory $job|Out-Null;$staged=Join-Path $job 'up.exe';Copy-Item $exe $staged;$helper=Join-Path $job 'helper.exe';Copy-Item $target $helper
-  $plan=@{schema=2;build=$(if($mode -eq 'legacy-r28'){$build}else{$build+1});version='v0.01';parentPID=$running.Id;target=$target;staged=$staged;configDir=$caseConfig;oldSHA256=(Get-FileHash $target).Hash.ToLowerInvariant();packageSHA256=$expected;executableSHA256=$expected;platform='windows-amd64'}
+  $plan=@{schema=2;build=$(if($mode -eq 'legacy'){$build}else{$build+1});version='v0.01';parentPID=$running.Id;target=$target;staged=$staged;configDir=$caseConfig;oldSHA256=(Get-FileHash $target).Hash.ToLowerInvariant();packageSHA256=$expected;executableSHA256=$expected;platform='windows-amd64'}
   $planFile=Join-Path $job 'plan.json';[IO.File]::WriteAllText($planFile,($plan|ConvertTo-Json),[Text.UTF8Encoding]::new($false))
   $worker=Start-Process $helper -ArgumentList @('--dengshell-update-helper',('"'+$planFile+'"')) -WindowStyle Hidden -PassThru
   Wait-QA {Test-Path (Join-Path $job 'ready')} "$mode helper validates actual packed update"
