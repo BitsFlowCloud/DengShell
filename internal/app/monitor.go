@@ -109,6 +109,7 @@ type Stats struct {
 	SampleReady                  bool                `json:"sampleReady"`
 	Disks                        []Disk              `json:"disks"`
 	Processes                    []Process           `json:"processes"`
+	ProcessMemoryTop             []Process           `json:"processMemoryTop,omitempty"`
 	ProcessSample                ProcessSampleInfo   `json:"processSample"`
 	SampledAt                    time.Time           `json:"sampledAt"`
 	Cached                       bool                `json:"cached"`
@@ -262,7 +263,12 @@ func (s *Session) Stats(ctx context.Context) (Stats, error) {
 	return s.collectStats(ctx, true, true)
 }
 func (s *Session) statsForDisplay(ctx context.Context, processes bool) (Stats, error) {
-	return s.collectStats(ctx, processes, false)
+	value, err := s.collectStats(ctx, processes, false)
+	if err == nil && processes {
+		value.ProcessMemoryTop = topProcesses(value.Processes, "memory")
+		value.Processes = topProcesses(value.Processes, "cpu")
+	}
+	return value, err
 }
 func (s *Session) collectStats(ctx context.Context, processes, force bool) (Stats, error) {
 	s.statsMu.Lock()
@@ -277,10 +283,10 @@ func (s *Session) collectStats(ctx context.Context, processes, force bool) (Stat
 			return Stats{}, s.statsLastError
 		}
 		if s.previous != nil {
-			// Expanding the process card must not resample load/CPU/disk before
-			// their five-second tick. Only the explicitly requested scan runs.
+			// A process refresh must not resample load/CPU/disk before
+			// their five-second tick. Only the due process scan runs.
 			if processDue {
-				if err := s.collectProcessesOnly(ctx, now); err != nil {
+				if err := s.collectProcessesOnly(ctx); err != nil {
 					return Stats{}, err
 				}
 			}
@@ -288,13 +294,10 @@ func (s *Session) collectStats(ctx context.Context, processes, force bool) (Stat
 		}
 	}
 	s.statsNextSampleAt = advanceSampleDue(s.statsNextSampleAt, now, monitorMinimumInterval)
-	if processDue {
-		s.processNextSampleAt = advanceSampleDue(s.processNextSampleAt, now, monitorProcessInterval)
-	}
 	staticDue := s.staticPrevious == nil || now.Sub(s.staticPrevious.MetadataSampledAt) >= monitorStaticInterval
-	ctx, cancel := context.WithTimeout(ctx, 12*time.Second)
-	defer cancel()
-	data, err := s.run(ctx, monitorCommandFor(staticDue, processDue))
+	coreCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
+	data, err := s.coreCollector.run(coreCtx, s, "system", monitorCommandFor(staticDue, false), monitorOutputLimit)
+	cancel()
 	if err != nil {
 		s.statsLastError = err
 		return Stats{}, err
@@ -314,21 +317,8 @@ func (s *Session) collectStats(ctx context.Context, processes, force bool) (Stat
 	} else {
 		applyStaticMetadata(&current, s.staticPrevious)
 	}
-	if processDue {
-		current.ProcessSample.SampledAt = current.SampledAt
-		if s.processPrevious != nil {
-			applyProcessRates(&current, s.processPrevious)
-		}
-		snapshot := current
-		s.processPrevious = &snapshot
-	} else if processes && s.processPrevious != nil {
-		current.Processes = append([]Process{}, s.processPrevious.Processes...)
-		current.ProcessSample = s.processPrevious.ProcessSample
-		current.ProcessSample.Cached = true
-	} else {
-		current.Processes = []Process{}
-		current.ProcessSample = ProcessSampleInfo{Paused: true}
-	}
+	current.Processes = []Process{}
+	current.ProcessSample = ProcessSampleInfo{Paused: true}
 	current.ProcessSample.IntervalMilliseconds = int(monitorProcessInterval / time.Millisecond)
 	if previous := s.previous; previous != nil {
 		seconds := current.Uptime - previous.Uptime
@@ -347,17 +337,29 @@ func (s *Session) collectStats(ctx context.Context, processes, force bool) (Stat
 		}
 	}
 	s.previous = &current
+	if processDue {
+		if err := s.collectProcessesOnly(ctx); err != nil {
+			return Stats{}, err
+		}
+	}
 	return s.cachedDisplayStats(processes, false), nil
 }
 
 // Called with statsMu held. Process-only refreshes leave the core sample's
-// timestamp and load untouched, so rapid expand/collapse cannot increase cost.
-func (s *Session) collectProcessesOnly(ctx context.Context, now time.Time) error {
-	ctx, cancel := context.WithTimeout(ctx, 12*time.Second)
+// timestamp and load untouched; requests cannot increase sampling frequency.
+func (s *Session) collectProcessesOnly(ctx context.Context) error {
+	processCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
 	defer cancel()
-	data, err := s.run(ctx, "export LC_ALL=C\n"+processMonitorCommand)
+	started := time.Now()
+	data, err := s.processCollector.run(processCtx, s, "processes", "export LC_ALL=C\n"+processMonitorCommand, monitorOutputLimit)
 	if err != nil {
-		return err
+		// Keep core CPU/memory/disk samples usable when the optional process
+		// scan fails. Back off retries; a stuck worker cannot multiply on clicks.
+		s.processPrevious = &rawStats{Stats: Stats{Processes: []Process{}, ProcessSample: ProcessSampleInfo{
+			SampledAt: time.Now(), Error: "进程采集未完成：" + err.Error(), IntervalMilliseconds: 30000,
+		}}}
+		s.processNextSampleAt = time.Now().Add(30 * time.Second)
+		return ctx.Err()
 	}
 	current := rawStats{Stats: Stats{SampledAt: time.Now()}}
 	lines := []string{}
@@ -373,12 +375,17 @@ func (s *Session) collectProcessesOnly(ctx context.Context, now time.Time) error
 	}
 	parseProcessStats(&current, lines)
 	current.ProcessSample.SampledAt = current.SampledAt
-	current.ProcessSample.IntervalMilliseconds = int(monitorProcessInterval / time.Millisecond)
+	interval := max(monitorProcessInterval, min(30*time.Second, 2*time.Since(started)))
+	if !current.ProcessSample.Available {
+		interval = 30 * time.Second
+	}
+	current.ProcessSample.IntervalMilliseconds = int(interval / time.Millisecond)
 	if s.processPrevious != nil {
 		applyProcessRates(&current, s.processPrevious)
 	}
 	s.processPrevious = &current
-	s.processNextSampleAt = advanceSampleDue(s.processNextSampleAt, now, monitorProcessInterval)
+	// Long scans leave an idle interval instead of immediately starting again.
+	s.processNextSampleAt = time.Now().Add(interval)
 	return nil
 }
 

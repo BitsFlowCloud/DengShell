@@ -168,3 +168,7 @@
 .disk-section h2 { margin-bottom:8px; }
 .disk-total-bar { margin:6px 0; }
 .disk-table-head { padding:2px 0 4px; }
+
+.process-heading { display:flex; align-items:center; gap:8px; padding:8px 0; color:var(--text); font-size:12px; font-weight:600; }
+.process-heading #process-count { margin-left:auto; font-size:11px; color:var(--text-secondary); font-weight:400; }
+.process-heading #monitor-state { font-size:11px; font-weight:400; }

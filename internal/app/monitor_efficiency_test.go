@@ -111,7 +111,10 @@ func TestMonitorCommandsOmitHeavyProcessWorkWhenCollapsed(t *testing.T) {
 		}
 	}
 	full := monitorCommandFor(true, true)
-	for _, required := range []string{"smaps_rollup", "df -Pk", "/proc/cpuinfo", "ip -o"} {
+	if strings.Contains(full, "smaps_rollup") {
+		t.Fatal("routine monitoring scans process memory pages")
+	}
+	for _, required := range []string{"/proc/[0-9]*/stat", "df -Pk", "/proc/cpuinfo", "ip -o"} {
 		if !strings.Contains(full, required) {
 			t.Fatal("full sample dropped required information", required)
 		}

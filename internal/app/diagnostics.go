@@ -16,10 +16,6 @@ import (
 
 const diagnosticOutputLimit = 512 << 10
 
-// SSH channel-open requests have no per-request cancellation in x/crypto/ssh.
-// Keep their concurrency bounded even if a peer stops acknowledging channels.
-var diagnosticRemoteSlots = make(chan struct{}, 4)
-
 type DiagnosticReport struct {
 	ID          string                 `json:"id"`
 	SessionID   string                 `json:"sessionId"`
@@ -240,12 +236,7 @@ func remoteDiagnosticCommand(target string) string {
 func runRemoteDiagnostic(ctx context.Context, s *Session, target string, d *Diagnostic) error {
 	fmt.Fprint(d, diagnosticHeader("服务器", target, "远程 mtr · 10 轮 · ASN 查询"))
 	fmt.Fprintln(d, "ASN：mtr 的 AS 查询（默认 Team Cymru DNS）；不可用时显示 AS???。")
-	channel, err := openMTRChannel(ctx, s)
-	if err != nil {
-		return err
-	}
-	channel.Stdout, channel.Stderr = d, d
-	err = s.runSSHChannel(ctx, channel, remoteDiagnosticCommand(target), ssh.SIGTERM)
+	_, err := s.commandCollector.runWithOutput(ctx, s, "diagnostic", remoteDiagnosticCommand(target), diagnosticOutputLimit, d)
 	var exitErr *ssh.ExitError
 	if errors.As(err, &exitErr) && exitErr.ExitStatus() == 127 && strings.Contains(d.snapshot().Output, "__DENGSHELL_MTR_MISSING__") {
 		d.setOutput(strings.ReplaceAll(d.snapshot().Output, "__DENGSHELL_MTR_MISSING__", "远程服务器未安装 mtr。"))

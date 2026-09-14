@@ -77,24 +77,10 @@ func TestMonitorAndScriptDeadlineReleasesBlockedWait(t *testing.T) {
 			case <-time.After(time.Second):
 				t.Fatal("SSH wait ignored caller deadline")
 			}
-			if os.Getenv("DENGSHELL_TEST_IGNORED_CHANNEL_CLOSE") == "1" && s.ctx.Err() == nil {
-				t.Fatal("unresponsive transport was retained after the close grace period")
+			if os.Getenv("DENGSHELL_TEST_IGNORED_CHANNEL_CLOSE") == "1" && s.ctx.Err() != nil {
+				t.Fatal("collector cancellation closed the SSH transport")
 			}
 		})
-	}
-}
-
-func TestMonitorOpenTimeoutReleasesDiagnosticSlot(t *testing.T) {
-	s, _, _ := backgroundNetworkSSHFixture(t, true, nil)
-	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Millisecond)
-	defer cancel()
-	_, err := s.runBoundedSSH(ctx, networkMonitorCommand, monitorOutputLimit)
-	if !errors.Is(err, context.DeadlineExceeded) {
-		t.Fatalf("open deadline: %v", err)
-	}
-	awaitNetworkCondition(t, time.Second, func() bool { return len(diagnosticRemoteSlots) == 0 })
-	if s.ctx.Err() == nil {
-		t.Fatal("stalled channel-open transport stayed alive")
 	}
 }
 
@@ -152,8 +138,8 @@ func TestCancelledChannelOpenAllowsCooperativePeerToFinish(t *testing.T) {
 				t.Fatal("cancelled opening worker did not exit")
 			}
 			if os.Getenv("DENGSHELL_TEST_IGNORED_CHANNEL_CLOSE") == "1" {
-				if s.ctx.Err() == nil {
-					t.Fatal("unused channel retained a wait goroutine after ignored close")
+				if s.ctx.Err() != nil {
+					t.Fatal("ignored collector close killed healthy SSH")
 				}
 				return
 			}
@@ -184,8 +170,8 @@ func TestRejectedExecWaitIsStillBounded(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("rejected exec retained SSH request worker")
 	}
-	if os.Getenv("DENGSHELL_TEST_IGNORED_CHANNEL_CLOSE") == "1" && s.ctx.Err() == nil {
-		t.Fatal("ignored close after rejected exec retained transport")
+	if os.Getenv("DENGSHELL_TEST_IGNORED_CHANNEL_CLOSE") == "1" && s.ctx.Err() != nil {
+		t.Fatal("ignored collector close killed the terminal")
 	}
 }
 

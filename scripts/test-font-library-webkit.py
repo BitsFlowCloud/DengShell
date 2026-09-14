@@ -31,7 +31,9 @@ const face=allFonts().find(f=>f.id===job.asset.id);await loadFace(face);await al
 const c=document.createElement('canvas').getContext('2d');c.font=`100px ${terminalFontFamily}`;const narrow={latin:c.measureText('M').width,han:c.measureText('中').width,family:terminalFontFamily};
 await DengFontLibrary.open('font');
 const shellCount=document.querySelectorAll('.library-card').length;
-await wait(1500);const preview=[...document.querySelectorAll('.library-preview img')].some(x=>x.naturalWidth===800);
+document.querySelector('#library-preview-bold').click();
+if(getComputedStyle(document.querySelector('.library-live-preview')).fontWeight!=='700')throw Error('Bold preview did not update');
+await wait(1500);const preview=[...document.querySelectorAll('.library-live-preview')].some(x=>!x.hidden&&x.style.fontFamily.includes('Deng online preview'));
 if(uiCount!==20||shellCount!==30||!uiActive||!preview||Math.abs(narrow.han-2*narrow.latin)>.2)throw Error(JSON.stringify({uiCount,shellCount,uiActive,preview,narrow}));
 window.webkit.messageHandlers.qa.postMessage(JSON.stringify({passed:true,uiCount,shellCount,uiActive,preview,widths,narrow}));
 }catch(error){window.webkit.messageHandlers.qa.postMessage(JSON.stringify({passed:false,error:String(error),stack:error.stack,errors:window.__qaErrors,scripts:[...document.scripts].map(s=>s.src),body:document.body?.innerText?.slice(0,1200),url:location.href.split('#')[0],ready:document.readyState}));}})();'''

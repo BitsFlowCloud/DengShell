@@ -1,7 +1,7 @@
 'use strict';
 
 window.DengFontLibrary = (() => {
-  let catalogPromise, dialog, kind = 'ui-font', query = '', observer;
+  let catalogPromise, dialog, kind = 'ui-font', query = '', observer, previewBold = false;
   const jobs = new Map(), previewLoads = new Map(), confirming = new Set(), intent = { 'ui-font': 0, font: 0 };
   const bytes = size => size >= 1048576 ? `${(size / 1048576).toFixed(2)} MiB` : `${Math.ceil(size / 1024)} KiB`;
   const installed = font => font.builtinId || managedAssets.filter(a => a.kind === font.kind && a.libraryId === font.id).sort((a,b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0]?.id;
@@ -84,12 +84,17 @@ window.DengFontLibrary = (() => {
   }
 
   async function preview(card) {
-    const font = card._font, img = card.querySelector('img');
+    const font = card._font, sample = card.querySelector('.library-live-preview');
     try {
-      if (!previewLoads.has(font.id)) previewLoads.set(font.id, api(`/api/font-library/previews/${encodeURIComponent(font.id)}`).catch(error => { previewLoads.delete(font.id); throw error; }));
-      const { dataUrl } = await previewLoads.get(font.id);
+      if (!previewLoads.has(font.id)) previewLoads.set(font.id, (async () => {
+        const { dataUrl } = await api(`/api/font-library/previews/${encodeURIComponent(font.id)}?format=font`);
+        const face = new FontFace(`Deng online preview ${font.id}`, `url(${JSON.stringify(dataUrl)})`, { weight: font.weightRange || '400', display: 'swap' });
+        await face.load(); document.fonts.add(face); return face.family;
+      })().catch(error => { previewLoads.delete(font.id); throw error; }));
+      const family = await previewLoads.get(font.id);
       if (!card.isConnected) return;
-      img.src = dataUrl; img.hidden = false; card.querySelector('.library-preview-message').hidden = true;
+      sample.style.fontFamily = `${JSON.stringify(family)}, "Deng UI IBM Plex", monospace`;
+      sample.hidden = false; card.querySelector('.library-preview-message').hidden = true;
     } catch {
       if (!card.isConnected) return;
       const message = card.querySelector('.library-preview-message'); message.replaceChildren(document.createTextNode('预览暂不可用 '));
@@ -125,7 +130,7 @@ window.DengFontLibrary = (() => {
     for (const font of fonts) {
       const card = node('article', 'library-card'); card.dataset.libraryFont = font.id; card._font = font;
       const title = node('strong', '', font.name), detail = node('p', 'library-detail', font.description);
-      const image = node('img'); image.alt = `${font.name} 的实际字体样张`; image.hidden = true; image.width = 800; image.height = 200;
+      const image = node('span', 'library-live-preview', font.kind === 'font' ? 'root@server:~$ echo "Hello"\n简体中文 /home/user 繁體中文\n0123456789 ABC abc' : '连接服务器 · 文件管理\n简体中文 · 繁體中文\nDengShell 0123456789'); image.hidden = true;
       const previewBox = node('div', 'library-preview'), message = node('span', 'library-preview-message', '正在准备样张…'); previewBox.append(image, message);
       const note = node('p', 'library-note', font.fallbackNote), status = node('p', 'library-state');
       const progress = node('progress'); progress.hidden = true; progress.setAttribute('aria-label', `${font.name}下载进度`);
@@ -145,7 +150,8 @@ window.DengFontLibrary = (() => {
   function initialize() {
     if (dialog) return;
     dialog = node('dialog', 'font-library-dialog'); dialog.id = 'font-library-dialog'; dialog.setAttribute('aria-labelledby', 'font-library-title');
-    dialog.innerHTML = `<div class="dialog-heading"><div><h2 id="font-library-title">在线字体库</h2><p>预览样张从官网下载；完整字体仅在确认后下载并保存在本机。</p></div><button class="icon-button library-close" type="button" aria-label="关闭在线字体库">×</button></div><div class="library-toolbar"><nav class="font-kind-tabs" aria-label="字体类型"><button type="button" data-library-kind="ui-font" aria-pressed="true">界面字体 · 20</button><button type="button" data-library-kind="font" aria-pressed="false">Shell 字体 · 30</button></nav><input type="search" class="library-search" aria-label="搜索在线字体" placeholder="搜索字体名称或风格"></div><p class="library-count" role="status"></p><div class="library-list"></div><footer class="library-footer"><button type="button" class="text-button library-back">返回已安装字体</button><span>字体下载不影响 SSH 连接；离线时仍可使用已安装字体。</span></footer>`;
+    dialog.innerHTML = `<div class="dialog-heading"><div><h2 id="font-library-title">在线字体</h2><p>先看实际字形，确认后下载使用；加粗开关仅改变样张。</p></div><button class="icon-button library-close" type="button" aria-label="关闭在线字体库">×</button></div><div class="library-toolbar"><nav class="font-kind-tabs" aria-label="字体类型"><button type="button" data-library-kind="ui-font" aria-pressed="true">界面字体</button><button type="button" data-library-kind="font" aria-pressed="false">Shell 字体</button></nav><label class="library-bold"><input type="checkbox" id="library-preview-bold">加粗预览</label><input type="search" class="library-search" aria-label="搜索在线字体" placeholder="搜索字体名称或风格"></div><p class="library-count" role="status"></p><div class="library-list"></div><footer class="library-footer"><button type="button" class="text-button library-back">返回已安装字体</button><span>字体下载不影响 SSH 连接；离线时仍可使用已安装字体。</span></footer>`;
+    dialog.querySelector('#library-preview-bold').onchange = event => { previewBold = event.target.checked; dialog.classList.toggle('preview-bold', previewBold); };
     dialog.querySelector('.library-close').onclick = () => dialog.close();
     dialog.querySelector('.library-back').onclick = safe(async () => { dialog.close(); if (kind === 'ui-font') await window.DengUIAppearance.open(); else await openAppearance('font'); });
     dialog.querySelectorAll('[data-library-kind]').forEach(button => button.onclick = safe(async () => { kind = button.dataset.libraryKind; await render(); }));

@@ -51,6 +51,7 @@ type LibraryFont struct {
 	FallbackNote string      `json:"fallbackNote"`
 	File         LibraryFile `json:"file"`
 	Preview      LibraryFile `json:"preview"`
+	PreviewFont  LibraryFile `json:"previewFont"`
 }
 
 type FontLibraryCatalog struct {
@@ -69,19 +70,19 @@ var libraryCatalogOnce = sync.OnceValues(func() (FontLibraryCatalog, error) {
 			return catalog, errors.New("内置在线字体目录无效")
 		}
 		seen[font.ID] = true
-		for _, file := range []LibraryFile{font.File, font.Preview} {
+		for _, file := range []LibraryFile{font.File, font.Preview, font.PreviewFont} {
 			if !validLibraryFile(file) {
 				return catalog, errors.New("内置在线字体文件描述无效")
 			}
 		}
-		if !strings.HasPrefix(font.File.Path, "/fonts/files/") || !strings.HasPrefix(font.Preview.Path, "/fonts/previews/") || font.Preview.Size > 2<<20 || !strings.HasPrefix(font.Project, "https://") {
+		if !strings.HasPrefix(font.File.Path, "/fonts/files/") || !strings.HasPrefix(font.Preview.Path, "/fonts/previews/") || font.Preview.Size > 2<<20 || !strings.HasPrefix(font.PreviewFont.Path, "/fonts/previews/") || !strings.HasSuffix(font.PreviewFont.Path, ".woff2") || font.PreviewFont.Size > 256<<10 || !strings.HasPrefix(font.Project, "https://") {
 			return catalog, errors.New("内置在线字体类型或来源无效")
 		}
 	}
 	return catalog, nil
 })
 
-var libraryPathPattern = regexp.MustCompile(`^/fonts/(files/[a-z0-9-]+\.woff2|previews/[a-z0-9-]+\.png)$`)
+var libraryPathPattern = regexp.MustCompile(`^/fonts/(files/[a-z0-9-]+\.woff2|previews/[a-z0-9-]+\.(png|woff2))$`)
 
 func validLibraryFile(file LibraryFile) bool {
 	return libraryPathPattern.MatchString(file.Path) && updateHashPattern.MatchString(file.SHA256) && file.Size > 0 && file.Size <= maxFontBytes
@@ -166,7 +167,7 @@ func fetchLibraryFile(ctx context.Context, client *http.Client, file LibraryFile
 	if preview && file.Size > 2<<20 {
 		return nil, errors.New("字体预览文件过大")
 	}
-	if preview {
+	if strings.HasSuffix(file.Path, ".png") {
 		req.Header.Set("Accept", "image/png")
 	} else {
 		req.Header.Set("Accept", "font/woff2")
@@ -213,7 +214,7 @@ func fetchLibraryFile(ctx context.Context, client *http.Client, file LibraryFile
 	if int64(len(data)) != file.Size || !strings.EqualFold(hex.EncodeToString(hash[:]), file.SHA256) {
 		return nil, errors.New("字体完整性校验失败，未安装，请重试")
 	}
-	if preview {
+	if strings.HasSuffix(file.Path, ".png") {
 		info, err := png.DecodeConfig(bytes.NewReader(data))
 		if err != nil || info.Width < 1 || info.Height < 1 || info.Width > 4096 || info.Height > 2048 {
 			return nil, errors.New("字体预览图片无效")
@@ -357,13 +358,17 @@ func (a *App) registerFontLibraryHTTP(mux *http.ServeMux) {
 			writeError(w, 400, err)
 			return
 		}
+		file, mime := font.Preview, "image/png"
+		if r.URL.Query().Get("format") == "font" {
+			file, mime = font.PreviewFont, "font/woff2"
+		}
 		a.fontLibrary.mu.Lock()
-		data := a.fontLibrary.preview[font.ID]
+		data := a.fontLibrary.preview[file.Path]
 		a.fontLibrary.mu.Unlock()
 		if data == nil {
 			ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 			defer cancel()
-			data, err = fetchLibraryFile(ctx, a.fontLibraryClient(), font.Preview, nil)
+			data, err = fetchLibraryFile(ctx, a.fontLibraryClient(), file, nil)
 			if err != nil {
 				writeError(w, 502, err)
 				return
@@ -372,9 +377,9 @@ func (a *App) registerFontLibraryHTTP(mux *http.ServeMux) {
 			if a.fontLibrary.preview == nil {
 				a.fontLibrary.preview = map[string][]byte{}
 			}
-			a.fontLibrary.preview[font.ID] = data
+			a.fontLibrary.preview[file.Path] = data
 			a.fontLibrary.mu.Unlock()
 		}
-		writeJSON(w, map[string]string{"dataUrl": fontPreviewDataURL(data)})
+		writeJSON(w, map[string]string{"dataUrl": "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)})
 	})
 }

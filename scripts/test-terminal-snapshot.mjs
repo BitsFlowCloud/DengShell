@@ -6,7 +6,7 @@ import {join,dirname,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {tmpdir} from 'node:os';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
-const assets=new Map([['/xterm.js','web/vendor/xterm.js'],['/serialize.js','web/vendor/addon-serialize.js'],['/snapshot.js','web/terminal-snapshot.js']]);
+const assets=new Map([['/xterm.js','web/vendor/xterm.js'],['/serialize.js','web/vendor/addon-serialize.js'],['/snapshot.js','web/terminal-snapshot.js'],['/app.js','web/app.js']]);
 const server=createServer(async(req,res)=>{try{if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end('<script src="/xterm.js"></script><script src="/serialize.js"></script><script src="/snapshot.js"></script>');return}const file=assets.get(req.url);if(!file){res.writeHead(404).end();return}res.setHeader('Content-Type','text/javascript');res.end(await readFile(join(root,file)))}catch(error){res.writeHead(500).end(String(error))}});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const directory=await mkdtemp(join(process.env.TMPDIR||tmpdir(),'dengshell-vt-snapshot-'));
@@ -36,6 +36,27 @@ try{
  const wrapping=make(8,4);await write(wrapping.term,'12345678');const wrapped=await roundtrip(wrapping);await write(wrapping.term,'中x');await write(wrapped.term,'中x');check('pending autowrap and CJK continuation agree',shape(wrapping.term)===shape(wrapped.term));
  const charset=make();await write(charset.term,String.fromCharCode(27)+'[3g'+String.fromCharCode(27)+'[1;6H'+String.fromCharCode(27)+'H'+String.fromCharCode(27)+'(0lq');const ch=await roundtrip(charset);await write(charset.term,'qk\\tX');await write(ch.term,'qk\\tX');check('line drawing charset and custom tabs agree',shape(charset.term)===shape(ch.term));
  const good=DengTerminalSnapshot.capture(target.term),before=shape(target.term);for(const mutation of [s=>s.normal.top=-1,s=>s.alternate.bottom=999,s=>s.mouseEncoding='unknown',s=>s.normal.savedAttrs.fg=NaN,s=>s.charsets=[{evil:'x'}]]){const bad=structuredClone(good);mutation(bad);let rejected=false;try{DengTerminalSnapshot.restore(target.term,bad)}catch{rejected=true}check('invalid snapshot rejected before mutation',rejected&&shape(target.term)===before)}
+ const app=await(await fetch('/app.js')).text();
+ const reconnectCode=app.slice(app.indexOf('function writeTerminalAndWait('),app.indexOf('function showConnectionProgress('));
+ const reconnectSource=make(40,8),reconnectTarget=make(80,12);
+ const oldState={id:'old',term:reconnectSource.term,serialize:reconnectSource.addon},newState={id:'new',term:reconnectTarget.term};
+ let disposed=false,replayedInput=0;
+ newState.term.onData(()=>replayedInput++);
+ const reconnect=new Function('closeSession','current',reconnectCode+';return {preserveReconnectTerminal,restoreReconnectTerminal,writeTerminalAndWait};')(async id=>{if(id!=='old')throw Error('wrong terminal closed');oldState.closed=true;oldState.term.dispose();disposed=true},()=>null);
+ // Queued output must be parsed before the old renderer is destroyed.
+ oldState.term.write(Array.from({length:180},(_,i)=>'行 '+i+' 中文 '+String.fromCharCode(27)+'[31mRED'+String.fromCharCode(27)+'[0m\\r\\n').join(''));
+ oldState.term.write(String.fromCharCode(27)+'[?1049h'+String.fromCharCode(27)+'[?1002h'+String.fromCharCode(27)+'[?2004hTUI');
+ await reconnect.preserveReconnectTerminal(oldState,newState);
+ check('reconnect disposes only after capturing queued output',disposed&&!!newState.reconnectScreen);
+ await reconnect.restoreReconnectTerminal(newState);
+ const retained=read(newState.term.buffer.normal).map(l=>l.text).join('\\n');
+ check('reconnect retains old scrollback and Chinese text',retained.includes('行 0 中文 RED')&&retained.includes('行 179 中文 RED')&&retained.includes('以上为上一会话记录'));
+ check('reconnect keeps colors',Array.from({length:newState.term.cols},(_,i)=>newState.term.buffer.normal.getLine(0).getCell(i)).some(cell=>cell.getChars()==='R'&&cell.getFgColor()===1));
+ check('reconnect resets TUI alternate and input modes',newState.term.buffer.active.type==='normal'&&!newState.term.modes.bracketedPasteMode&&newState.term.modes.mouseTrackingMode==='none');
+ check('reconnect restoration does not resend old commands',replayedInput===0);
+ const closing=make(),closingState={term:closing.term};
+ const drained=reconnect.writeTerminalAndWait(closingState,'queued');closingState.closed=true;for(const done of closingState.terminalWriteWaiters)done();closing.term.dispose();
+ check('closing a tab releases a pending renderer write',await drained===false);
  return results;
 })()`);
  for(const name of result)console.log('PASS:',name);

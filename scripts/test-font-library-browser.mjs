@@ -19,24 +19,32 @@ try{
   // This endpoint belongs to the opt-in isolated fixture, never a user Store.
   assert(new URL(fixture.url).hostname==='127.0.0.1');
   for(const asset of (await api('/api/config')).assets) await api(`/api/assets/${asset.id}`,{method:'DELETE'});
-  await api('/api/appearance/patch',{method:'POST',body:JSON.stringify({uiFontId:'builtin:ui-ibm-plex-sans-sc',fontId:'builtin:jetbrains-mono'})});
+  await api('/api/appearance/patch',{method:'POST',body:JSON.stringify({uiFontId:'builtin:ui-ibm-plex-sans-sc',fontId:'builtin:jetbrains-mono',startupAnimation:false,onboardingCompleted:true})});
   await mkdir(join(stage,'screenshots'),{recursive:true});
   const page=await browser.newPage();await page.setViewport({width:1440,height:1000});
   page.on('pageerror',e=>errors.push(e.message));
   await page.setRequestInterception(true);page.on('request',r=>{requests.push(r.url());if(r.url().includes('/api/updates/check'))r.respond({status:200,contentType:'application/json',body:'{"status":"current"}'});else if(/^(http|https):/.test(r.url())&&!r.url().startsWith(new URL(fixture.url).origin))r.abort();else r.continue();});
   await page.goto(fixture.url,{waitUntil:'networkidle0'});
+  await page.waitForFunction(()=>!document.querySelector('#startup-splash.is-running'));
   await page.waitForFunction(()=>document.documentElement.dataset.uiFont==='builtin:ui-ibm-plex-sans-sc');
   assert.equal(await page.evaluate(()=>allFonts().length),5);
   assert.equal(requests.filter(u=>u.includes('/api/font-library')).length,0);
   checks.push('启动仅加载内置资源，1 UI / 5 Shell，无在线字体请求');
   await page.evaluate(()=>DengUIAppearance.open());
   assert.equal(await page.$$eval('#ui-font-list .ui-font-card',a=>a.length),1);
-  await page.click('#switch-shell-fonts');assert.equal(await page.$$eval('#asset-list .asset-card',a=>a.length),5);
-  await page.click('#switch-ui-fonts');await page.click('#online-ui-fonts');
+  const uiFrame=await page.$eval('#ui-appearance-dialog',e=>({width:e.offsetWidth,height:e.offsetHeight}));
+  await page.screenshot({path:join(stage,'screenshots/ui-font-settings.png')});
+  await page.click('#switch-shell-fonts');
+  await page.waitForSelector('#appearance-dialog[open]');
+  assert.deepEqual(await page.$eval('#appearance-dialog',e=>({width:e.offsetWidth,height:e.offsetHeight})),uiFrame);
+  await page.screenshot({path:join(stage,'screenshots/shell-font-settings.png')});assert.equal(await page.$$eval('#asset-list .asset-card',a=>a.length),5);
+  await page.click('#switch-ui-fonts');await page.waitForSelector('#ui-appearance-dialog[open]');await page.click('#online-ui-fonts');
   await page.waitForFunction(()=>document.querySelectorAll('.library-card').length===20);
-  await page.waitForFunction(()=>[...document.querySelectorAll('.library-preview img')].some(x=>x.complete&&x.naturalWidth===800));
+  await page.waitForFunction(()=>[...document.querySelectorAll('.library-live-preview')].some(x=>!x.hidden&&x.style.fontFamily.includes('Deng online preview')));
+  await page.click('#library-preview-bold');
+  assert.equal(await page.$eval('.library-live-preview',e=>getComputedStyle(e).fontWeight),'700');
   await page.screenshot({path:join(stage,'screenshots/app-ui-library.png')});
-  checks.push('界面 / Shell 设置切换、20 款界面目录及真实 PNG 预览');
+  checks.push('界面 / Shell 设置切换、20 款界面目录及真实字体预览及加粗');
   async function select(kind,id){
     await page.evaluate(k=>DengFontLibrary.open(k),kind);
     await page.$eval('.library-search',(e,id)=>{e.value=id;e.dispatchEvent(new Event('input',{bubbles:true}));},id.name);

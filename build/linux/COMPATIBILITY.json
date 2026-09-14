@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "application": "DengShell v0.01 r40",
-  "testedExecutableSHA256": "b6efcdfec6ef12b945212130199b469feafad89fd5903b5c39b6de89fa34ecce",
+  "testedExecutableSHA256": "c27e1ba5c2f010d587e8ea11905f35da6c1cf00676fe43351f00e40462942d3a",
   "requiredGLIBC": "2.34",
   "runtimeMatrix": [
     {
@@ -58,5 +58,6 @@
     "Software rendering/X11 inside QA containers; physical GPU, Wayland, tray and DPI remain unverified.",
     "WebKit sandbox/DMABUF overrides are limited to QA containers and are not shipped.",
     "Other distributions/versions are dependency targets, not separately tested."
-  ]
+  ],
+  "applicationBuild": 20260915041
 }

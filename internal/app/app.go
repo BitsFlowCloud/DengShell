@@ -9,12 +9,14 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 )
 
 type App struct {
+	sshDiagnostics   sshDiagnosticLog
 	uiFontMu         sync.Mutex
 	uiFontsAtStartup map[string]bool
 	activeUIFontID   string
@@ -45,6 +47,7 @@ func New(configDir string) (*App, error) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	a := &App{ctx: ctx, cancel: cancel, store: s, sessions: map[string]*Session{}, transfers: map[string]*Transfer{}, token: randomID()}
+	a.sshDiagnostics.path = filepath.Join(s.dir, "logs", "ssh-disconnect.jsonl")
 	a.initializeUIFonts()
 	return a, nil
 }
@@ -73,6 +76,12 @@ func (a *App) Start(address string, assets fs.FS) error {
 	return nil
 }
 func (a *App) Close() {
+	defer a.sshDiagnostics.close()
+	a.mu.Lock()
+	for _, s := range a.sessions {
+		s.noteDisconnect("DS-101", "application-exit")
+	}
+	a.mu.Unlock()
 	a.cancel()
 	a.closeDiagnostics()
 	a.mu.Lock()
@@ -178,9 +187,13 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 		respond(w, s, err)
 	})
 	mux.HandleFunc("DELETE /api/sessions/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if s, err := a.session(r.PathValue("id")); err == nil {
+			s.noteDisconnect("DS-100", "user-action")
+		}
 		a.disconnect(r.PathValue("id"))
 		writeJSON(w, map[string]bool{"ok": true})
 	})
+	mux.HandleFunc("GET /api/sessions/{id}/disconnect-diagnostic", a.sshDisconnectDiagnosticHTTP)
 	mux.HandleFunc("GET /api/sessions/{id}/terminal", a.terminal)
 	mux.HandleFunc("GET /api/sessions/{id}/files", a.listFiles)
 	mux.HandleFunc("POST /api/sessions/{id}/file-action", a.fileAction)

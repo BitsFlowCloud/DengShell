@@ -535,24 +535,8 @@ func runMTRScript(ctx context.Context, s *Session, command string, limit int) (s
 		err := cmd.Run()
 		return out.String(), err
 	}
-	if err := s.ctx.Err(); err != nil {
-		return "", err
-	}
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	stopSession := context.AfterFunc(s.ctx, cancel)
-	defer stopSession()
-	channel, err := openMTRChannel(ctx, s)
-	if err != nil {
-		return "", err
-	}
-	channel.Stdout = out
-	channel.Stderr = out
-	err = s.runSSHChannel(ctx, channel, command)
-	return out.String(), err
-}
-func openMTRChannel(ctx context.Context, s *Session) (*commandSSHSession, error) {
-	return s.openSSHChannel(ctx, diagnosticRemoteSlots)
+	data, err := s.commandCollector.run(ctx, s, "script", command, limit)
+	return string(data), err
 }
 
 var _ io.Writer = (*mtrLimitedOutput)(nil)

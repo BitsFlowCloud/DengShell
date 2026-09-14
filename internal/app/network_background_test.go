@@ -110,7 +110,7 @@ func backgroundNetworkSSHFixture(t *testing.T, holdChannel bool, sample func(con
 		listener.Close()
 		t.Fatal(err)
 	}
-	session := &Session{ctx: ctx, cancel: cancel, client: client}
+	session := &Session{ctx: ctx, cancel: cancel, client: client, cleanupGrace: 250 * time.Millisecond}
 	t.Cleanup(func() {
 		session.Close()
 		listener.Close()
@@ -220,7 +220,19 @@ func TestNetworkBackgroundStalledServersDoNotBlockOtherSessions(t *testing.T) {
 		if time.Since(closedAt) > 250*time.Millisecond {
 			t.Fatal("stalled channel open delayed closing the SSH session")
 		}
-		awaitNetworkCondition(t, time.Second, func() bool { return len(session.networkOpenSlot) == 0 })
+		awaitNetworkCondition(t, time.Second, func() bool {
+			session.networkCollector.mu.Lock()
+			defer session.networkCollector.mu.Unlock()
+			if session.networkCollector.job == nil {
+				return true
+			}
+			select {
+			case <-session.networkCollector.job.done:
+				return true
+			default:
+				return false
+			}
+		})
 	}
 	if commands.Load() < 5 {
 		t.Fatal("slow sessions blocked the independent fast sampler", commands.Load())
@@ -299,8 +311,8 @@ func TestNetworkBackgroundHistoryBoundedAndPruned(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		session.retainNetworkHistory(NetworkHistorySample{SampledAt: start.Add(time.Duration(i) * time.Second), Interfaces: []NetworkHistoryInterface{{Name: fmt.Sprint(i)}}})
 	}
-	if len(session.networkHistory) != 31 || session.networkHistory[0].Interfaces[0].Name != "69" {
-		t.Fatal("history exceeds actual 30-second window", len(session.networkHistory))
+	if len(session.networkHistory) != 61 || session.networkHistory[0].Interfaces[0].Name != "39" {
+		t.Fatal("history exceeds actual 60-second window", len(session.networkHistory))
 	}
 	for i := 0; i < 500; i++ {
 		session.retainNetworkHistory(NetworkHistorySample{SampledAt: start.Add(100 * time.Second), Interfaces: []NetworkHistoryInterface{{Name: "burst"}}})

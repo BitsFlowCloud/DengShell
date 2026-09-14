@@ -102,7 +102,7 @@ func TestProcessCollectorReadErrorsAndMultilineNames(t *testing.T) {
 	}
 	name := "name) with\n__CS_END__\t中文\\"
 	write("101/stat", stat(101, name))
-	write("101/smaps_rollup", "Rss: 72 kB\n")
+	write("101/status", "VmRSS: 72 kB\n")
 	write("102/status", "Name: unreadable\n")
 	write("103/stat", stat(103, "memory fallback"))
 	write("103/status", "VmRSS: 36 kB\n")
@@ -127,11 +127,11 @@ func TestProcessCollectorReadErrorsAndMultilineNames(t *testing.T) {
 	if !parsed.ProcessSample.Available || parsed.ProcessSample.Readable != 2 || parsed.ProcessSample.Unreadable != 1 || len(parsed.Processes) != 3 {
 		t.Fatalf("one failed PID aborted other records: %+v %q", parsed.ProcessSample, output)
 	}
-	if p := parsed.Processes[0]; p.PID != 101 || p.Name != name || p.Memory != 72*1024 || p.MemorySource != "smaps_rollup" {
-		t.Fatalf("name framing or exact RSS changed: %+v", p)
+	if p := parsed.Processes[0]; p.PID != 101 || p.Name != name || p.Memory != 3*parsed.ProcessSample.PageSize || p.MemorySource != "stat" || !p.MemoryEstimated {
+		t.Fatalf("name framing or lightweight RSS changed: %+v", p)
 	}
-	if p := parsed.Processes[2]; p.PID != 103 || p.Memory != 36*1024 || p.MemorySource != "status" {
-		t.Fatalf("memory read failure did not fall back: %+v", p)
+	if p := parsed.Processes[2]; p.PID != 103 || p.Memory != 3*parsed.ProcessSample.PageSize || p.MemorySource != "stat" || !p.MemoryEstimated {
+		t.Fatalf("lightweight stat memory was not used: %+v", p)
 	}
 }
 

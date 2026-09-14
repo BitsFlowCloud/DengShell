@@ -10,7 +10,7 @@ def nsis_string(value):
 
 def build(stage, output):
     application_build = int(re.search(r"const ApplicationBuild uint64 = (\d+)", (ROOT / "internal/app/updates.go").read_text()).group(1))
-    release = application_build % 1000
+    release = int(re.search(r"const ApplicationRelease = (\d+)", (ROOT / "internal/app/updates.go").read_text()).group(1))
     stage, output = stage.resolve(), output.resolve()
     if sorted(p.name for p in stage.iterdir()) != ['DengShell.exe', 'data']:
         raise SystemExit('Windows staging must contain only DengShell.exe and data.')

@@ -283,9 +283,20 @@ func relayStatus(peer *terminalPeer, kind, message, nonce string) error {
 func (r *terminalRelay) run() {
 	s := r.session
 	active := r.first
+	write := func(peer *terminalPeer, kind int, data []byte) error {
+		err := relayWrite(peer, kind, data)
+		if err != nil && peer == active {
+			s.noteDisconnect("DS-221", sshDiagnosticErrorKind(err))
+		}
+		return err
+	}
+	status := func(peer *terminalPeer, kind, message, nonce string) error {
+		data, _ := json.Marshal(map[string]string{"type": kind, "message": message, "nonce": nonce})
+		return write(peer, websocket.TextMessage, data)
+	}
 	startupCtx, cancelStartup := context.WithTimeout(s.ctx, terminalStartupTimeout)
 	defer cancelStartup()
-	stopStartup := context.AfterFunc(startupCtx, s.forceClose)
+	stopStartup := context.AfterFunc(startupCtx, func() { s.forceCloseDiagnostic("DS-120", "terminal-startup-timeout") })
 	defer stopStartup()
 	// Publishing the relay means its hard startup deadline is already armed.
 	// A reserved/failed WebSocket upgrade must not bypass the orphan deadline.
@@ -307,6 +318,7 @@ func (r *terminalRelay) run() {
 	defer close(stopWatch)
 	defer func() {
 		r.finishHandoff(r.handoff, errors.New("SSH 终端已关闭"))
+		s.noteDisconnect("DS-299", "terminal-relay-ended")
 		r.app.disconnect(s.ID)
 		r.mu.Lock()
 		for peer := range r.peers {
@@ -316,12 +328,14 @@ func (r *terminalRelay) run() {
 	}()
 	sh, err := s.client.NewSession()
 	if err != nil {
-		_ = relayStatus(active, "error", "无法创建 SSH 终端："+err.Error(), "")
+		s.noteDisconnect("DS-212", "create-terminal-channel")
+		_ = status(active, "error", "无法创建 SSH 终端："+err.Error(), "")
 		return
 	}
 	defer sh.Close()
 	if err = sh.RequestPty("xterm-256color", r.rows, r.cols, ssh.TerminalModes{ssh.ECHO: 1, ssh.TTY_OP_ISPEED: 38400, ssh.TTY_OP_OSPEED: 38400}); err != nil {
-		_ = relayStatus(active, "error", err.Error(), "")
+		s.noteDisconnect("DS-212", "request-pty")
+		_ = status(active, "error", err.Error(), "")
 		return
 	}
 	in, err := sh.StdinPipe()
@@ -344,11 +358,12 @@ func (r *terminalRelay) run() {
 		err = sh.Shell()
 	}
 	if err != nil {
-		_ = relayStatus(active, "error", err.Error(), "")
+		s.noteDisconnect("DS-212", "start-shell")
+		_ = status(active, "error", err.Error(), "")
 		return
 	}
 	ready := terminalIntegrationReady(integration)
-	if relayWrite(active, websocket.TextMessage, ready) != nil {
+	if write(active, websocket.TextMessage, ready) != nil {
 		return
 	}
 	if !stopStartup() || startupCtx.Err() != nil {
@@ -363,7 +378,7 @@ func (r *terminalRelay) run() {
 			select {
 			case data := <-r.inputs:
 				if _, err := io.WriteString(in, data); err != nil {
-					s.Close()
+					s.closeDiagnostic("DS-211", sshDiagnosticErrorKind(err))
 					return
 				}
 			case <-s.ctx.Done():
@@ -419,7 +434,7 @@ func (r *terminalRelay) run() {
 		h.ready = true
 		duration := r.timeout
 		r.mu.Unlock()
-		if err := relayStatus(active, "handoff-ready", "", h.nonce); err != nil {
+		if err := status(active, "handoff-ready", "", h.nonce); err != nil {
 			return err
 		}
 		timer = time.NewTimer(duration)
@@ -440,7 +455,7 @@ func (r *terminalRelay) run() {
 		if active.dead.Load() {
 			return errors.New("原窗口已关闭，无法恢复终端")
 		}
-		return relayStatus(active, "handoff-cancelled", "已恢复原窗口", nonce)
+		return status(active, "handoff-cancelled", "已恢复原窗口", nonce)
 	}
 	for {
 		if shellEnded && outputEnded && len(r.output) == 0 && paused == nil {
@@ -448,7 +463,7 @@ func (r *terminalRelay) run() {
 			if shellErr != nil {
 				message = shellErr.Error()
 			}
-			_ = relayStatus(active, "exit", message, "")
+			_ = status(active, "exit", message, "")
 			return
 		}
 		var output <-chan []byte
@@ -462,10 +477,11 @@ func (r *terminalRelay) run() {
 			outputEnded = true
 			copiesDone = nil
 		case shellErr = <-shellDone:
+			s.noteDisconnect("DS-210", sshDiagnosticErrorKind(shellErr))
 			shellEnded = true
 			shellDone = nil
 		case frame := <-output:
-			if relayWrite(active, websocket.BinaryMessage, frame) != nil {
+			if write(active, websocket.BinaryMessage, frame) != nil {
 				return
 			}
 			credits++
@@ -482,7 +498,7 @@ func (r *terminalRelay) run() {
 				stopTimer()
 				err := errors.New("终端正在接收未完成的字符或控制序列，请稍后重试")
 				r.finishHandoff(h, err)
-				if relayStatus(active, "handoff-error", err.Error(), h.nonce) != nil {
+				if status(active, "handoff-error", err.Error(), h.nonce) != nil {
 					return
 				}
 			} else if paused != nil && resume(paused.nonce) != nil {
@@ -504,7 +520,7 @@ func (r *terminalRelay) run() {
 					respond(errors.New("新窗口已关闭"))
 					continue
 				}
-				if err := relayWrite(next, websocket.TextMessage, ready); err != nil {
+				if err := write(next, websocket.TextMessage, ready); err != nil {
 					respond(err)
 					continue
 				}
@@ -526,6 +542,7 @@ func (r *terminalRelay) run() {
 			switch m.Type {
 			case "peer-closed":
 				if paused == nil {
+					s.noteDisconnect("DS-220", "renderer-channel-closed")
 					return
 				}
 			case "ack":
@@ -534,14 +551,14 @@ func (r *terminalRelay) run() {
 				}
 			case "handoff-begin":
 				if paused != nil || pending != nil || !validHandoffNonce(m.Nonce) {
-					_ = relayStatus(active, "handoff-error", "迁移正在进行或凭据无效", m.Nonce)
+					_ = status(active, "handoff-error", "迁移正在进行或凭据无效", m.Nonce)
 					continue
 				}
 				r.mu.Lock()
 				previous := r.handoff
 				r.mu.Unlock()
 				if previous != nil && previous.nonce == m.Nonce {
-					_ = relayStatus(active, "handoff-error", "迁移凭据已使用", m.Nonce)
+					_ = status(active, "handoff-error", "迁移凭据已使用", m.Nonce)
 					continue
 				}
 				h := &terminalHandoff{nonce: m.Nonce, done: make(chan struct{})}
@@ -568,13 +585,13 @@ func (r *terminalRelay) run() {
 					continue
 				}
 				if len(m.Data) > 65536 {
-					_ = relayStatus(active, "error", "输入过多，请分批粘贴", "")
+					_ = status(active, "error", "输入过多，请分批粘贴", "")
 					return
 				}
 				select {
 				case r.inputs <- m.Data:
 				default:
-					_ = relayStatus(active, "error", "输入过多，请分批粘贴", "")
+					_ = status(active, "error", "输入过多，请分批粘贴", "")
 					return
 				}
 			case "resize":

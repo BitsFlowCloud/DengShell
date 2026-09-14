@@ -14,21 +14,21 @@ import (
 )
 
 const sftpIdleTimeout = 30 * time.Second
-const sftpCancelGrace = 250 * time.Millisecond
 
 // SFTP v3 has no request cancellation. Closing a File only sends another
 // request, and cannot interrupt a pending Write/Stat/Close. Give a responsive
-// operation time to clean up; otherwise close the underlying SSH transport.
+// operation time to clean up; otherwise close only the isolated SFTP bridge.
 // This also bounds cleanup and preserves the global upload worker limit.
 type sftpOperation struct {
-	ctx         context.Context
-	cancel      context.CancelCauseFunc
-	done        chan struct{}
-	exited      chan struct{}
-	progress    chan struct{}
-	stopSession func() bool
-	forced      atomic.Bool
-	closeOnce   sync.Once
+	ctx               context.Context
+	cancel            context.CancelCauseFunc
+	done              chan struct{}
+	exited            chan struct{}
+	progress          chan struct{}
+	stopSession       func() bool
+	forced            atomic.Bool
+	fileChannelClosed atomic.Bool
+	closeOnce         sync.Once
 }
 
 type sftpOperationContextKey struct{}
@@ -53,14 +53,23 @@ func startSFTPOperation(parent context.Context, s *Session, idle time.Duration) 
 			case <-timer.C:
 				cancel(context.DeadlineExceeded)
 			case <-ctx.Done():
-				grace := time.NewTimer(sftpCancelGrace)
+				s.noteOperationCancellation("sftp", context.Cause(ctx))
+				grace := time.NewTimer(s.cleanupGracePeriod())
 				defer grace.Stop()
 				select {
 				case <-op.done:
 					return
 				case <-grace.C:
 					op.forced.Store(true)
-					s.forceClose()
+					if b := s.fileBridge.Load(); b != nil {
+						op.fileChannelClosed.Store(true)
+						s.noteOperationCancellation("sftp-channel-closed", context.Cause(ctx))
+						b.close()
+					} else {
+						// Standalone transports used by callers/tests have no SSH
+						// bridge. Closing them cannot affect a separate terminal.
+						s.forceCloseDiagnostic("DS-240", "sftp-cleanup-timeout")
+					}
 					return
 				}
 			}
@@ -94,8 +103,9 @@ func (op *sftpOperation) close() {
 }
 
 type sftpInterruptedError struct {
-	cause        error
-	disconnected bool
+	cause             error
+	disconnected      bool
+	fileChannelClosed bool
 }
 
 func (e *sftpInterruptedError) Error() string {
@@ -106,13 +116,16 @@ func (e *sftpInterruptedError) Error() string {
 	if e.disconnected {
 		message += "；服务器未响应，已断开此 SSH 连接，请重新连接。未完成的私有临时文件可能保留在远端"
 	}
+	if e.fileChannelClosed {
+		message += "；文件通道已中断，SSH 终端保持连接。重新连接后可恢复文件管理；未完成的临时文件可能保留在远端"
+	}
 	return message
 }
 func (e *sftpInterruptedError) Unwrap() error { return e.cause }
 func (e *sftpInterruptedError) Code() string  { return "sftp_interrupted" }
 func (op *sftpOperation) err(err error) error {
 	if cause := context.Cause(op.ctx); cause != nil {
-		return &sftpInterruptedError{cause, op.forced.Load()}
+		return &sftpInterruptedError{cause: cause, disconnected: op.forced.Load() && !op.fileChannelClosed.Load(), fileChannelClosed: op.fileChannelClosed.Load()}
 	}
 	return err
 }

@@ -11,8 +11,8 @@ import (
 
 const (
 	networkSampleInterval = time.Second
-	networkHistoryWindow  = 30 * time.Second
-	networkHistoryLimit   = 32
+	networkHistoryWindow  = 60 * time.Second
+	networkHistoryLimit   = 62
 )
 
 // History omits discovery metadata and retains only actual observations.
@@ -192,16 +192,10 @@ func (s *Session) startNetworkSamplerWithReader(read func(context.Context, strin
 	})
 }
 
-// Each SSH session has at most one in-flight channel-open. A stalled server
-// cannot occupy the global diagnostic slots or accumulate open goroutines as
-// sampling deadlines expire. Existing SSH transport closure releases the slot.
+// The collector retains its worker through cancellation, without closing the
+// shared SSH transport or blocking another server's sampling.
 func (s *Session) runNetworkMonitor(ctx context.Context, command string) ([]byte, error) {
-	s.networkOpenOnce.Do(func() { s.networkOpenSlot = make(chan struct{}, 1) })
-	channel, err := s.openSSHChannel(ctx, s.networkOpenSlot)
-	if err != nil {
-		return nil, err
-	}
-	return s.runBoundedChannel(ctx, channel, command, networkOutputLimit)
+	return s.networkCollector.run(ctx, s, "network", command, networkOutputLimit)
 }
 
 func (s *Session) retainNetworkHistory(sample NetworkHistorySample) {

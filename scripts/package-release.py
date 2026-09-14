@@ -9,7 +9,7 @@ from pathlib import Path
 import argparse, hashlib, json, re, shutil, subprocess, tarfile, zipfile
 ROOT = Path(__file__).resolve().parent.parent
 BUILD = int(re.search(r'const ApplicationBuild uint64 = (\d+)', (ROOT/'internal/app/updates.go').read_text()).group(1))
-RELEASE = BUILD % 1000
+RELEASE = int(re.search(r'const ApplicationRelease = (\d+)', (ROOT/'internal/app/updates.go').read_text()).group(1))
 LABEL = f'{str(BUILD)[:8]}-r{RELEASE}'
 
 def digest(p):
@@ -71,7 +71,7 @@ def package(args):
     linux = distribution(work/'DengShell-linux-x64',linuxbinary,False)
     zip_tree(win,out/'DengShell-windows-x64.zip')
     subprocess.run(['python3',str(ROOT/'scripts/package-windows.py'),'--stage',str(win),'--output',str(out/'DengShell-Setup-x64.exe')],check=True)
-    subprocess.run(['python3',str(ROOT/'scripts/package-linux.py'),'--stage',str(linux),'--build-info',str(linuxbinary.parent/'build-info.json'),'--version','0.1.0','--release',str(RELEASE),'--output',str(out)],check=True)
+    subprocess.run(['python3',str(ROOT/'scripts/package-linux.py'),'--stage',str(linux),'--build-info',str(linuxbinary.parent/'build-info.json'),'--version','0.1.0','--release',str(BUILD),'--output',str(out)],check=True)
     copy(winbinary,out/'DengShell.exe')
     copy(out/'up.deb',out/'DengShell-linux-x64.deb')
     copy(out/'up.deb',out/'DengShell-ubuntu-x64.deb')
@@ -92,7 +92,7 @@ def package(args):
     for p in sorted(set(sourcefiles)):copy(p,source/p.relative_to(ROOT))
     copy(linuxbinary.parent/'build-info.json',source/'build/linux/native/build-info.json')
     zip_tree(source,out/'DengShell-source.zip',Path('DengShell'))
-    notes=f'R30 至 R{RELEASE} 累计更新：精简内置字体并加入在线字体库，分组背景色与三次确认删除，紧凑连接列表及跨服务器文本编辑；优化 SSH 初始化，修复提示符重复、默认网卡选择、字体切换竞态与连接历史残留。'
+    notes=f'R30 至 R{RELEASE} 累计更新：精简内置字体并加入在线字体库，分组颜色、递归删除与跨服务器编辑；修复 SSH 误断线和重连记录丢失，常驻资源前五进程，网速图延长至 60 秒，统一字体设置并支持在线加粗预览。'
     for binary,artifact,platform,name in [(winbinary,winbinary,'windows-amd64','up.exe'),(linuxbinary,out/'up.deb','linux-amd64','up.deb'),(linuxbinary,out/'DengShell-linux-x64.pkg.tar.zst','linux-amd64-pacman','up.pkg.tar.zst')]:
         copy(artifact,site/name)
         info={'schemaVersion':2,'build':BUILD,'product':'DengShell','platform':platform,'version':'v0.01','notes':notes,'sha256':digest(artifact),'size':artifact.stat().st_size,'executableSHA256':digest(binary)}

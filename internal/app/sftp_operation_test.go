@@ -225,7 +225,7 @@ func stalledSFTPSession(t *testing.T) (*Session, <-chan struct{}) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { close(lister.gate); cc.Close(); client.Close(); server.Close(); sc.Close() })
-	return &Session{ID: "unresponsive-sftp", ctx: context.Background(), files: client}, lister.entered
+	return &Session{ID: "unresponsive-sftp", ctx: context.Background(), files: client, cleanupGrace: 250 * time.Millisecond}, lister.entered
 }
 
 func TestCancelledStalledSaveCannotBlockAnotherSession(t *testing.T) {
@@ -277,6 +277,7 @@ func TestCancelledStalledSaveCannotBlockAnotherSession(t *testing.T) {
 
 func TestSFTPIdleDeadlineInterruptsLstatWithoutPeerReply(t *testing.T) {
 	s, entered := stalledSFTPSession(t)
+	s.diagnosticLog = &sshDiagnosticLog{}
 	op := startSFTPOperation(context.Background(), s, 25*time.Millisecond)
 	defer op.close()
 	done := make(chan error, 1)
@@ -290,6 +291,12 @@ func TestSFTPIdleDeadlineInterruptsLstatWithoutPeerReply(t *testing.T) {
 	case err := <-done:
 		if !errors.Is(op.err(err), context.DeadlineExceeded) || !op.forced.Load() {
 			t.Fatalf("deadline did not force transport shutdown: %v", op.err(err))
+		}
+		s.diagnosticLog.mu.Lock()
+		diagnostic := s.diagnosticLog.records[s.ID]
+		s.diagnosticLog.mu.Unlock()
+		if diagnostic.Code != "DS-240" {
+			t.Fatalf("SFTP diagnostic: %+v", diagnostic)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("idle timeout did not interrupt SFTP")

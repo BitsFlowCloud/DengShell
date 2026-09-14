@@ -136,7 +136,15 @@ window.DengUIAppearance = (() => {
       row.querySelector('.ui-color-sample').style.color = color;
     }
   }
+  let colorSaveTimer;
+  function previewColor(theme, color) {
+    appearance = { ...appearance, uiTextColors: { ...appearance.uiTextColors, [theme]: color.toLowerCase() } };
+    applyColors();
+    clearTimeout(colorSaveTimer);
+    colorSaveTimer = setTimeout(() => { colorSaveTimer = null; chooseAppearance({ uiTextColors: { ...appearance.uiTextColors } }).catch(error => toast(error.message)); }, 250);
+  }
   async function saveColor(theme, color) {
+    clearTimeout(colorSaveTimer); colorSaveTimer = null;
     if (color !== null && !validColor(color)) throw new Error('请输入 #RRGGBB 格式的颜色，例如 #243b4e');
     const colors = { ...appearance.uiTextColors };
     if (color === null) delete colors[theme]; else colors[theme] = color.toLowerCase();
@@ -154,25 +162,27 @@ window.DengUIAppearance = (() => {
     try { await finishImport(await desktop.ChooseAsset('ui-font')); } finally { button.disabled = false; }
   }
   function initialize() {
-    dialog = document.createElement('dialog'); dialog.id = 'ui-appearance-dialog'; dialog.setAttribute('aria-labelledby', 'ui-appearance-title');
-    dialog.innerHTML = `<div class="dialog-heading"><div><h2 id="ui-appearance-title">字体设置 · 界面字体</h2><p>调整软件界面的标题、正文和说明文字。</p></div><button type="button" class="icon-button" id="close-ui-appearance" aria-label="关闭界面外观设置"><svg><use href="#i-close"/></svg></button></div>
+    dialog = document.createElement('dialog'); dialog.id = 'ui-appearance-dialog'; dialog.className = 'font-settings-panel'; dialog.setAttribute('aria-labelledby', 'ui-appearance-title');
+    dialog.innerHTML = `<div class="dialog-heading appearance-drag-handle" id="ui-font-drag-handle" tabindex="0" aria-label="拖动字体设置，方向键移动"><div><h2 id="ui-appearance-title">字体设置 · 界面字体</h2><p>调整软件界面的标题、正文和说明文字。</p></div><button type="button" class="icon-button" id="close-ui-appearance" aria-label="关闭界面外观设置"><svg><use href="#i-close"/></svg></button></div>
       <nav class="font-kind-tabs" aria-label="字体设置分类"><button type="button" aria-pressed="true">界面字体</button><button type="button" id="switch-shell-fonts" aria-pressed="false">Shell 字体</button></nav>
-      <section class="ui-text-settings" aria-labelledby="ui-text-title"><h3 id="ui-text-title">文字颜色</h3><p>浅色与深色模式分别保存。每行可预览颜色，点击应用后生效。</p><div id="ui-text-colors"></div></section>
-      <section aria-labelledby="ui-font-title"><div class="ui-font-heading"><h3 id="ui-font-title">已安装字体</h3><button type="button" class="upload-button" id="import-ui-font">导入字体…</button></div><p>内置 IBM Plex Sans SC。在线下载后可直接切换；手动导入支持 TTF / OTF / WOFF / WOFF2（最大 64 MiB），重启软件后启用。</p><div class="font-library-entry"><p>更多黑体、宋体、圆体与手写风格</p><button type="button" class="upload-button" id="online-ui-fonts">在线字体库 · 20 款</button></div><p id="ui-font-status" role="status"></p><div id="ui-font-list"></div><input type="file" id="ui-font-picker" accept=".ttf,.otf,.woff,.woff2" hidden></section>`;
+
+      <div class="font-library-entry"><span>预览更多字体，下载后立即使用</span><button type="button" class="upload-button" id="online-ui-fonts">在线字体</button></div><div class="appearance-body"><section aria-labelledby="ui-font-title"><div class="ui-font-heading"><h3 id="ui-font-title">已安装字体</h3><button type="button" class="upload-button" id="import-ui-font">导入字体…</button></div><p>内置 IBM Plex Sans SC。在线下载后可直接切换；手动导入支持 TTF / OTF / WOFF / WOFF2（最大 64 MiB），重启软件后启用。</p><p id="ui-font-status" role="status"></p><div id="ui-font-list"></div><input type="file" id="ui-font-picker" accept=".ttf,.otf,.woff,.woff2" hidden></section><details class="ui-text-settings"><summary id="ui-text-title">文字颜色 · 浅色 / 深色</summary><p>颜色变化立即预览并自动保存。</p><div id="ui-text-colors"></div></details></div>`;
     document.body.append(dialog);
+    initializeAppearancePalette(dialog, dialog.querySelector('#ui-font-drag-handle'));
     licenseDialog = document.createElement('dialog'); licenseDialog.id = 'ui-font-license';
     licenseDialog.innerHTML = '<div class="dialog-heading"><h2>字体许可</h2><button type="button" class="icon-button" aria-label="关闭字体许可"><svg><use href="#i-close"/></svg></button></div><p></p><pre tabindex="0"></pre>';
     licenseDialog.querySelector('button').onclick = () => licenseDialog.close(); document.body.append(licenseDialog);
     for (const theme of ['light', 'dark']) {
       const label = theme === 'light' ? '浅色模式' : '深色模式', row = node('div', 'ui-color-row'); row.dataset.uiColorTheme = theme;
-      row.innerHTML = `<div class="ui-color-label"><strong>${label}</strong><span class="ui-color-state"></span></div><label class="ui-color-input"><span class="sr-only">${label}文字颜色</span><input type="color" aria-label="${label}文字颜色"></label><input type="text" maxlength="7" spellcheck="false" aria-label="${label}十六进制文字颜色"><button type="button" class="upload-button ui-color-save">应用</button><button type="button" class="text-button ui-color-reset">恢复默认</button><div class="ui-color-sample ${theme}">简体中文 · 繁體中文 · English 012345</div>`;
+      row.innerHTML = `<div class="ui-color-label"><strong>${label}</strong><span class="ui-color-state"></span></div><label class="ui-color-input"><span class="sr-only">${label}文字颜色</span><input type="color" aria-label="${label}文字颜色"></label><input type="text" maxlength="7" spellcheck="false" aria-label="${label}十六进制文字颜色"><button type="button" class="upload-button ui-color-save" hidden>应用</button><button type="button" class="text-button ui-color-reset">恢复默认</button><div class="ui-color-sample ${theme}">简体中文 · 繁體中文 · English 012345</div>`;
       const picker = row.querySelector('input[type=color]'), hex = row.querySelector('input[type=text]'), sample = row.querySelector('.ui-color-sample');
-      picker.oninput = () => { hex.value = picker.value; sample.style.color = picker.value; };
-      hex.oninput = () => { if (validColor(hex.value)) { picker.value = hex.value; sample.style.color = hex.value; } };
+      picker.oninput = () => { hex.value = picker.value; sample.style.color = picker.value; previewColor(theme, picker.value); };
+      hex.oninput = () => { if (validColor(hex.value)) { picker.value = hex.value; sample.style.color = hex.value; previewColor(theme, hex.value); } };
       row.querySelector('.ui-color-save').onclick = safe(() => saveColor(theme, hex.value));
       row.querySelector('.ui-color-reset').onclick = safe(() => saveColor(theme, null));
       dialog.querySelector('#ui-text-colors').append(row);
     }
+    dialog.addEventListener('close', () => { if (colorSaveTimer) { clearTimeout(colorSaveTimer); colorSaveTimer = null; chooseAppearance({ uiTextColors: { ...appearance.uiTextColors } }).catch(error => toast(error.message)); } });
     dialog.querySelector('#close-ui-appearance').onclick = () => dialog.close();
     dialog.querySelector('#switch-shell-fonts').onclick = safe(async () => { dialog.close(); await openAppearance('font'); });
     dialog.querySelector('#online-ui-fonts').onclick = safe(() => window.DengFontLibrary.open('ui-font'));
@@ -189,7 +199,7 @@ window.DengUIAppearance = (() => {
     document.querySelector('#manage-ui-appearance').onclick = safe(open);
     window.addEventListener('cloudshell:theme', () => applyColors());
   }
-  async function open() { setSettingsMenu(false); if (document.querySelector('#appearance-dialog')?.dataset.kind === 'font') document.querySelector('#appearance-dialog').close(); await loadProfiles(); await render(); if (!dialog.open) dialog.showModal(); }
+  async function open() { setSettingsMenu(false); if (document.querySelector('#appearance-dialog')?.dataset.kind === 'font') document.querySelector('#appearance-dialog').close(); await loadProfiles(); await render(); if (!dialog.open) dialog.show(); positionAppearancePalette(); }
   async function useFont(id, stillWanted = () => true) { await initCatalog(); const font = fonts().find(f => f.id === id); if (!font) throw new Error('界面字体不存在，请重新下载或导入'); return selectFont(font, stillWanted); }
   return { initialize, apply, acceptConfig, open, useFont };
 })();

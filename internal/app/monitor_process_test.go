@@ -185,8 +185,8 @@ func TestLocalProcessWorkloadIntegration(t *testing.T) {
 		return Process{}, ProcessSampleInfo{}
 	}
 	first, _ := snapshot()
-	if first.CPUReady || !first.MemoryReady || first.Memory < 24<<20 || first.MemorySource != "smaps_rollup" || first.MemoryEstimated {
-		t.Fatalf("first current memory sample is not accurate: %+v", first)
+	if first.CPUReady || !first.MemoryReady || first.Memory < 24<<20 || first.MemorySource != "stat" || !first.MemoryEstimated {
+		t.Fatalf("first lightweight memory sample is invalid: %+v", first)
 	}
 	setWorkload("busy")
 	snapshot() // Establish a baseline entirely inside the busy interval.
@@ -202,7 +202,7 @@ func TestLocalProcessWorkloadIntegration(t *testing.T) {
 	if !idle.CPUReady || idle.CPU >= 10 || active.CPU-idle.CPU < 25 {
 		t.Fatalf("CPU still reflects process lifetime after it went idle: busy=%+v idle=%+v", active, idle)
 	}
-	t.Logf("PID %d: current busy CPU %.2f%% -> idle %.2f%%; accurate RSS %d bytes (%s), %d visible PIDs, collection %.0fms", active.PID, active.CPU, idle.CPU, active.Memory, active.MemorySource, meta.Visible, meta.CollectionMilliseconds)
+	t.Logf("PID %d: current busy CPU %.2f%% -> idle %.2f%%; estimated RSS %d bytes (%s), %d visible PIDs, collection %.0fms", active.PID, active.CPU, idle.CPU, active.Memory, active.MemorySource, meta.Visible, meta.CollectionMilliseconds)
 }
 
 func TestProcessNameFramingAndUnavailableSnapshot(t *testing.T) {

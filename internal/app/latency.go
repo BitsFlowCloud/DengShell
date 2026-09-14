@@ -2,8 +2,11 @@ package app
 
 import (
 	"net/http"
+	"sync/atomic"
 	"time"
 )
+
+const sshHeartbeatTimeout = 90 * time.Second
 
 type LatencySample struct {
 	Milliseconds         float64   `json:"milliseconds"`
@@ -40,6 +43,10 @@ func (s *Session) Latency() LatencySample {
 // actual transport. It also replaces the old keepalive, avoiding queue delay
 // between competing global requests. No shell or monitoring commands are run.
 func (s *Session) heartbeat() {
+	s.heartbeatWithTimeout(sshHeartbeatTimeout)
+}
+
+func (s *Session) heartbeatWithTimeout(limit time.Duration) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
@@ -53,20 +60,49 @@ func (s *Session) heartbeat() {
 		s.latency.Pending = true
 		s.latency.PendingSince = started
 		s.latencyMu.Unlock()
-		timeout := time.AfterFunc(10*time.Second, s.Close)
+		// A single delayed global reply cannot kill an active terminal/SFTP
+		// stream. Only continuous absence of inbound SSH data expires the link.
+		done, watchDone := make(chan struct{}), make(chan struct{})
+		var expired atomic.Bool
+		go func() {
+			defer close(watchDone)
+			timer := time.NewTimer(limit)
+			defer timer.Stop()
+			for {
+				select {
+				case <-done:
+					return
+				case <-s.ctx.Done():
+					return
+				case <-timer.C:
+					idle := time.Since(started)
+					if s.activity != nil {
+						idle = s.activity.idleFor()
+					}
+					if idle < limit {
+						timer.Reset(limit - idle)
+						continue
+					}
+					expired.Store(true)
+					s.forceCloseDiagnostic("DS-201", "transport-idle-timeout")
+					return
+				}
+			}
+		}()
 		_, _, err := s.client.SendRequest("keepalive@openssh.com", true, nil)
-		stopped := timeout.Stop()
-		if err != nil || !stopped {
+		close(done)
+		<-watchDone
+		if err != nil || expired.Load() {
 			s.latencyMu.Lock()
 			s.latency.Pending = false
 			s.latency.Ready = false
-			if err != nil {
-				s.latency.Error = err.Error()
+			if expired.Load() {
+				s.latency.Error = "SSH 持续未收到数据，连接已断开"
 			} else {
-				s.latency.Error = "SSH 心跳超过 10 秒，连接已断开"
+				s.latency.Error = err.Error()
 			}
 			s.latencyMu.Unlock()
-			s.Close()
+			s.closeDiagnostic("DS-202", sshDiagnosticErrorKind(err))
 			return
 		}
 		// An SSH REQUEST_FAILURE is also a reply (RFC 4254 §4), not packet loss.

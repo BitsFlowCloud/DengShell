@@ -114,12 +114,12 @@ async function connectProfile(profileID, force, { background = false, refreshHis
   if (existing?.detaching || existing?.handoffProvisional || existing?.ownershipUncertain) { toast('此 SSH 正在交接窗口，请稍后再试'); return null; }
   if (existing?.connected && !force) { if (!background) { activate(existing.id); setDrawer(false); } return existing; }
   const tabOrder = existing?.tabOrder ?? nextSessionOrder++;
-  const state = makeSessionState({ id: `pending:${profileID}:${tabOrder}`, profileId: profileID, home: '/' });
+  const state = makeSessionState({ id: `pending:${profileID}:${crypto.randomUUID()}`, profileId: profileID, home: '/' });
   Object.assign(state, { tabOrder, connected: false, localOnly: true, pendingConnection: true, connectionMessage: '正在连接…', connectionAbort: new AbortController() });
   const alive = () => !state.closed && sessions.get(state.id) === state;
   connecting.add(profileID); connectionAttempts.set(profileID, state);
   // Removing an old session is independent of every other selected profile.
-  const previousClose = existing ? closeSession(existing.id) : Promise.resolve();
+  const previousClose = existing ? preserveReconnectTerminal(existing, state) : Promise.resolve();
   sessions.set(state.id, state);
   try {
     createTerminal(state);
@@ -137,6 +137,8 @@ async function connectProfile(profileID, force, { background = false, refreshHis
       if (profile.auth === 'password' && !secret) throw new Error('请输入 SSH 密码');
     }
     await previousClose;
+    if (!alive()) return null;
+    await restoreReconnectTerminal(state);
     if (!alive()) return null;
     showConnectionProgress(state, '正在连接…');
     const requestConnection = async () => {
@@ -201,6 +203,38 @@ async function connectProfile(profileID, force, { background = false, refreshHis
     if (alive() && state.localOnly) { state.pendingConnection = false; renderTabs(); if (current() === state) renderSessionInfo(); }
     renderConnections(); updateStatus();
   }
+}
+function writeTerminalAndWait(state, text = '') {
+  if (state.closed) return Promise.resolve(false);
+  return new Promise((resolve, reject) => {
+    state.terminalWriteWaiters ||= new Set();
+    const done = () => { state.terminalWriteWaiters.delete(done); resolve(!state.closed); };
+    state.terminalWriteWaiters.add(done);
+    try { state.term.write(text, done); }
+    catch (error) { state.terminalWriteWaiters.delete(done); reject(error); }
+  });
+}
+async function preserveReconnectTerminal(previous, next) {
+  // Drain xterm's asynchronous write queue, including the final output frame
+  // and shell-confirmed history events, before disposing the old renderer.
+  await writeTerminalAndWait(previous);
+  if (!previous.closed) {
+    next.reconnectScreen = {
+      cols: previous.term.cols, rows: previous.term.rows,
+      // A new SSH shell must not inherit an old TUI's mouse/paste/alternate
+      // screen modes. Only rendered normal-buffer text and colors are copied.
+      text: previous.serialize.serialize({ excludeAltBuffer: true, excludeModes: true }),
+    };
+    await closeSession(previous.id);
+  }
+}
+async function restoreReconnectTerminal(state) {
+  const screen = state.reconnectScreen;
+  if (!screen || state.closed) return;
+  state.term.resize(screen.cols, screen.rows);
+  await writeTerminalAndWait(state, screen.text + '\x1b[0m\r\n\x1b[38;5;245m── 重新连接 · 以上为上一会话记录 ──\x1b[0m\r\n');
+  state.reconnectScreen = null;
+  if (current() === state && !state.closed) fitActive();
 }
 function showConnectionProgress(state, message, failed = false) {
   state.connectionMessage = message; state.connectionFailed = failed;
@@ -295,8 +329,38 @@ function markSessionDisconnected(state) {
   state.connected = false; state.ready = false; state.navGeneration++; state.navAbort?.abort();
   state.term.options.disableStdin = true;
   state.term.writeln('\r\n\x1b[38;5;245m连接已断开，终端内容已保留。点击重新连接可建立新会话。\x1b[0m');
+  showDisconnectDiagnostic(state);
   renderTabs();
   if (activeID === state.id) { renderSessionInfo(); renderFiles(); }
+}
+async function showDisconnectDiagnostic(state) {
+  if (state.disconnectDiagnosticRequested) return;
+  state.disconnectDiagnosticRequested = true;
+  let result;
+  try {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      let timer;
+      try {
+        result = await Promise.race([
+          api(`/api/sessions/${state.id}/disconnect-diagnostic`),
+          new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('诊断接口未响应')), 2000); }),
+        ]);
+      } finally { clearTimeout(timer); }
+      if (result.code || state.closed) break;
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
+  } catch {}
+  if (state.closed) return;
+  if (!/^DS-\d{3}$/.test(result?.code || '')) result = { code: 'DS-290', traceId: state.id.slice(0, 12), message: '无法取得后端断开原因，可能是本地窗口通信异常；请提供本地诊断日志。' };
+  state.disconnectDiagnostic = result;
+  const clean = value => String(value || '').replace(/[\x00-\x1f\x7f-\x9f]/g, ' ');
+  const label = `断开诊断码 ${result.code}${result.traceId ? ' / ' + clean(result.traceId) : ''}`;
+  state.term.writeln(`\r\n\x1b[38;5;214m[${label}]\x1b[0m ${clean(result.message)}`);
+  if (result.logPath) state.term.writeln(`诊断日志：${clean(result.logPath)}${result.logWriteFailed ? '（文件写入失败，请保留本页诊断码）' : ''}`);
+  if (current() === state) {
+    $('#terminal-state').textContent = `已断开 · ${result.code}`;
+    $('#terminal-state').title = label + ' · ' + clean(result.message);
+  }
 }
 async function disconnectSession(state = current()) {
   if (!state?.connected || state.disconnecting || state.detaching || state.handoffProvisional || state.ownershipUncertain) return;
@@ -313,6 +377,7 @@ async function disconnectSession(state = current()) {
 function dropSessionView(id, expected = null) {
   const state = sessions.get(id); if (!state || expected && state !== expected) return;
   state.closed = true; state.connected = false; state.ready = false;
+  for (const done of state.terminalWriteWaiters || []) done();
   if (state.localOnly) {
     state.connectionAbort?.abort();
     if (connectionAttempts.get(state.profileId) === state) {
@@ -361,7 +426,8 @@ function updateStatus() { $('#connection-button').setAttribute('aria-label', '�
 function renderSessionInfo() {
   const state = current(), profile = profileFor(state);
   $('#welcome-state').hidden = !!state;
-  $('#terminal-meta-host').textContent = profile ? `${profile.user}@${profile.name}` : 'SSH 终端'; $('#terminal-state').textContent = state?.handoffProvisional ? '正在接收标签…' : state?.pendingConnection ? '正在连接…' : state?.connectionFailed ? '连接未完成' : state?.connected ? '已连接' : '待连接';
+  $('#terminal-meta-host').textContent = profile ? `${profile.user}@${profile.name}` : 'SSH 终端'; $('#terminal-state').textContent = state?.handoffProvisional ? '正在接收标签…' : state?.pendingConnection ? '正在连接…' : state?.connectionFailed ? '连接未完成' : state?.connected ? '已连接' : state?.disconnectDiagnostic ? `已断开 · ${state.disconnectDiagnostic.code}` : '待连接';
+  $('#terminal-state').title = state?.disconnectDiagnostic?.message || '';
   $('#command-history').disabled = false; $('#command-input').disabled = !state?.connected; $('#command-input').value = ''; resizeCommandInput(); $('#reconnect').disabled = !state || !!(state.pendingConnection || state.disconnecting || state.detaching || state.handoffProvisional || state.ownershipUncertain); $('#disconnect').disabled = !state?.connected || !!(state.disconnecting || state.detaching || state.handoffProvisional || state.ownershipUncertain);
   $('#follow-terminal').checked = !!state?.follow; $('#follow-terminal').disabled = !state?.ready;
   renderMonitor(state?.connected ? state.stats : null); renderLatency(); renderCommands(); window.DengCommonApps?.render(); updateStatus();
@@ -500,11 +566,11 @@ async function pollNetwork() {
 async function pollStats() {
   const state = current(); if (!state?.connected || statsRequests.has(state) || !monitorVisible()) return;
   if ((!networkTimer && !networkRequests.has(state)) || networkPolledSession !== state.id) pollNetwork();
-  clearTimeout(statsTimer); statsTimer = 0; statsRequests.add(state); const includeProcesses = $('.process-details')?.open === true;
+  clearTimeout(statsTimer); statsTimer = 0; statsRequests.add(state); const includeProcesses = true;
   let delay = 5000;
   try { const stats = await api(`/api/sessions/${state.id}/stats?processes=${includeProcesses ? 1 : 0}`); if (sessions.get(state.id) !== state || !state.connected) return; rememberProcessSample(state, stats); state.stats = stats; delay = monitorPollDelay(stats.nextSampleInMilliseconds, 5000); if (activeID === state.id) { renderMonitor(stats); $('.system-section').classList.remove('stale'); $('#monitor-state').title = ''; } }
   catch (error) { if (activeID === state.id) { $('#monitor-state').textContent = '读取失败'; $('#monitor-state').hidden = false; $('#monitor-state').title = error.message; $('.system-section').classList.add('stale'); } }
-  finally { statsRequests.delete(state); if (current() === state && state.connected && monitorVisible()) { clearTimeout(statsTimer); statsTimer = setTimeout(() => { statsTimer = 0; pollStats(); }, !includeProcesses && $('.process-details').open ? 0 : delay); } }
+  finally { statsRequests.delete(state); if (current() === state && state.connected && monitorVisible()) { clearTimeout(statsTimer); statsTimer = setTimeout(() => { statsTimer = 0; pollStats(); }, delay); } }
 }
 function meter(selector, percent, detail, valid = true) { const el = $(selector); el.querySelector('i').style.width = `${valid ? Math.max(0, Math.min(100, percent)) : 0}%`; el.querySelector('b').textContent = valid ? `${percent.toFixed(1)}%` : '—'; el.querySelector('em').textContent = detail; }
 function renderMonitor(stats) {
@@ -548,7 +614,6 @@ setInterval(() => {
   renderNetwork(current().stats);
 }, 1000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { pollStats(); pollNetwork(); } });
-$('.process-details').addEventListener('toggle', () => { renderProcesses(current()?.stats); if ($('.process-details').open) pollStats(); });
 
 // Connection groups and credentials are persisted by Go, never in browser storage.
 let drawerTrigger;

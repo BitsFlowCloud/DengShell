@@ -18,7 +18,7 @@ for(const peak of [0,.125,1,2.5,27,999,1024,2500,1024**2*2.5,1024**3*39,1024**4]
 }
 assert.equal(trafficChartModel([],now).axis,null);
 assert.equal(trafficChartModel([sample(null,NaN),sample(-1,-3)],now).axis,null,'unknown/invalid rates are never zero samples');
-const timed=trafficChartModel([sample(1,2,30000),sample(3,4,29999),sample(5,6,2000),sample(7,8,-1)],now);
+const timed=trafficChartModel([sample(1,2,60000),sample(3,4,59999),sample(5,6,2000),sample(7,8,-1)],now);
 assert.deepEqual(Array.from(timed.points,p=>p.tx),[3,5],'actual thirty-second timestamps exclude stale and future samples');
 const state={};
 const first={sampledAt:new Date(now-5000).toISOString(),interfaces:[{name:'eth0',ready:true,rx:400,tx:100},{name:'eth1',ready:true,rx:2,tx:1}]};
@@ -27,15 +27,15 @@ assert.equal(state.interfaceCharts.get('eth0').length,1,'cached backend response
 rememberNetworkSample(state,{sampledAt:new Date(now).toISOString(),interfaces:[{name:'eth0',ready:false,rx:0,tx:0}]});
 assert.equal(state.interfaceCharts.get('eth0')[1].rx,null,'counter reset or missing sample remains a gap');
 assert.equal(state.interfaceCharts.get('eth1')[0].rx,2,'interface histories remain independent');
-/* R9 dynamic-axis behavior: full peaks stay visible, small rates recover after 30s + 5s. */
+/* R9 dynamic-axis behavior: full peaks stay visible, small rates recover after 60s + 5s. */
 const axisState={};
 const peakPoint=sample(2*1024**2,1000);
 let axis=trafficChartModel([peakPoint],now,axisState).axis;
 assert(axis.max>=2*1024**2*1.1,'a new peak receives headroom immediately');
 const large=axis.max;
-for(const age of [1000,29000]){axis=trafficChartModel([peakPoint,{...sample(4096,819),sampledAt:new Date(now+age).toISOString()}],now+age,axisState).axis;assert.equal(axis.max,large,'a visible peak is not cropped');}
-for(const age of [30000,31000,32000,34000]){axis=trafficChartModel([{...sample(age%2000?5000:4096,819),sampledAt:new Date(now+age).toISOString()}],now+age,axisState).axis;assert.equal(axis.max,large,'downshift waits five seconds despite varying smaller buckets');}
-axis=trafficChartModel([{...sample(4096,819),sampledAt:new Date(now+35000).toISOString()}],now+35000,axisState).axis;
+for(const age of [1000,59000]){axis=trafficChartModel([peakPoint,{...sample(4096,819),sampledAt:new Date(now+age).toISOString()}],now+age,axisState).axis;assert.equal(axis.max,large,'a visible peak is not cropped');}
+for(const age of [60000,61000,62000,64000]){axis=trafficChartModel([{...sample(age%2000?5000:4096,819),sampledAt:new Date(now+age).toISOString()}],now+age,axisState).axis;assert.equal(axis.max,large,'downshift waits five seconds despite varying smaller buckets');}
+axis=trafficChartModel([{...sample(4096,819),sampledAt:new Date(now+65000).toISOString()}],now+65000,axisState).axis;
 assert(axis.max<large&&axis.unit==='KiB/s','an expired MB peak cannot permanently flatten KB traffic');
 assert.equal(trafficChartRuns([{time:0,tx:1},{time:1000,tx:2},{time:3000,tx:4}], 'tx',x=>x,y=>y).length,2,'one missing second makes a real gap');
 /* R11: counter-proven continuity tolerates delivery jitter, never missed data. */
@@ -69,7 +69,7 @@ assert.equal(trafficChartRuns(sampled,'tx',x=>x,y=>y).length,1,'the complete API
 const metadata={metadataSampledAt:new Date(now).toISOString(),serverIPv4:['203.0.113.1'],interfaces:[{name:'eth0',addresses:['203.0.113.1'],default:true,up:true,rx:999,tx:999}]};
 const live={stats:metadata,networkStats:{metadataSampledAt:'0001-01-01T00:00:00Z',interfaces:[{name:'eth0',addresses:[],default:false,up:false,rx:100,tx:10,ready:true}]}};
 const combined=currentNetworkInterfaces(live)[0];assert.equal(combined.rx,100);assert.equal(combined.default,true);assert.equal(combined.addresses[0],'203.0.113.1');assert.equal(metadata.interfaces[0].rx,999,'lightweight traffic never mutates core metadata');
-console.log('Traffic chart: adaptive byte-rate scale, actual 30s window, counter-proven continuity under delivery jitter, real missing-data gaps and NIC history deduplication passed.');
+console.log('Traffic chart: adaptive byte-rate scale, actual 60s window, counter-proven continuity under delivery jitter, real missing-data gaps and NIC history deduplication passed.');
 
 /* R12: returning to a tab backfills actual backend samples, including gaps. */
 const frameAt=(index)=>({sampledAt:new Date(now-12000+index*1000).toISOString(),elapsedMilliseconds:1000,interfaces:[
@@ -99,9 +99,9 @@ rememberNetworkSample(removedNIC,{...removedFrames.at(-1),history:removedFrames}
 assert.equal(removedNIC.interfaceCharts.get('eth0')[5].tx,null,'removed NIC receives a missing point, not another NIC rate');
 assert.equal(removedNIC.interfaceCharts.get('lo')[5].tx,30,'remaining NIC is not interrupted by another interface disappearing');
 const retained={};const minute=Array.from({length:62},(_,i)=>frameAt(i-49));rememberNetworkSample(retained,{...minute.at(-1),history:minute});
-assert.equal(retained.interfaceCharts.get('eth0').length,30,'history is bounded to the latest thirty seconds');
+assert.equal(retained.interfaceCharts.get('eth0').length,60,'history is bounded to the latest sixty seconds');
 assert.equal(trafficChartRuns(trafficChartModel(retained.interfaceCharts.get('eth0'),now).points,'tx',x=>x,y=>y).length,1,'returning after more than the visible window retrieves a full recent curve');
-console.log('Network history: true background backfill, ordered deduplication, NIC isolation, real error gaps and 30s retention passed.');
+console.log('Network history: true background backfill, ordered deduplication, NIC isolation, real error gaps and 60s retention passed.');
 
 /* Default NIC choice must favor usable Ethernet links over a default bridge. */
 const {preferredNetworkInterface,selectNetworkInterface}=context;

@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -18,6 +19,10 @@ import (
 )
 
 type Session struct {
+	diagnosticLog       *sshDiagnosticLog
+	diagnosticMu        sync.Mutex
+	diagnosticCode      string
+	diagnosticStarted   time.Time
 	ID                  string `json:"id"`
 	ProfileID           string `json:"profileId"`
 	Home                string `json:"home"`
@@ -26,26 +31,31 @@ type Session struct {
 	connectionPeer      string // public direct TCP peer; empty for explicit proxies
 	fileWriteIdentity   string // immutable verified server identity for text-save locks
 	client              *ssh.Client
+	activity            *sshActivityConn
 	files               *sftp.Client
+	fileBridge          atomic.Pointer[sshSFTPBridge]
 	preparedIntegration *terminalIntegration // immutable before session publication
 	fileOwners          fileOwnerCache
 	cancel              context.CancelFunc
 	ctx                 context.Context
 	closeOnce           sync.Once
 	transportCloseOnce  sync.Once
+	cleanupGrace        time.Duration // optional shorter interval for isolated fault fixtures
 	mu                  sync.Mutex
 	terminalRelay       *terminalRelay
 	terminalStarted     bool
 	terminalReady       bool
 	statsMu             sync.Mutex
+	coreCollector       monitorCommandRunner
+	commandCollector    monitorCommandRunner
+	processCollector    monitorCommandRunner
+	networkCollector    monitorCommandRunner
 	statsNextSampleAt   time.Time
 	statsLastError      error
 	processNextSampleAt time.Time
 	networkMu           sync.Mutex
 	networkReadMu       sync.Mutex
 	networkStartOnce    sync.Once
-	networkOpenOnce     sync.Once
-	networkOpenSlot     chan struct{}
 	networkBackground   bool
 	networkHistory      []NetworkHistorySample
 	networkErrorAt      time.Time
@@ -70,15 +80,30 @@ type Session struct {
 	promptHostname      string
 }
 
+// Cleanup acknowledgements need several round trips on congested links. A
+// short monitoring deadline must not turn 250 ms of network jitter into a
+// terminal disconnect. Workers remain owned until cleanup finishes or expires.
+func (s *Session) cleanupGracePeriod() time.Duration {
+	if s.cleanupGrace > 0 {
+		return s.cleanupGrace
+	}
+	return 30 * time.Second
+}
+
 func (s *Session) Close() {
+	s.noteDisconnect("DS-299", "session-close")
 	s.closeOnce.Do(func() { s.removePromptStyleBeforeClose(); s.forceClose() })
 }
 
 // forceClose never performs a remote operation. Closing the transport releases
 // SSH requests and SFTP calls even when the peer ignores channel-close messages.
 func (s *Session) forceClose() {
+	s.noteDisconnect("DS-299", "transport-close")
 	if s.cancel != nil {
 		s.cancel()
+	}
+	if b := s.fileBridge.Load(); b != nil {
+		b.close()
 	}
 	s.transportCloseOnce.Do(func() {
 		if s.client != nil {
@@ -204,6 +229,8 @@ func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret 
 	if err != nil {
 		return nil, fmt.Errorf("连接 %s：%w", address, err)
 	}
+	activity := newSSHActivityConn(conn)
+	conn = activity
 	stop := context.AfterFunc(dialCtx, func() { conn.Close() })
 	defer stop()
 	deadline, _ := dialCtx.Deadline()
@@ -222,7 +249,7 @@ func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret 
 	client := ssh.NewClient(sshConn, chans, reqs)
 	sessionCtx, sessionCancel := context.WithCancel(a.ctx)
 	writeIdentity := strings.Join([]string{address, fingerprint, p.User, p.Proxy.Type, p.Proxy.Host, strconv.Itoa(p.Proxy.Port), p.Proxy.User}, "\x00")
-	s := &Session{ID: randomID(), ProfileID: p.ID, Fingerprint: fingerprint, connectionHost: p.Host, connectionPeer: directSSHServerPeer(client.RemoteAddr(), p.Proxy.Type), fileWriteIdentity: writeIdentity, client: client, ctx: sessionCtx, cancel: sessionCancel}
+	s := &Session{ID: randomID(), ProfileID: p.ID, Fingerprint: fingerprint, connectionHost: p.Host, connectionPeer: directSSHServerPeer(client.RemoteAddr(), p.Proxy.Type), fileWriteIdentity: writeIdentity, client: client, activity: activity, ctx: sessionCtx, cancel: sessionCancel}
 	appearance := a.store.List().Appearance
 	s.promptUsernameColor, s.promptHostnameColor = appearance.PromptUsernameColor, appearance.PromptHostnameColor
 	// Independent SSH channels: stage the shell while the SFTP handshake/home
@@ -244,7 +271,7 @@ func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret 
 			s.Close()
 		}
 	}()
-	files, err := sftp.NewClient(client)
+	files, err := s.openFileClient()
 	if err != nil {
 		return nil, fmt.Errorf("SSH 已连接，但 SFTP 不可用：%w", err)
 	}
@@ -268,8 +295,11 @@ func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret 
 		return nil, fmt.Errorf("无法保存成功连接记录：%w", err)
 	}
 	connected = true
+	s.diagnosticLog = &a.sshDiagnostics
+	s.diagnosticStarted = time.Now()
 	a.sessions[s.ID] = s
 	a.mu.Unlock()
+	s.startConnectionDiagnostics()
 	go func() { <-sessionCtx.Done(); a.disconnect(s.ID) }()
 	// This is only the deadline for attaching a window. Once attached, the
 	// relay's independent startup deadline covers channel/PTY/shell readiness.
@@ -278,6 +308,7 @@ func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret 
 		started := s.terminalRelay != nil
 		s.mu.Unlock()
 		if !started {
+			s.noteDisconnect("DS-110", "terminal-not-attached")
 			a.disconnect(s.ID)
 		}
 	})
@@ -307,7 +338,7 @@ func (a *App) disconnect(id string) {
 	delete(a.sessions, id)
 	a.mu.Unlock()
 	if s != nil {
-		s.Close()
+		s.closeDiagnostic("DS-100", "session-removed")
 	}
 }
 

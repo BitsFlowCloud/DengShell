@@ -127,51 +127,50 @@ function renderCommandHistory() {
 function resizeCommandInput() { const input = $('#command-input'); input.style.height = 'auto'; input.style.height = `${Math.min(76, input.scrollHeight)}px`; }
 function openCommandHistory() { historySession = current(); $('#history-filter').value = ''; renderCommandHistory(); $('#history-dialog').showModal(); $('#history-filter').focus(); refreshGlobalCommandHistory().catch(error => toast(`命令历史刷新失败：${error.message || error}`)); }
 function compactDiskSize(bytes) { const unit = bytes >= 1024 ** 4 ? 'T' : 'G'; return `${(bytes / 1024 ** (unit === 'T' ? 4 : 3)).toFixed(1)}${unit}`; }
-function processOrder(state = current()) { return state?.processSort || readSaved('dengshell.workspace', {}).processSort || { key:null, ascending:false }; }
+function processOrder(state = current()) { const saved = state?.processSort || readSaved('dengshell.workspace', {}).processSort; return { key: saved?.key === 'memory' ? 'memory' : 'cpu', ascending: false }; }
 function rememberProcessSample(state, stats) {
   const sample = stats?.processSample;
-  // A collapsed response intentionally contains no processes; it must never
-  // overwrite the last real sample with an invented zero-process snapshot.
+  // An unavailable response must not erase the last successful top-five sample.
   if (!state || !sample?.available || sample.paused) return;
-  state.processSnapshot = { processes: [...(stats.processes || [])], sample: { ...sample }, sampledAt: sample.sampledAt || stats.sampledAt };
+  state.processSnapshot = { processes: [...(stats.processes || [])], memoryTop: [...(stats.processMemoryTop || stats.processes || [])], sample: { ...sample }, sampledAt: sample.sampledAt || stats.sampledAt };
 }
 function renderProcesses(stats) {
-  const state = current(), expanded = $('.process-details').open;
+  const state = current();
   rememberProcessSample(state, stats);
   const snapshot = state?.processSnapshot, sample = snapshot?.sample;
-  const order = processOrder(), items = [...(snapshot?.processes || [])];
+  const order = processOrder(), items = [...(order.key === 'memory' ? snapshot?.memoryTop || snapshot?.processes || [] : snapshot?.processes || [])];
   const valid = (process, key) => key === 'cpu' ? process.cpuReady === true : process.memoryReady === true;
-  if (expanded) items.sort((a, b) => {
+  items.sort((a, b) => {
     const key = order.key || 'cpu', av = valid(a,key), bv = valid(b,key);
     if (av !== bv) return av ? -1 : 1;
     const difference = av ? a[key] - b[key] : 0;
     if (difference) return (order.key && order.ascending ? 1 : -1) * difference;
     return (b.memory || 0) - (a.memory || 0) || (a.pid || 0) - (b.pid || 0);
   });
+  items.splice(5); // Also bound old snapshots received from an existing window.
   const hasSample = !!snapshot, attempted = stats?.processSample;
-  $('#process-count').textContent = !expanded ? '点击显示进程列表' : hasSample ? `最近采样 ${items.length} 个` : state?.connected ? attempted?.error && !attempted.paused ? '暂不可用' : '采样中…' : '等待连接';
+  $('#process-count').textContent = hasSample ? `${attempted?.error && !attempted.available ? '采集失败，保留缓存 · ' : ''}${order.key === 'memory' ? '内存' : 'CPU'} 前 ${items.length}` : state?.connected ? attempted?.error && !attempted.paused ? '暂不可用' : '采样中…' : '等待连接';
   const sampledAt = snapshot?.sampledAt && Number.isFinite(Date.parse(snapshot.sampledAt)) ? new Date(snapshot.sampledAt).toLocaleString() : '';
   const interval = (attempted?.intervalMilliseconds || sample?.intervalMilliseconds || 5000) / 1000;
   $('#process-count').title = [
-    expanded ? `仅在此列表展开且窗口可见时采集；约每 ${interval} 秒更新一次` : '已暂停进程采集；展开后查看。下方缓存不会被当作实时数据。',
+    `窗口可见时自动采集并常驻显示前 5 个；约每 ${interval} 秒更新一次`,
     sampledAt ? `最近采样：${sampledAt}` : '尚未采集进程列表',
     sample ? `已读取 ${sample.readable} / 可见 ${sample.visible} 个进程${sample.unreadable ? `；${sample.unreadable} 个无权限或已退出` : ''}${sample.elapsedSeconds ? `；CPU 采样间隔 ${sample.elapsedSeconds.toFixed(2)} 秒` : ''}` : '',
     attempted?.error || sample?.error || '',
   ].filter(Boolean).join('\n');
   $('#monitor-state').textContent = state?.connected ? '' : '待连接';
   $('#monitor-state').hidden = !!state?.connected;
-  $('.process-details').dataset.sampleState = hasSample ? expanded ? 'sampled' : 'paused' : expanded && state?.connected ? 'pending' : 'uncollected';
+  $('.process-details').dataset.sampleState = hasSample ? 'sampled' : state?.connected ? 'pending' : 'uncollected';
   for (const key of ['cpu','memory']) {
     const button = $(`#sort-process-${key}`), selected = order.key === key;
     button.querySelector('span').textContent = selected ? order.ascending ? '↑' : '↓' : '';
     button.closest('th').setAttribute('aria-sort', selected ? order.ascending ? 'ascending' : 'descending' : 'none');
   }
-  if (!expanded) { if (!hasSample) $('#process-list').replaceChildren(); return; }
   const scroll = $('.process-table'), previousTop = scroll.scrollTop;
   $('#process-list').replaceChildren(...items.map(process => {
     const row = node('tr'), memory = node('td', '', process.memoryReady ? `${process.memoryEstimated ? '≈ ' : ''}${prettySize(process.memory)}` : '—'), cpu = node('td', '', process.cpuReady ? `${process.cpu.toFixed(1)}%` : '—'), name = node('td', '', process.name);
     row.dataset.pid = process.pid;
-    memory.title = !process.memoryReady ? '无法读取此进程的驻留内存' : process.memoryEstimated ? '内核驻留内存估算值；当前账号无法读取精确内存页统计' : '当前驻留内存 RSS，读取自 /proc 的内存页统计';
+    memory.title = !process.memoryReady ? '无法读取此进程的驻留内存' : process.memoryEstimated ? '内核驻留内存估算值；使用轻量采样，避免遍历所有进程的内存页影响服务器' : '当前驻留内存 RSS，读取自 /proc 的内存页统计';
     cpu.title = process.cpuReady ? '采样间隔内的 CPU 占用；单核满载为 100%，多线程可超过 100%' : '等待同一进程的下一次采样';
     name.title = `${process.name}${process.pid ? ` · PID ${process.pid}` : ''}`;
     row.append(memory,cpu,name); return row;
@@ -180,12 +179,11 @@ function renderProcesses(stats) {
 }
 function sortProcesses(key, reset = false) {
   const state = current(); if (!state) return;
-  const previous = processOrder(state);
-  state.processSort = reset ? { key:null, ascending:false } : { key, ascending:previous.key === key ? !previous.ascending : true };
+  state.processSort = { key: reset ? 'cpu' : key, ascending:false };
   save('dengshell.workspace', { ...readSaved('dengshell.workspace', {}), processSort: state.processSort });
   $('.process-table').scrollTop = 0; renderProcesses(state.stats);
 }
-const trafficWindowMilliseconds = 30000;
+const trafficWindowMilliseconds = 60000;
 function rememberNetworkSample(state, stats) {
   state.interfaceCharts ||= new Map();
   // Sampling belongs to the SSH session, not the selected UI tab. Merge the
@@ -280,12 +278,12 @@ function renderTrafficChart(host, samples) {
   const labels = axis?.labels || ['—','—','—'], left = Math.max(35,...labels.map(label => label.length * 5.6 + 10)), right = width - 3, plotWidth = Math.max(1,right-left);
   const element = (tag,attrs = {},text) => { const node = document.createElementNS('http://www.w3.org/2000/svg',tag); for (const [key,value] of Object.entries(attrs)) node.setAttribute(key,String(value)); if (text != null) node.textContent = text; return node; };
   host.setAttribute('viewBox',`0 0 ${width} ${height}`); host.replaceChildren(); host.dataset.scaleMax = axis?.max ?? ''; host.dataset.trafficUnit = axis?.unit || '';
-  host.setAttribute('aria-label',`最近30秒网卡流量，上行和下行使用各自设定的线条样式，两者使用同一刻度${axis ? `，零至${labels[0]} ${axis.unit}` : ''}；点击运行 MTR 路径诊断`);
-  host.setAttribute('title','刻度单位 B/s、KiB/s、MiB/s、GiB/s（1024进位）；最近30秒真实采样；新峰立即扩大刻度，旧峰移出后稳定5秒再缩小。上传和下载共用零起点刻度；点击运行 MTR 路径诊断');
+  host.setAttribute('aria-label',`最近60秒网卡流量，上行和下行使用各自设定的线条样式，两者使用同一刻度${axis ? `，零至${labels[0]} ${axis.unit}` : ''}；点击运行 MTR 路径诊断`);
+  host.setAttribute('title','刻度单位 B/s、KiB/s、MiB/s、GiB/s（1024进位）；最近60秒真实采样；新峰立即扩大刻度，旧峰移出后稳定5秒再缩小。上传和下载共用零起点刻度；点击运行 MTR 路径诊断');
   const grid = element('g',{class:'traffic-grid'});
   grid.append(element('text',{x:left-8,y:9,'text-anchor':'end',class:'traffic-unit'},axis?.unit || 'B/s'));
   [top,(top+bottom)/2,bottom].forEach((y,index) => { grid.append(element('line',{x1:left,y1:y,x2:right,y2:y}),element('text',{x:left-8,y:y+3,'text-anchor':'end'},labels[index])); });
-  grid.append(element('text',{x:left,y:61,class:'traffic-time'},'30秒前'),element('text',{x:right,y:61,'text-anchor':'end',class:'traffic-time'},'现在')); host.append(grid);
+  grid.append(element('text',{x:left,y:61,class:'traffic-time'},'60秒前'),element('text',{x:right,y:61,'text-anchor':'end',class:'traffic-time'},'现在')); host.append(grid);
   if (!axis) { host.append(element('text',{x:left+plotWidth/2,y:33,'text-anchor':'middle',class:'traffic-empty'},state?.connected ? '等待流量采样' : '连接后显示流量')); return; }
   const x = time => left + (time - (now - trafficWindowMilliseconds)) / trafficWindowMilliseconds * plotWidth, y = value => bottom - value / axis.max * (bottom-top);
   for (const key of ['tx','rx']) {

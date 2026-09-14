@@ -336,6 +336,7 @@ async function openAppearance(kind) {
   setSettingsMenu(false); assetKind = kind;
   await initializeAppearanceCatalogs();
   const isFont = kind === 'font';
+  if (isFont) document.getElementById('ui-appearance-dialog')?.close();
   $('#appearance-title').textContent = isFont ? '字体设置 · Shell 字体' : '背景管理器';
   $('#appearance-description').textContent = isFont ? '每款字体单独设置加粗和颜色，点击字体即可应用。' : '背景立即生效，可拖动此面板观察终端。';
   $('#import-asset span').textContent = isFont ? '导入字体' : '导入背景';
@@ -478,7 +479,7 @@ function previewFontBold(bold, id = appearance.fontId) {
   reflectEditedFont(id); saveFontStylesSoon();
 }
 function clampAppearancePalette() {
-  const dialog = document.getElementById('appearance-dialog');
+  const dialog = document.querySelector('#ui-appearance-dialog[open]') || document.getElementById('appearance-dialog');
   if (!dialog?.open || !appearancePalettePosition) return;
   appearancePalettePosition.x = Math.max(8, Math.min(appearancePalettePosition.x, logicalWidth() - dialog.offsetWidth - 8));
   appearancePalettePosition.y = Math.max(8, Math.min(appearancePalettePosition.y, logicalHeight() - dialog.offsetHeight - 8));
@@ -488,8 +489,7 @@ function positionAppearancePalette() {
   if (!appearancePalettePosition) appearancePalettePosition = { x: logicalWidth() - $('#appearance-dialog').offsetWidth - 18, y: 54 };
   clampAppearancePalette();
 }
-function initializeAppearancePalette() {
-  const dialog = $('#appearance-dialog'), handle = $('#appearance-drag-handle');
+function initializeAppearancePalette(dialog = $('#appearance-dialog'), handle = $('#appearance-drag-handle')) {
   dialog.setAttribute('aria-modal', 'false');
   const saved = readSaved('dengshell.appearance-palette', null);
   if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) appearancePalettePosition = { x: saved.x, y: saved.y };

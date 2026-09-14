@@ -188,7 +188,7 @@ func uploadSFTPFixture(t *testing.T, delay time.Duration) (*App, *Session, strin
 		client.Close()
 		server.Close()
 	})
-	s := &Session{ID: "upload-test", Home: root, ctx: ctx, files: client}
+	s := &Session{ID: "upload-test", Home: root, ctx: ctx, files: client, cleanupGrace: 250 * time.Millisecond}
 	a := &App{sessions: map[string]*Session{s.ID: s}, transfers: make(map[string]*Transfer)}
 	return a, s, root, link
 }

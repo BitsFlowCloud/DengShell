@@ -43,3 +43,27 @@ button, input, select { font-family: inherit; }
   .ui-color-save { grid-column: 2; }
   .ui-color-reset { grid-column: 3; }
 }
+/* Both font settings use the same movable frame and content hierarchy. */
+#ui-appearance-dialog, #appearance-dialog[data-kind="font"] { position:fixed; inset:auto; margin:0; width:min(700px,calc(var(--view-width,100vw) - 16px)); height:min(740px,calc(var(--view-height,100vh) - 16px)); max-height:calc(var(--view-height,100vh) - 16px); padding:0; overflow:hidden; border-radius:17px; font-size:14px; z-index:25; box-shadow:0 12px 46px #152d4338; }
+#ui-appearance-dialog[open], #appearance-dialog[data-kind="font"][open] { display:flex; flex-direction:column; }
+#ui-appearance-dialog .dialog-heading, #appearance-dialog[data-kind="font"] .dialog-heading { flex:none; margin:0; padding:20px 20px 12px; cursor:grab; touch-action:none; user-select:none; --wails-draggable:no-drag; }
+#ui-appearance-dialog .dialog-heading h2, #appearance-dialog[data-kind="font"] .dialog-heading h2 { font-size:21px; margin:0; }
+#ui-appearance-dialog .dialog-heading p, #appearance-dialog[data-kind="font"] .dialog-heading p { font-size:13px; line-height:1.6; margin:8px 0 0; }
+#ui-appearance-dialog .font-kind-tabs, #appearance-dialog[data-kind="font"] .font-kind-tabs { flex:none; margin:0 20px 12px; }
+#ui-appearance-dialog .font-library-entry, #appearance-dialog[data-kind="font"] .font-library-entry { flex:none; margin:0 20px 16px; font-size:13px; }
+#ui-appearance-dialog .appearance-body, #appearance-dialog[data-kind="font"] .appearance-body { min-height:0; overflow:auto; padding:0 20px 20px; overscroll-behavior:contain; }
+:is(#online-ui-fonts, #online-shell-fonts) { padding:11px 16px!important; color:#fff!important; background:#315f7a!important; border:1px solid #315f7a; border-radius:10px; font-size:14px!important; font-weight:600; box-shadow:0 3px 9px #183c521f; }
+:is(#online-ui-fonts, #online-shell-fonts):hover { background:#23485f!important; }
+#appearance-dialog[data-kind="font"] :is(.asset-caption strong,.manager-toolbar) { font-size:14px; }
+#appearance-dialog[data-kind="font"] :is(.asset-caption span,.font-card-bold,.font-color-open,.font-preview-options label) { font-size:13px; }
+#appearance-dialog[data-kind="font"] .asset-list, #ui-font-list { gap:12px; }
+#ui-appearance-dialog .ui-text-settings { border-top:1px solid var(--border); border-bottom:0; padding:16px 0 0; margin:20px 0 0; }
+#ui-appearance-dialog .ui-text-settings summary { cursor:pointer; font-weight:600; }
+#ui-appearance-dialog .ui-color-row { grid-template-columns:minmax(100px,1fr) 40px 105px auto; }
+.library-bold { display:flex!important; flex-direction:row!important; align-items:center; gap:7px; white-space:nowrap; margin:0!important; font-size:13px!important; }
+.library-bold input { width:16px!important; height:16px; margin:0!important; accent-color:var(--accent); }
+.library-live-preview { display:block; width:100%; white-space:pre-wrap; color:#253e50; font-size:18px; font-weight:400; line-height:1.8; padding:14px; overflow-wrap:anywhere; font-synthesis:weight; }
+.preview-bold .library-live-preview { font-weight:700; }
+.library-toolbar { flex-wrap:wrap; gap:10px; }
+.library-toolbar .library-search { flex-basis:180px; }
+@media(max-width:650px) { #ui-font-list, #appearance-dialog[data-kind="font"] .asset-list { grid-template-columns:1fr; } .font-library-entry { flex-wrap:wrap; } #ui-appearance-dialog .ui-color-row { grid-template-columns:1fr 40px 105px; } }
