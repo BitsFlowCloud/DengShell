@@ -12,7 +12,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -26,7 +25,7 @@ const ApplicationVersion = "v0.01"
 
 // Increase this integer for every published build, including packaging-only
 // releases. Display versions alone do not distinguish the v0.01 revisions.
-const ApplicationBuild uint64 = 20260914027
+const ApplicationBuild uint64 = 20260914028
 const UpdateManifestURL = "https://ds.free-vps.org/up.deb.json"
 const updateTimeout = 3 * time.Second
 const maximumUpdateSize int64 = 1 << 30
@@ -35,6 +34,7 @@ var updateHashPattern = regexp.MustCompile(`^[a-fA-F0-9]{64}$`)
 
 type UpdateDescriptor = updatetrust.Descriptor
 type UpdatePackage struct {
+	Format           string `json:"format"`
 	Build            uint64 `json:"build"`
 	Version          string `json:"version"`
 	URL              string `json:"url"`
@@ -83,6 +83,9 @@ func updateAddress(platform string) (string, string) {
 	if platform == "windows-amd64" {
 		return "https://ds.free-vps.org/up.exe.json", "https://ds.free-vps.org/up.exe"
 	}
+	if platform == ArchUpdatePlatform {
+		return "https://ds.free-vps.org/up.pkg.tar.zst.json", "https://ds.free-vps.org/up.pkg.tar.zst"
+	}
 	if platform == "linux-amd64" {
 		return UpdateManifestURL, "https://ds.free-vps.org/up.deb"
 	}
@@ -97,7 +100,7 @@ func updateClient(timeout time.Duration) *http.Client {
 	}}
 }
 func noUpdate(reason string) UpdateStatus {
-	platform := runtime.GOOS + "-" + runtime.GOARCH
+	platform := currentUpdatePlatform()
 	source, _ := updateAddress(platform)
 	return UpdateStatus{Status: "none", CurrentVersion: ApplicationVersion, Source: source, Platform: platform, Reason: reason}
 }
@@ -134,50 +137,17 @@ func (a *App) beginUpdateCheck() {
 				if err != nil {
 					return noUpdate("invalid-receipt")
 				}
-				platform := runtime.GOOS + "-" + runtime.GOARCH
+				platform := currentUpdatePlatform()
 				address, _ := updateAddress(platform)
 				result := checkUpdate(ctx, updateClient(updateTimeout), address, platform, hash, receipt)
 				if result.Status == "available" && !NativePackageUpdateSupported() {
 					result.InstallerReady = false
-					result.Reason = "此 Linux 发行版请从官网下载 RPM 或通用安装包更新，保留原数据目录。内置自动安装目前适用于 Debian/Ubuntu 系列，不会在此系统运行 dpkg。"
+					result.Reason = "当前发行版不支持内置安装或缺少安装工具，请从官网下载对应安装包升级，保留原数据目录。"
 				}
 				return result
 			})
 		}()
 	})
-}
-
-// A matching ELF can run across distributions; a Debian package transaction
-// cannot. Finding an optional dpkg binary alone does not make Fedora Debian.
-func NativePackageUpdateSupported() bool {
-	if runtime.GOOS != "linux" {
-		return true
-	}
-	release, err := os.ReadFile("/etc/os-release")
-	if err != nil {
-		release, _ = os.ReadFile("/usr/lib/os-release")
-	}
-	_, dpkgErr := exec.LookPath("dpkg")
-	_, debErr := exec.LookPath("dpkg-deb")
-	return debianPackageHost(string(release), dpkgErr == nil && debErr == nil)
-}
-func debianPackageHost(release string, toolsPresent bool) bool {
-	if !toolsPresent {
-		return false
-	}
-	for _, line := range strings.Split(release, "\n") {
-		key, value, ok := strings.Cut(strings.TrimSpace(line), "=")
-		if !ok || (key != "ID" && key != "ID_LIKE") {
-			continue
-		}
-		value = strings.Trim(value, "\"'")
-		for _, id := range strings.Fields(value) {
-			if id == "debian" || id == "ubuntu" {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 // A slow filesystem must not hold startup or the check API past the deadline.
@@ -277,7 +247,7 @@ func checkUpdateTrusted(ctx context.Context, client *http.Client, address, platf
 	result.InstallerReady = true
 	result.LatestVersion = descriptor.Version
 	result.Notes = descriptor.Notes
-	result.Package = &UpdatePackage{Build: descriptor.Build, Version: descriptor.Version, URL: artifact, SHA256: descriptor.SHA256, Size: descriptor.Size, ExecutableSHA256: descriptor.ExecutableSHA256, expiresAt: descriptor.ExpiresAt}
+	result.Package = &UpdatePackage{Format: updatePackageFormat(platform), Build: descriptor.Build, Version: descriptor.Version, URL: artifact, SHA256: descriptor.SHA256, Size: descriptor.Size, ExecutableSHA256: descriptor.ExecutableSHA256, expiresAt: descriptor.ExpiresAt}
 	return result
 }
 
@@ -428,10 +398,13 @@ func (a *App) StartUpdateDownload(hash string) (UpdateDownload, error) {
 	}
 	offer := a.updateCheck.result
 	if offer.Status == "available" && !NativePackageUpdateSupported() {
-		return UpdateDownload{}, errors.New("请从官网下载此发行版对应的 RPM 或通用安装包，不在此系统下载并执行 DEB 更新")
+		return UpdateDownload{}, errors.New("当前发行版不支持内置安装或缺少安装工具，请下载对应安装包升级")
 	}
 	if offer.Status != "available" || offer.Package == nil || offer.Package.SHA256 != hash {
 		return UpdateDownload{}, errors.New("更新文件与本次检查结果不一致")
+	}
+	if runtime.GOOS == "linux" && offer.Package.Format != NativePackageFormat() {
+		return UpdateDownload{}, errors.New("更新安装包格式与当前发行版不匹配")
 	}
 	if offer.Package.expiresAt <= time.Now().Unix() {
 		return UpdateDownload{}, errors.New("更新签名已过期，请重新启动程序检查更新")

@@ -5,9 +5,9 @@ DengShell v0.01 · 原生 Linux x64 发行说明
 支持范围
 • Ubuntu 22.04 / 24.04 / 26.04、Debian 12 / 13，以及满足相同依赖的衍生版：DEB。
 • Fedora、openSUSE 等提供 glibc >= 2.35、GTK3 和 WebKitGTK 4.1 的 x86-64 桌面：RPM。
-• Arch / Manjaro 等 glibc x86-64 桌面：通用 tar.gz，安装依赖后运行或安装。
+• Arch / Manjaro 等 glibc x86-64 桌面：pacman .pkg.tar.zst，支持软件内更新；也提供通用 tar.gz。
 • 不包含 ARM、32位、Alpine/musl、Ubuntu20.04、Debian11、默认仓库的 RHEL/Rocky/AlmaLinux8/9 支持。WebKitGTK4.0或6.0不能替代4.1。
-本轮已实际通过Ubuntu22.04、24.04、Debian12、Fedora43、openSUSE Tumbleweed的原生前端启动及对应包安装，证据见Linux-兼容验证.json。
+本轮已实际通过Ubuntu22.04、24.04、Debian12、Fedora43、openSUSE Tumbleweed和Arch的原生前端启动及对应包安装，证据见Linux-兼容验证.json。
 容器验证只覆盖运行库和原生前端启动，无法替代每种显卡、Wayland/X11、桌面托盘和缩放组合的实体桌面测试。
 
 安装
@@ -32,7 +32,7 @@ RPM 尚未签名；安装器会显示本地包签名提示。
 
 首次启动会检查共享库和 ping，并按发行版提示缺失包；原生前端成功运行后在配置目录记录检查成功，之后直接启动。MTR 在使用网络诊断时再检测和引导。
 Arch / Manjaro 安装依赖：
-  sudo pacman -S --needed gtk3 webkit2gtk-4.1 iputils
+  sudo pacman -S --needed gtk3 webkit2gtk-4.1 iputils polkit libarchive
 Fedora：sudo dnf install gtk3 webkit2gtk4.1 iputils
 openSUSE：sudo zypper install libgtk-3-0 libwebkit2gtk-4_1-0 iputils
 Ubuntu22.04 / Debian12：sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0 iputils-ping
@@ -60,7 +60,7 @@ ICMP经过系统路由/TUN，不是SSH按键计时。进程仅在展开时采集
 原生程序和构建证据：build/linux/native/dengshell、build-info.json。
 镜像基础摘要和 Go1.27.1 的 SHA256 固定在 build/linux/Dockerfile；完整构建依赖版本和实际镜像ID记录在 build-info.json。apt安全更新会改变新建镜像的依赖版本；需要逐字节复现时应保存并复用记录的完整构建镜像，设置 DENGSHELL_LINUX_BUILDER 为其镜像ID。
 脚本强制 GOAMD64=v1、CGO原生编译并拒绝 GLIBC符号需求超过2.35、错误架构、缺少GTK/WebKit链接或含构建机RPATH的程序。
-构建后由 scripts/package-linux.py --stage <仅包含dengshell和data的发行资源目录> --release 26 生成 DEB、RPM、pacman .pkg.tar.zst、tar.gz 与 linux-packages.json。整体发布使用 scripts/package-release.py。
+构建后由 scripts/package-linux.py --stage <仅包含dengshell和data的发行资源目录> --release 28 生成 DEB、RPM、pacman .pkg.tar.zst、tar.gz 与 linux-packages.json。整体发布使用 scripts/package-release.py。
 
 官方依赖参考：
 https://v2.wails.io/docs/gettingstarted/installation/
@@ -74,6 +74,8 @@ https://archlinux.org/packages/extra/x86_64/webkit2gtk-4.1/
 Arch Linux / 兼容 pacman 的 x86-64 桌面：
   sudo pacman -U ./DengShell-linux-x64.pkg.tar.zst
 卸载：sudo pacman -R dengshell（用户配置目录保留）。
-Arch 依赖 gtk3、webkit2gtk-4.1、bash、iputils、glibc；托盘可选 libayatana-appindicator。
-Windows/Debian 的内置更新会退出并重启；Arch 请用新版 pacman 包升级。
-R20 至 R27 全部变化见 CHANGELOG.md；本轮验证边界见 FUNCTIONAL-AUDIT-r27.md。
+Arch 依赖 gtk3、webkit2gtk-4.1、bash、iputils、glibc、pacman、libarchive、polkit；托盘可选 libayatana-appindicator。
+Windows、Debian/Ubuntu 和 Arch pacman 支持内置更新，确认后安装并重启。
+旧 Arch 版需先手动安装一次 R28，此后通过软件启动检查更新。
+Arch 使用 pkexec 请求系统授权，再执行 pacman -U 安装已验证签名的包；不添加 pacman 仓库。
+R20 至 R28 全部变化见 CHANGELOG.md；本轮验证边界见 FUNCTIONAL-AUDIT-r28.md。

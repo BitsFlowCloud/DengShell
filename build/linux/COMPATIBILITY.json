@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "application": "DengShell v0.01 r27",
-  "testedExecutableSHA256": "f8b1510ab8b487efb960dde13cef97661c84deb8d401ce65897669df0a97c8c3",
+  "application": "DengShell v0.01 r28",
+  "testedExecutableSHA256": "3e20abedf241c2ed7c1f1ec968547c733e3687189bed62978fe99234577e9c34",
   "requiredGLIBC": "2.34",
   "runtimeMatrix": [
     {
@@ -46,8 +46,8 @@
     },
     {
       "distribution": "Arch Linux",
-      "image": "dengshell-arch-builder:r26",
-      "imageId": "sha256:9e1f564427b9894a326979af7fa0e8e2f1f2579a0c9d71f16d804d63ebc9c282",
+      "image": "dengshell-arch-builder:r28",
+      "imageId": "sha256:8cad7e4f91dfa3773c0b1187113b2fa626d3ed42d1987eaff0e3473919c199dd",
       "glibc": "glibc 2.44",
       "nativeFrontendReady": true,
       "allLibrariesResolved": true

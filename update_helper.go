@@ -14,6 +14,7 @@ import (
 )
 
 type updatePlan struct {
+	PackageFormat    string `json:"packageFormat,omitempty"`
 	Schema           int    `json:"schema"`
 	Build            uint64 `json:"build"`
 	Version          string `json:"version"`
@@ -170,7 +171,7 @@ func launchUpdateHelper(job app.UpdateDownload, configDir string) error {
 	if e != nil {
 		return e
 	}
-	plan := updatePlan{Schema: 2, Build: job.Package.Build, Version: job.Package.Version, ParentPID: os.Getpid(), Target: target, Staged: job.File, ConfigDir: configDir, OldSHA256: oldHash, PackageSHA256: job.Package.SHA256, ExecutableSHA256: job.Package.ExecutableSHA256, Platform: runtime.GOOS + "-" + runtime.GOARCH}
+	plan := updatePlan{PackageFormat: job.Package.Format, Schema: 2, Build: job.Package.Build, Version: job.Package.Version, ParentPID: os.Getpid(), Target: target, Staged: job.File, ConfigDir: configDir, OldSHA256: oldHash, PackageSHA256: job.Package.SHA256, ExecutableSHA256: job.Package.ExecutableSHA256, Platform: runtime.GOOS + "-" + runtime.GOARCH}
 	if e = validatePlatformUpdate(plan); e != nil {
 		return e
 	}

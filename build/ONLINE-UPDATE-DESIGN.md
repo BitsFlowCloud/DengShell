@@ -1,62 +1,41 @@
-# DengShell 在线更新实现与发布协议
+# DengShell 在线更新协议（R28）
 
-当前版本已经实现真实下载、SHA-256 校验、安装助手和重启。更新来源固定为 `https://ds.free-vps.org`，不会执行描述文件提供的命令或访问其中自定义的下载地址。
+启动检查固定来源 `https://ds.free-vps.org`，用户确认后下载、校验、安装并重启。更新会关闭 SSH 会话，安装前应保存编辑内容。配置、密钥、自定义字体和背景沿用原数据目录。
 
 ## 发布文件
 
-| 平台 | 更新描述 | 安装文件 |
-| --- | --- | --- |
-| Windows x64 | `/up.exe.json` | `/up.exe` |
-| Ubuntu / Debian AMD64 | `/up.deb.json` | `/up.deb` |
+| 平台 | 签名描述 | 安装文件 | 签名中的 platform |
+| --- | --- | --- | --- |
+| Windows x64 | `/up.exe.json` | `/up.exe` | `windows-amd64` |
+| Debian / Ubuntu AMD64 | `/up.deb.json` | `/up.deb` | `linux-amd64` |
+| Arch / ID_LIKE=arch x86-64 | `/up.pkg.tar.zst.json` | `/up.pkg.tar.zst` | `linux-amd64-pacman` |
 
-描述文件为 UTF-8 JSON，最大 64 KiB：
+Arch 从 R28 开始支持；旧版须先手动安装一次 R28 或更新版。不添加 pacman 仓库，系统的 `pacman -Syu` 不会从官网获取此软件。RPM 和通用 Linux 包继续手动升级。
 
-```json
-{
-  "schemaVersion": 2,
-  "build": 20260913017,
-  "product": "DengShell",
-  "platform": "linux-amd64",
-  "version": "v0.01",
-  "notes": "本次更新说明，可包含换行。",
-  "sha256": "此处填写 up.deb 文件的实际 SHA-256，共 64 位十六进制字符",
-  "size": 12345678,
-  "executableSHA256": "此处填写包内 /opt/dengshell/dengshell 的实际 SHA-256"
-}
-```
+JSON 使用 schema 2，最大 64 KiB。身份包含 product、platform、version 和递增的 build；还包含安装包 size、sha256、包内程序 executableSHA256、notes 以及 signingKeyID、issuedAt、expiresAt、signature。由 `scripts/package-release.py` 生成真实文件大小与哈希，再调用发行签名工具。完整签名协议和密钥管理见 [SIGNED-UPDATES.md](SIGNED-UPDATES.md)。Arch 通过已有 platform 字段区分包类型，未改变旧 Windows/DEB 的签名字节协议。
 
-Windows 的 `platform` 为 `windows-amd64`，`sha256` 和 `executableSHA256` 必须相同。Linux 必须分别计算整个 `.deb` 与包内 ELF 的哈希，不能拿安装包哈希直接比较运行程序。`size` 是实际文件字节数，允许 1 字节至 1 GiB。示例中的哈希说明文字必须替换，不能直接发布。
+每次发布都递增 `internal/app/updates.go` 中的 ApplicationBuild。描述必须与程序构建号一致；已运行版本和安装收据记录的构建高水位均禁止回退。当前 R28 为 20260914028。每个包最大 1 GiB。
 
-每次发布（包括仅调整安装包）必须递增 `internal/app/updates.go` 的 `ApplicationBuild`，并让描述中的无符号整数 `build` 与该发布构建一致；`scripts/package-release.py` 从该常量读取构建号。当前源码构建号为 `20260913016`，示例 `20260913017` 表示下一次构建。显示版本可仍为 `v0.01`，但只接受高于当前程序和安装收据记录的最大构建号，且点分数字版本不得低于当前或已安装版本。同构建不同哈希、旧构建、旧显示版本、缺少构建号及 schema 1 描述均不提供安装。回滚失败更新时恢复原收据；下一次正常更新仍须递增构建号。
+## 下载与信任
 
-上传时先传实际安装文件，最后传匹配的描述文件，最好使用原子发布切换。客户端碰到新旧文件混合时会因大小或哈希不匹配而拒绝安装。不要对 EXE/DEB 动态 gzip。描述文件建议 `Content-Type: application/json` 并禁用长时间缓存；必须使用系统信任的 HTTPS 证书。宝塔 Nginx 静态站点即可提供全部文件，无须 PHP 程序。
+每次启动检查描述，整体检查期限为 3 秒；超时、缺失、签名不可信或描述过期均跳过，不阻止主界面。下载仅在确认后开始，支持进度与取消，最长 15 分钟。HTTPS 跳转只能留在固定域名。描述不能提供任意下载地址或安装命令。
 
-## 启动与下载
+R21 起强制验证内置公钥的 Ed25519 签名、有效期、文件大小、SHA-256 和更高版本构建。R20 会忽略新增签名字段，首次迁移仍须信任旧渠道。暂存文件位于原配置目录的私有 `.update-*` 子目录；安装助手启动前及父进程退出后再次核对文件和收据。
 
-每次启动只请求小型描述文件。整个检查包括本地程序哈希读取，最多等待 3 秒；网络或磁盘慢、描述缺失或无效时，本次跳过提示，主界面正常启动。HTTPS 跳转只能留在同一固定域名，最多两次。
+## 安装与重启
 
-用户在更新窗口点击“下载并安装更新”后才会下载。下载显示进度、可取消、最多 15 分钟；安装文件存放在原数据目录的私有 `.update-*` 子目录。只接受这次启动实际检查到的哈希，完整下载后验证字节数和 SHA-256，启动助手前及旧进程退出后再校验。取消与完成同时发生时，以加锁后确认的取消状态为准，不把已取消的文件标记为可安装。
+Windows 验证 AMD64 PE，通过独立助手等待旧进程退出，在原程序目录原子替换 EXE，并保留已验证的备份。失败时尝试恢复并启动旧程序。原程序目录必须可写；这不等于 Authenticode 签名或绕过 SmartScreen。
 
-## Windows 安装
+Debian/Ubuntu 验证包名 `dengshell`、架构 `amd64`，固定执行 `pkexec <dpkg路径> --install <已校验文件>`。Arch 只将 `.PKGINFO` 读到有大小和时间限制的缓冲区，校验包名 `dengshell`、架构 `x86_64` 和与构建号一致的 pkgrel，然后固定执行 `pkexec <pacman路径> --upgrade --noconfirm --needed <已校验文件>`。参数通过独立 argv 传递，不经 Shell。root 直接调用包管理器。Arch 包声明 pacman、libarchive 和 polkit 依赖；普通桌面需有正常工作的系统授权代理。
 
-校验文件为 AMD64 PE 后，在私有更新目录复制一个安装助手。助手就绪后主程序退出，助手等待旧进程结束，在原 EXE 所在目录暂存新程序、通过同一文件系统上的重命名替换，并把旧 EXE 的校验后副本保存在数据目录内。正常完成后 EXE 旁不保留额外备份文件。配置目录在另一分区时，备份使用复制，替换仍在程序所在文件系统内完成。
+pacman 保留依赖、数据库锁和本机签名策略检查，不执行系统整体升级，不删除锁，也不关闭验证。`--noconfirm` 用于用户已在软件内确认后的无终端安装。授权取消或包管理器忙时记录失败并尝试重开旧程序，不清除用户数据。已授权的包管理事务不会被下载计时器强制终止。完整 Linux 包事务的回退需要旧安装包，不能仅复制 ELF 冒充回退。
 
-替换或启动失败时尝试恢复旧 EXE 并重新启动。成功后运行新 EXE，传入原来的绝对 `--config` 路径。EXE 所在目录必须可写；当前没有申请管理员权限覆盖受保护目录的功能。本机制不提供代码签名，也不关闭 Windows 的安全提示或 SmartScreen。
+Linux 安装目标为 `/opt/dengshell/dengshell`。安装后验证目标程序哈希，并传入原绝对 `--config` 路径启动。数据目录内的 update-receipt.json 保存构建高水位，update-result.json 与私有更新目录内 installer.log 记录结果；收据通过私有临时文件、fsync 和原子重命名保存。
 
-## Ubuntu / Debian 安装
+## 网站部署与验证边界
 
-校验 `.deb` 包名为 `dengshell`、架构为 `amd64` 后，使用固定命令 `pkexec <本机 dpkg 路径> --install <已校验安装包>`，通过系统授权窗口完成安装；以 root 运行时直接调用 dpkg。安装目标为 `/opt/dengshell/dengshell`。安装结束后校验该 ELF 的哈希，再以原绝对 `--config` 数据目录重新启动。
+先上传安装文件，最后上传对应 JSON，推荐原子切换整个目录；不要把不匹配的新旧文件混合。JSON 应禁止长时间缓存；CDN 对六个更新文件使用缓存绕过规则，覆盖后清除旧缓存。公开下载位于 downloads/，更新描述中的地址固定在站点根目录。GitHub Release 上传不会部署官网。
 
-已授权的 dpkg 事务由独立助手运行至结束，不因下载超时、主窗口关闭或任意 15 分钟期限而被终止。取消系统授权或安装失败时记录结果；如果原程序仍完整，会尝试重新打开原程序。dpkg 可能修改包脚本和依赖，完整回退需要旧版本 `.deb`，不能通过复制一个 ELF 假装回退整个安装。
+签名描述默认 90 天有效，最长 180 天；到期前需重新签发，即使程序版本不变。过期只停止提供更新。
 
-`.deb` 的首次桌面启动由包内 `data/support/start.sh` 指向用户配置目录 `${XDG_CONFIG_HOME:-$HOME/.config}/dengshell`，避免普通用户写 `/opt`。便携程序原有数据目录会在在线升级后通过显式 `--config` 继续使用。
-
-## 记录与实际限制
-
-助手在原数据目录写入 `update-receipt.json` 和 `update-result.json`；安装日志保留在 `.update-*` 中。回执记录安装包身份、显示版本与已安装构建高水位，以私有临时文件、fsync 和原子替换保存。收据损坏时跳过更新检查；收据无法写入时停止启动新版本并尝试恢复旧程序；若新程序无法启动，会恢复之前的回执。安装助手会在旧进程退出后再次核对收据高水位，拒绝已经过期的暂存安装计划。不会修改服务器、密钥或外观配置。
-
-发布者信任来自固定 HTTPS 来源及用户主动确认；哈希保证下载内容匹配描述，不等于数字签名。Windows 原生托盘、运行中更新及系统授权仍需在实际 Windows 机器验证。Ubuntu 安装包由 Ubuntu 26.04 环境构建，旧发行版可能缺少对应 GLIBC、GTK 3 或 WebKitGTK 4.1，不能承诺所有 Linux 发行版可运行。
-
-## 验证范围
-
-自动测试覆盖固定来源、大小与哈希、三秒检查期限、程序和安装包身份、下载取消与损坏、暂存文件篡改、旧程序备份、替换回退，以及旧描述/构建/版本重放、安装收据高水位、回执写入失败后停止新版本启动和启动失败后恢复回执。测试不会安装真实软件包，也不会替换当前使用的程序。Linux 的真实原生最小化、托盘隐藏/恢复、无托盘降级和关闭确认另有隔离配置测试。Windows 交叉编译通过不等于已经在 Windows 执行安装。
+本轮实际验证结果与边界见 [FUNCTIONAL-AUDIT-r28.md](FUNCTIONAL-AUDIT-r28.md)。容器中以 root 完成包安装不能代替真实桌面 polkit 授权窗口或 Windows 实机更新验证。

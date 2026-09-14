@@ -26,7 +26,7 @@ def package(args):
     docker = ['docker']
     if subprocess.run(docker + ['info'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode:
         docker = ['sudo', '-n', 'docker']
-    image = os.environ.get('DENGSHELL_ARCH_BUILDER', 'dengshell-arch-builder:r26')
+    image = os.environ.get('DENGSHELL_ARCH_BUILDER', 'dengshell-arch-builder:r28')
     if not os.environ.get('DENGSHELL_ARCH_BUILDER'):
         subprocess.run(docker + ['build', '-t', image, '-f', str(ROOT / 'build/linux/Arch.Dockerfile'), str(ROOT / 'build/linux')], check=True)
     cache = Path.home() / '.cache/dengshell-linux-release'
@@ -49,7 +49,7 @@ pkgdesc='DengShell SSH terminal and SFTP desktop workspace'
 arch=('x86_64')
 url='https://github.com/BitsFlowCloud/DengShell'
 license=('MIT' 'OFL-1.1')
-depends=('glibc>=2.35' 'gtk3' 'webkit2gtk-4.1' 'bash' 'iputils')
+depends=('glibc>=2.35' 'gtk3' 'webkit2gtk-4.1' 'bash' 'iputils' 'pacman' 'libarchive' 'polkit')
 optdepends=('libayatana-appindicator: system tray integration')
 options=('!strip' '!debug')
 source=('payload.tar')

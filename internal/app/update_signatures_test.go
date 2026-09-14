@@ -62,7 +62,7 @@ func TestExpiredOfferCannotStartDownload(t *testing.T) {
 	}
 	defer a.Close()
 	a.updateCheck.once.Do(func() { a.updateCheck.done = make(chan struct{}); close(a.updateCheck.done) })
-	a.updateCheck.result = UpdateStatus{Status: "available", Package: &UpdatePackage{Build: ApplicationBuild + 1, Version: ApplicationVersion, SHA256: strings.Repeat("a", 64), expiresAt: time.Now().Add(-time.Second).Unix()}}
+	a.updateCheck.result = UpdateStatus{Status: "available", Package: &UpdatePackage{Format: NativePackageFormat(), Build: ApplicationBuild + 1, Version: ApplicationVersion, SHA256: strings.Repeat("a", 64), expiresAt: time.Now().Add(-time.Second).Unix()}}
 	if _, err = a.StartUpdateDownload(strings.Repeat("a", 64)); err == nil {
 		t.Fatal("expired startup offer downloaded")
 	}

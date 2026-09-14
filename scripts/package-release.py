@@ -76,16 +76,17 @@ def package(args):
     for folder in ['web','internal','scripts','cmd']:
         sourcefiles += [p for p in (ROOT/folder).rglob('*') if p.is_file() and '__pycache__' not in p.parts]
     sourcefiles += [p for p in (ROOT/'docs').rglob('*') if p.is_file()]
-    for name in ['dengshell.png','dengshell.svg','dengshell.ico','CONNECTION-CONFIG.md','config.example.json','COMMON-APPS.md',f'RELEASE-v0.01-r{RELEASE}.md','ONLINE-UPDATE-DESIGN.md','UPDATER-CONTRACT.md','SIGNED-UPDATES.md','FONT-VALIDATION.md','BACKGROUND-PROMPTS-v0.01.json','windows/app.manifest','windows/README.txt','linux/README.txt','linux/Dockerfile','linux/.dockerignore','linux/native/build-info.json','linux/COMPATIBILITY.json']:
+    for name in ['dengshell.png','dengshell.svg','dengshell.ico','CONNECTION-CONFIG.md','config.example.json','COMMON-APPS.md',f'RELEASE-v0.01-r{RELEASE}.md','ONLINE-UPDATE-DESIGN.md','UPDATER-CONTRACT.md','SIGNED-UPDATES.md','FONT-VALIDATION.md','BACKGROUND-PROMPTS-v0.01.json','windows/app.manifest','windows/README.txt','linux/README.txt','linux/Dockerfile','linux/.dockerignore','linux/COMPATIBILITY.json']:
         sourcefiles.append(ROOT/'build'/name)
     for folder in ['go-licenses','font-licenses','installer-licenses']:
         sourcefiles += [p for p in (ROOT/'build'/folder).glob('*') if p.is_file()]
     for name in ['FINALSHELL-IMPORT.md','COMMANDS-AND-EDITORS.md',f'FUNCTIONAL-AUDIT-r{RELEASE}.md','linux/Arch.Dockerfile']:
         sourcefiles.append(ROOT/'build'/name)
     for p in sorted(set(sourcefiles)):copy(p,source/p.relative_to(ROOT))
+    copy(linuxbinary.parent/'build-info.json',source/'build/linux/native/build-info.json')
     zip_tree(source,out/'DengShell-source.zip',Path('DengShell'))
-    notes=f'R20 至 R{RELEASE} 累计更新：Bash/Zsh/Fish 兼容、签名更新、界面字体与颜色、FinalShell 导入、命令参数与回车选项、分组拖动、跨服务器多标签文本编辑；新增 Arch pacman 包，修复最小化选项弹窗按钮和复选框错位。'
-    for binary,artifact,platform,name in [(winbinary,winbinary,'windows-amd64','up.exe'),(linuxbinary,out/'up.deb','linux-amd64','up.deb')]:
+    notes=f'R20 至 R{RELEASE} 累计更新：Bash/Zsh/Fish 兼容、签名更新、界面字体与颜色、FinalShell 导入、命令参数与回车选项、分组拖动、跨服务器多标签文本编辑；新增 Arch pacman 包及内置自动更新，修复最小化选项弹窗错位。'
+    for binary,artifact,platform,name in [(winbinary,winbinary,'windows-amd64','up.exe'),(linuxbinary,out/'up.deb','linux-amd64','up.deb'),(linuxbinary,out/'DengShell-linux-x64.pkg.tar.zst','linux-amd64-pacman','up.pkg.tar.zst')]:
         copy(artifact,site/name)
         info={'schemaVersion':2,'build':BUILD,'product':'DengShell','platform':platform,'version':'v0.01','notes':notes,'sha256':digest(artifact),'size':artifact.stat().st_size,'executableSHA256':digest(binary)}
         (site/(name+'.json')).write_text(json.dumps(info,ensure_ascii=False,indent=2)+'\n')

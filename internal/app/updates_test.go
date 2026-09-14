@@ -217,7 +217,7 @@ func TestDownloadMustMatchOfferAndBytes(t *testing.T) {
 			defer s.Close()
 			a.updateCheck.once.Do(func() {
 				a.updateCheck.done = make(chan struct{})
-				a.updateCheck.result = UpdateStatus{Status: "available", Package: &UpdatePackage{Build: ApplicationBuild + 1, Version: ApplicationVersion, URL: s.URL + "/up.deb", SHA256: hash, ExecutableSHA256: hash, Size: int64(len(payload)), expiresAt: time.Now().Add(time.Hour).Unix()}}
+				a.updateCheck.result = UpdateStatus{Status: "available", Package: &UpdatePackage{Format: NativePackageFormat(), Build: ApplicationBuild + 1, Version: ApplicationVersion, URL: s.URL + "/up.deb", SHA256: hash, ExecutableSHA256: hash, Size: int64(len(payload)), expiresAt: time.Now().Add(time.Hour).Unix()}}
 				close(a.updateCheck.done)
 			})
 			if _, e = a.StartUpdateDownload("wrong"); e == nil {

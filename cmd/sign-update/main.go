@@ -92,7 +92,7 @@ func run() error {
 	if decoder.Decode(&extra) != io.EOF {
 		return errors.New("trailing manifest data")
 	}
-	if d.SchemaVersion != 2 || d.Build == 0 || d.Product != "DengShell" || (d.Platform != "windows-amd64" && d.Platform != "linux-amd64") {
+	if d.SchemaVersion != 2 || d.Build == 0 || d.Product != "DengShell" || (d.Platform != "windows-amd64" && d.Platform != "linux-amd64" && d.Platform != "linux-amd64-pacman") {
 		return errors.New("invalid update identity")
 	}
 	for _, hash := range []string{d.SHA256, d.ExecutableSHA256} {

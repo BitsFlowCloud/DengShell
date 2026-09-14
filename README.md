@@ -4,7 +4,7 @@
 
 DengShell 是一款中文界面的开源 SSH 桌面工具，适合日常管理 VPS、维护 Linux 服务器、编辑远程配置和排查网络问题。支持 Windows 与 Linux 桌面，可同时连接多台服务器，并按自己的习惯调整字体、背景、布局和监控曲线。
 
-本说明对应 **v0.01 r27**。从 R20 升级的全部变化一次汇总在 [更新日志](CHANGELOG.md)。
+本说明对应 **v0.01 r28**。从 R20 升级的全部变化一次汇总在 [更新日志](CHANGELOG.md)。
 
 ## 内容导航
 
@@ -63,8 +63,8 @@ Linux 版本使用 GTK3 和 WebKitGTK 4.1，发行构建以 Ubuntu 22.04 / glibc
 
 **测试情况：**
 
-- **Linux：已测试通过。** 已在 Ubuntu 22.04、Ubuntu 24.04、Debian 12、Fedora 43 和 openSUSE Tumbleweed 和 Arch Linux 容器中通过安装、原生界面启动及卸载保留配置测试。具体范围见 [功能审查与验证](build/FUNCTIONAL-AUDIT-r27.md)。
-- **Windows：此前版本用户实机使用正常；本次 R27 已通过构建、压缩及安装包静态检查，尚未做 Windows 实机安装／卸载回归。**
+- **Linux：已测试通过。** 已在 Ubuntu 22.04、Ubuntu 24.04、Debian 12、Fedora 43 和 openSUSE Tumbleweed 和 Arch Linux 容器中通过安装、原生界面启动及卸载保留配置测试。具体范围见 [功能审查与验证](build/FUNCTIONAL-AUDIT-r28.md)。
+- **Windows：此前版本用户实机使用正常；本次 R28 已通过构建、压缩及安装包静态检查，尚未做 Windows 实机安装／卸载回归。**
 
 ### Linux 安装示例
 
@@ -361,7 +361,7 @@ SWAP 支持常用容量及自定义大小，并根据文件系统和交换区类
 
 ### 升级
 
-启动时可以检查新版本，确认后下载并验证 Ed25519 发行签名、大小、SHA-256、有效期和更高构建号。Windows 和 Debian / Ubuntu 提供相应在线更新流程，RPM、Arch pacman 和通用包通过对应安装包升级。当前属于退出并重启的更新方式，不保留正在运行的 SSH 会话；GitHub 发布本身不自动部署官网的更新文件。
+启动时可以检查新版本，确认后下载并验证 Ed25519 发行签名、大小、SHA-256、有效期和更高构建号。Windows、Debian / Ubuntu 和 Arch pacman 提供相应在线更新流程；Linux 会请求系统安装授权。旧 Arch 版需先手动安装一次 R28 或更新版，之后重启软件即可检查新版本、确认下载并安装。此功能不添加 pacman 仓库，`pacman -Syu` 不会单独从官网获取 DengShell 更新。RPM 和通用包通过对应安装包升级。当前属于退出并重启的更新方式，不保留正在运行的 SSH 会话；GitHub 发布本身不自动部署官网的更新文件。
 
 手动升级时先退出程序，替换程序文件或安装新版，并保留原数据目录。升级会中断当前 SSH 会话。Windows 安装版卸载保留个人数据；从便携版改用 Linux 安装版时，可按实际目录迁移备份。
 
