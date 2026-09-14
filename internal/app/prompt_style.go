@@ -59,6 +59,17 @@ func (s *Session) writePromptStyleFile(ctx context.Context, filename string, sty
 }
 
 func (s *Session) removePromptStyleBeforeClose() {
+	// A connection may be cancelled or its window closed before the warmed
+	// bootstrap has run. Remove that complete private staging set in one request.
+	s.mu.Lock()
+	terminalReady := s.terminalReady
+	s.mu.Unlock()
+	if s.preparedIntegration != nil && s.preparedIntegration.directory != "" && !terminalReady {
+		ctx, cancel := context.WithTimeout(s.ctx, time.Second)
+		defer cancel()
+		_, _ = runMTRScript(ctx, s, terminalIntegrationRemoveCommand(*s.preparedIntegration), 2048)
+		return
+	}
 	// A single best-effort SFTP cleanup is bounded by transport closure. No
 	// remote command or keystroke is injected while the terminal is shutting down.
 	if s.files == nil {

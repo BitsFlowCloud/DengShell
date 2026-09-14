@@ -1,3 +1,5 @@
+> 历史报告：此文对应早期全量字体方案。当前源码的 1 UI / 5 Shell 与在线字库验证见 [字体改革报告](FONT-REFORM-REPORT.md)。下文旧生成脚本已退役。
+
 # DengShell bundled font validation
 
 The 20 choices are 20 distinct Latin monospace families, each paired with the same bundled Noto Sans Mono CJK SC font. They are not represented as 20 independently complete Chinese font designs.

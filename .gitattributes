@@ -20,3 +20,11 @@
 *.ttf binary
 *.otf binary
 *.syso binary
+
+# Preserve exact embedded asset and font-license bytes for release verification.
+/web/assets/** -text
+/build/font-licenses/*.txt -text
+# Upstream license texts intentionally retain original whitespace.
+/web/assets/ui-fonts/*-OFL.txt -whitespace
+/web/assets/fonts/licenses/*.txt -whitespace
+/build/font-licenses/*.txt -whitespace

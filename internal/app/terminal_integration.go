@@ -4,8 +4,6 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
-	"io"
-	"os"
 	"path"
 	"strings"
 	"time"
@@ -14,8 +12,6 @@ import (
 //go:embed shell_integration/*
 var shellIntegrationAssets embed.FS
 
-// An optional integration must never hold terminal startup hostage to a server
-// that accepts SSH keepalives but stops answering SFTP or channel-open requests.
 var terminalIntegrationSlots = make(chan struct{}, 4)
 var terminalIntegrationCleanupSlots = make(chan struct{}, 4)
 
@@ -31,10 +27,17 @@ type terminalIntegration struct {
 
 func terminalQuote(value string) string { return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'" }
 
-// The SSH exec request starts an interactive shell with a temporary bootstrap.
-// Nothing is injected as keystrokes, and no remote profile/rc file is modified.
+// Preparation is warmed alongside SFTP during Connect. Fixtures that construct
+// a Session directly retain the same bounded optional-integration fallback.
 func (s *Session) prepareTerminalIntegration() terminalIntegration {
-	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
+	if s.preparedIntegration != nil {
+		return *s.preparedIntegration
+	}
+	return s.prepareTerminalIntegrationContext(s.ctx)
+}
+
+func (s *Session) prepareTerminalIntegrationContext(parent context.Context) terminalIntegration {
+	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
 	defer cancel()
 	return boundedTerminalIntegration(ctx, func() terminalIntegration { return s.prepareTerminalIntegrationFiles(ctx, "/tmp") }, s.cleanupTerminalIntegration)
 }
@@ -63,84 +66,113 @@ func boundedTerminalIntegration(ctx context.Context, prepare func() terminalInte
 	}
 }
 
+// A single exec detects the login shell and stages its bootstrap. File writes
+// happen on the server, avoiding a round trip for every SFTP open/chmod/write/
+// close. No command is injected into the interactive terminal or user rc files.
 func (s *Session) prepareTerminalIntegrationFiles(ctx context.Context, stagingRoot string) terminalIntegration {
-	output, err := runMTRScript(ctx, s, `printf '\n__DENGSHELL_SHELL__%s\n' "$SHELL"; printf '__DENGSHELL_USER__'; id -un; printf '__DENGSHELL_HOST__'; hostname -s`, 4096)
-	if err != nil {
-		return terminalIntegration{}
-	}
-	var shellPath, username, hostname string
-	for _, line := range strings.Split(output, "\n") {
-		line = strings.TrimSuffix(line, "\r")
-		if strings.HasPrefix(line, "__DENGSHELL_USER__") {
-			username = strings.TrimPrefix(line, "__DENGSHELL_USER__")
-		}
-		if strings.HasPrefix(line, "__DENGSHELL_HOST__") {
-			hostname = strings.TrimPrefix(line, "__DENGSHELL_HOST__")
-		}
-		if strings.HasPrefix(line, "__DENGSHELL_SHELL__") {
-			shellPath = strings.TrimPrefix(line, "__DENGSHELL_SHELL__")
-		}
-	}
-	if !strings.HasPrefix(shellPath, "/") || strings.ContainsAny(shellPath, "\x00\r\n") {
-		return terminalIntegration{}
-	}
-	shell := path.Base(shellPath)
-	if shell != "bash" && shell != "zsh" && shell != "fish" {
-		return terminalIntegration{}
-	}
-	if ctx.Err() != nil {
-		return terminalIntegration{}
-	}
-	integration := terminalIntegration{Shell: shell, Nonce: randomID(), Username: username, Hostname: hostname, directory: path.Join(stagingRoot, "dengshell-session-"+randomID())}
-	if err = s.files.Mkdir(integration.directory); err != nil {
-		return terminalIntegration{}
-	}
-	if err = s.files.Chmod(integration.directory, 0700); err != nil {
-		s.cleanupTerminalIntegration(integration)
-		return terminalIntegration{}
-	}
-	write := func(name, body string) error {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		filePath := path.Join(integration.directory, name)
-		integration.files = append(integration.files, filePath)
-		file, err := s.files.Create(filePath)
-		if err != nil {
-			return err
-		}
-		if err = file.Chmod(0600); err != nil {
-			file.Close()
-			return err
-		}
-		_, err = io.WriteString(file, body)
-		closeErr := file.Close()
-		if err != nil {
-			return err
-		}
-		return closeErr
-	}
-	// Keep only this small session-owned file after bootstrap self-cleanup.
-	// Shell hooks read data, never source/eval the file as code.
-	stylePath := path.Join(stagingRoot, "dengshell-prompt-"+integration.Nonce)
 	s.promptStyleMu.Lock()
 	initialStyle := s.promptUsernameColor + "\n" + s.promptHostnameColor + "\n"
 	s.promptStyleMu.Unlock()
-	styleFile, styleErr := s.files.OpenFile(stylePath, os.O_WRONLY|os.O_CREATE|os.O_EXCL)
-	if styleErr == nil {
-		integration.files = append(integration.files, stylePath, stylePath+".new")
-		styleErr = styleFile.Chmod(0600)
-		if styleErr == nil {
-			_, styleErr = io.WriteString(styleFile, initialStyle)
+	integration, script := terminalIntegrationScript(stagingRoot, initialStyle)
+	output, err := runMTRScript(ctx, s, script, 4096)
+	if err != nil {
+		return terminalIntegration{}
+	}
+	prefix := "__DENGSHELL_" + integration.Nonce + "__"
+	var shellPath, username, hostname string
+	for _, line := range strings.Split(output, "\n") {
+		line = strings.TrimSuffix(line, "\r")
+		if strings.HasPrefix(line, prefix+"SHELL=") {
+			shellPath = strings.TrimPrefix(line, prefix+"SHELL=")
 		}
-		closeErr := styleFile.Close()
-		if styleErr == nil {
-			styleErr = closeErr
+		if strings.HasPrefix(line, prefix+"USER=") {
+			username = strings.TrimPrefix(line, prefix+"USER=")
+		}
+		if strings.HasPrefix(line, prefix+"HOST=") {
+			hostname = strings.TrimPrefix(line, prefix+"HOST=")
 		}
 	}
-	if styleErr != nil {
+	if !strings.HasPrefix(shellPath, "/") || strings.ContainsAny(shellPath, "\x00\r\n") || (path.Base(shellPath) != "bash" && path.Base(shellPath) != "zsh" && path.Base(shellPath) != "fish") || ctx.Err() != nil {
 		s.cleanupTerminalIntegration(integration)
 		return terminalIntegration{}
+	}
+	stylePath := path.Join(stagingRoot, "dengshell-prompt-"+integration.Nonce)
+	// Keep the complete cleanup plan even though only one shell branch was written.
+	built, _ := terminalBootstrap(integration, shellPath, stylePath)
+	integration.Shell, integration.command = built.Shell, "exec "+posixShellCommand(built.command)
+	integration.Username, integration.Hostname = username, hostname
+	s.promptStyleMu.Lock()
+	if current := s.promptUsernameColor + "\n" + s.promptHostnameColor + "\n"; current != initialStyle {
+		err = s.writePromptStyleFile(ctx, stylePath, PromptStyle{s.promptUsernameColor, s.promptHostnameColor})
+		if err != nil {
+			s.promptStyleMu.Unlock()
+			s.cleanupTerminalIntegration(integration)
+			return terminalIntegration{}
+		}
+	}
+	s.promptStylePath, s.promptUsername, s.promptHostname = stylePath, username, hostname
+	s.promptStyleMu.Unlock()
+	return integration
+}
+
+func terminalIntegrationScript(stagingRoot, initialStyle string) (terminalIntegration, string) {
+	integration := terminalIntegration{Nonce: randomID(), directory: path.Join(stagingRoot, "dengshell-session-"+randomID())}
+	stylePath := path.Join(stagingRoot, "dengshell-prompt-"+integration.Nonce)
+	integration.files = []string{stylePath, stylePath + ".new"}
+	var branches strings.Builder
+	for _, shell := range []string{"bash", "zsh", "fish"} {
+		built, contents := terminalBootstrap(integration, "/"+shell, stylePath)
+		branches.WriteString(shell + ")\n")
+		for _, file := range built.files[len(integration.files):] {
+			branches.WriteString("printf '%s' " + terminalQuote(contents[file]) + " > " + terminalQuote(file) + " || exit 1\n")
+		}
+		branches.WriteString(";;\n")
+	}
+	// List all possible bootstrap files for cancellation/orphan cleanup.
+	for _, name := range []string{"bashrc", ".zshenv", ".zprofile", ".zshrc", ".zlogin", "init.fish"} {
+		integration.files = append(integration.files, path.Join(integration.directory, name))
+	}
+	prefix := "__DENGSHELL_" + integration.Nonce + "__"
+	script := `umask 077
+case "$SHELL" in /*) ;; *) exit 1;; esac
+_deng_shell=${SHELL##*/}
+case "$_deng_shell" in bash|zsh|fish) ;; *) exit 1;; esac
+_deng_dir_owned=0
+_deng_style_owned=0
+_deng_cleanup() {
+ if [ "$_deng_dir_owned" = 1 ]; then
+  ` + terminalIntegrationRemoveCommand(terminalIntegration{directory: integration.directory, files: integration.files[2:]}) + `
+ fi
+ if [ "$_deng_style_owned" = 1 ]; then command rm -f -- ` + terminalQuote(stylePath) + `; fi
+}
+trap '_deng_cleanup' 0
+trap 'exit 1' 1 2 15
+command mkdir -m 700 -- ` + terminalQuote(integration.directory) + ` || exit 1
+_deng_dir_owned=1
+# Noclobber also refuses a pre-existing symlink; never chmod/truncate it.
+(set -C; : > ` + terminalQuote(stylePath) + `) || exit 1
+_deng_style_owned=1
+printf '%s' ` + terminalQuote(initialStyle) + ` > ` + terminalQuote(stylePath) + ` || exit 1
+case "$_deng_shell" in
+` + branches.String() + `esac
+printf '\n%s%s\n' ` + terminalQuote(prefix+"SHELL=") + ` "$SHELL"
+printf '%s' ` + terminalQuote(prefix+"USER=") + `; id -un
+printf '%s' ` + terminalQuote(prefix+"HOST=") + `; hostname -s
+trap - 0 1 2 15
+`
+	return integration, script
+}
+
+// Generate the same shell-specific startup hooks for batching and launching.
+func terminalBootstrap(integration terminalIntegration, shellPath, stylePath string) (terminalIntegration, map[string]string) {
+	shell := path.Base(shellPath)
+	integration.Shell = shell
+	integration.files = append([]string(nil), integration.files...)
+	contents := make(map[string]string)
+	write := func(name, body string) {
+		filename := path.Join(integration.directory, name)
+		integration.files = append(integration.files, filename)
+		contents[filename] = body
 	}
 	styleHook, _ := shellIntegrationAssets.ReadFile("shell_integration/prompt-" + shell + ".sh")
 	styleContent := strings.ReplaceAll(string(styleHook), "@DENGSHELL_STYLE_FILE@", stylePath)
@@ -150,9 +182,8 @@ func (s *Session) prepareTerminalIntegrationFiles(ctx context.Context, stagingRo
 		content = strings.ReplaceAll(content, "# @DENGSHELL_PROMPT_STYLE@", styleContent)
 		cleanup := "command rm -f -- " + terminalQuote(path.Join(integration.directory, "bashrc")) + " 2>/dev/null\ncommand rmdir -- " + terminalQuote(integration.directory) + " 2>/dev/null || true"
 		content = strings.ReplaceAll(content, "# @DENGSHELL_CLEANUP@", cleanup)
-		if err = write("bashrc", content); err == nil {
-			integration.command = "exec " + terminalQuote(shellPath) + " --noprofile --rcfile " + terminalQuote(path.Join(integration.directory, "bashrc")) + " -i"
-		}
+		write("bashrc", content)
+		integration.command = "exec " + terminalQuote(shellPath) + " --noprofile --rcfile " + terminalQuote(path.Join(integration.directory, "bashrc")) + " -i"
 	} else if shell == "zsh" {
 		body, _ := shellIntegrationAssets.ReadFile("shell_integration/zshrc.zsh")
 		for _, name := range []string{".zshenv", ".zprofile", ".zshrc", ".zlogin"} {
@@ -171,48 +202,30 @@ func (s *Session) prepareTerminalIntegrationFiles(ctx context.Context, stagingRo
 			} else {
 				content += "ZDOTDIR=" + terminalQuote(integration.directory) + "\n"
 			}
-			if err = write(name, content); err != nil {
-				break
-			}
+			write(name, content)
 		}
-		if err == nil {
-			integration.command = "DENGSHELL_ORIGINAL_ZDOTDIR=\"${ZDOTDIR:-$HOME}\" ZDOTDIR=" + terminalQuote(integration.directory) + " exec " + terminalQuote(shellPath) + " -il"
-		}
+		integration.command = "DENGSHELL_ORIGINAL_ZDOTDIR=\"${ZDOTDIR:-$HOME}\" ZDOTDIR=" + terminalQuote(integration.directory) + " exec " + terminalQuote(shellPath) + " -il"
 	} else {
 		body, _ := shellIntegrationAssets.ReadFile("shell_integration/fish.fish")
 		content := strings.ReplaceAll(string(body), "@DENGSHELL_NONCE@", integration.Nonce)
 		content = strings.ReplaceAll(content, "# @DENGSHELL_PROMPT_STYLE@", styleContent)
 		cleanup := "command rm -f -- " + loginShellQuote(path.Join(integration.directory, "init.fish")) + " 2>/dev/null\ncommand rmdir -- " + loginShellQuote(integration.directory) + " 2>/dev/null; or true"
 		content = strings.ReplaceAll(content, "# @DENGSHELL_CLEANUP@", cleanup)
-		if err = write("init.fish", content); err == nil {
-			// Fish reads its normal configuration first, then installs only these
-			// session-local hooks. No persistent config or universal variable changes.
-			integration.command = "exec " + terminalQuote(shellPath) + " -il --init-command " + terminalQuote("source "+loginShellQuote(path.Join(integration.directory, "init.fish")))
-		}
+		write("init.fish", content)
+		// Fish reads its normal configuration first, then installs only these
+		// session-local hooks. No persistent config or universal variable changes.
+		integration.command = "exec " + terminalQuote(shellPath) + " -il --init-command " + terminalQuote("source "+loginShellQuote(path.Join(integration.directory, "init.fish")))
 	}
-	if err != nil {
-		s.cleanupTerminalIntegration(integration)
-		return terminalIntegration{}
+
+	return integration, contents
+}
+
+func terminalIntegrationRemoveCommand(integration terminalIntegration) string {
+	command := "command rm -f --"
+	for _, file := range integration.files {
+		command += " " + terminalQuote(file)
 	}
-	if ctx.Err() != nil {
-		s.cleanupTerminalIntegration(integration)
-		return terminalIntegration{}
-	}
-	s.promptStyleMu.Lock()
-	if current := s.promptUsernameColor + "\n" + s.promptHostnameColor + "\n"; current != initialStyle {
-		// Preferences may change while optional bootstrap files are being staged.
-		// Commit the newest requested colors before making this file addressable.
-		err = s.writePromptStyleFile(ctx, stylePath, PromptStyle{s.promptUsernameColor, s.promptHostnameColor})
-		if err != nil {
-			s.promptStyleMu.Unlock()
-			s.cleanupTerminalIntegration(integration)
-			return terminalIntegration{}
-		}
-	}
-	s.promptStylePath, s.promptUsername, s.promptHostname = stylePath, username, hostname
-	s.promptStyleMu.Unlock()
-	integration.command = "exec " + posixShellCommand(integration.command)
-	return integration
+	return command + " 2>/dev/null; command rmdir -- " + terminalQuote(integration.directory) + " 2>/dev/null || true"
 }
 
 func (s *Session) cleanupTerminalIntegration(integration terminalIntegration) {
@@ -226,10 +239,9 @@ func (s *Session) cleanupTerminalIntegration(integration terminalIntegration) {
 	}
 	go func() {
 		defer func() { <-terminalIntegrationCleanupSlots }()
-		for _, file := range integration.files {
-			_ = s.files.Remove(file)
-		}
-		_ = s.files.RemoveDirectory(integration.directory)
+		ctx, cancel := context.WithTimeout(s.ctx, time.Second)
+		defer cancel()
+		_, _ = runMTRScript(ctx, s, terminalIntegrationRemoveCommand(integration), 2048)
 	}()
 }
 

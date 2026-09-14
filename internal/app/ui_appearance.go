@@ -5,11 +5,23 @@ import (
 	"sort"
 )
 
-const defaultUIFontID = "builtin:ui-noto-sans"
+const defaultUIFontID = "builtin:ui-ibm-plex-sans-sc"
 
 func builtinUIFont(id string) bool {
+	return id == defaultUIFontID
+}
+
+func retiredBuiltinUIFont(id string) bool {
 	switch id {
-	case defaultUIFontID, "builtin:ui-noto-serif", "builtin:ui-sarasa", "builtin:ui-wenkai", "builtin:ui-maple":
+	case "builtin:ui-noto-sans", "builtin:ui-noto-serif", "builtin:ui-sarasa", "builtin:ui-wenkai", "builtin:ui-maple":
+		return true
+	}
+	return false
+}
+
+func builtinTerminalFont(id string) bool {
+	switch id {
+	case "builtin:jetbrains-mono", "builtin:fira-code", "builtin:source-code-pro", "builtin:ibm-plex-mono", "builtin:maple-mono-cn":
 		return true
 	}
 	return false
@@ -42,8 +54,9 @@ type uiFontState struct {
 	PendingID    string   `json:"pendingId,omitempty"`
 }
 
-// Registration belongs to the backend process. Refreshing a WebView or opening
-// a detached window must not activate a font imported after startup.
+// Registration belongs to the backend process. Manual imports still require
+// restart. Verified catalog downloads can be explicitly registered at runtime.
+// Refreshing a WebView or opening a detached window cannot bypass this boundary.
 func (a *App) initializeUIFonts() {
 	a.uiFontsAtStartup = map[string]bool{}
 	for _, asset := range a.store.List().Assets {

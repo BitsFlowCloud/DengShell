@@ -39,4 +39,4 @@ try{
  return results;
 })()`);
  for(const name of result)console.log('PASS:',name);
-}catch(error){console.error(error);process.exitCode=1}finally{ws?.close();child.kill('SIGTERM');await new Promise(resolve=>child.once('exit',resolve));server.close();await rm(directory,{recursive:true,force:true})}
+}catch(error){console.error(error);process.exitCode=1}finally{ws?.close();const exited=new Promise(resolve=>{if(child.exitCode!==null||child.signalCode!==null)resolve();else child.once('exit',resolve)});child.kill('SIGTERM');await exited;server.close();await rm(directory,{recursive:true,force:true,maxRetries:5,retryDelay:150})}

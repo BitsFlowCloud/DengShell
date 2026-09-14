@@ -314,19 +314,37 @@ function compactTrafficSize(bytes) {
   for (const [power,unit] of [[3,'GiB/s'],[2,'MiB/s'],[1,'KiB/s']]) if (bytes >= 1024 ** power) { const value = bytes / 1024 ** power; return `${value.toFixed(value < 100 ? 1 : 0)} ${unit}`; }
   return `${Math.round(bytes)} B/s`;
 }
+function preferredNetworkInterface(interfaces) {
+  const priority = iface => {
+    if (iface.loopback || iface.name === 'lo') return 6;
+    const ethernet = /^(?:en|eth)[a-z0-9]/i.test(iface.name);
+    const down = ['down','lowerlayerdown','notpresent'].includes(iface.state);
+    if (iface.up && !down) return ethernet ? 0 : 1;
+    if (!down) return ethernet ? 2 : 3;
+    return ethernet ? 4 : 5;
+  };
+  // Choose by link state and name, never by changing instantaneous traffic.
+  // Default routes break ties within a class, including among Ethernet NICs.
+  return [...interfaces].sort((a,b) => priority(a)-priority(b) || Number(!!b.default)-Number(!!a.default) || a.name.localeCompare(b.name,'en',{numeric:true}))[0];
+}
+function selectNetworkInterface(state, interfaces, saved = '') {
+  if (!state || !interfaces.length) return;
+  const manual = state.networkInterfaceManual && interfaces.find(iface => iface.name === state.networkInterface);
+  const remembered = interfaces.find(iface => iface.name === saved);
+  state.networkInterface = (manual || remembered || preferredNetworkInterface(interfaces))?.name || '';
+  if (!manual) state.networkInterfaceManual = false;
+  // Reconsider automatic choices when delayed metadata arrives. An early br0
+  // sample must not permanently lock out an Ethernet NIC discovered later.
+}
 function renderNetwork(stats) {
   const state = current(), interfaces = currentNetworkInterfaces(state,stats), select = $('#network-interface');
   const saved = state ? readSaved(`dengshell.nic.${state.profileId}`, '') : '';
-  const preferred = interfaces.find(iface => iface.default && iface.up);
-  if (state && (!interfaces.some(iface => iface.name === state.networkInterface) || !saved && !state.networkInterfaceManual && !state.networkDefaultResolved && preferred)) {
-    state.networkInterface = interfaces.find(iface => iface.name === saved)?.name || preferred?.name || interfaces.find(iface => iface.up && !iface.loopback)?.name || interfaces.find(iface => !iface.loopback)?.name || interfaces[0]?.name || '';
-    if (preferred) state.networkDefaultResolved = true;
-  }
+  selectNetworkInterface(state,interfaces,saved);
   const signature = JSON.stringify(interfaces.map(iface => [iface.name, iface.default, iface.state]));
   if (select.dataset.signature !== signature || (!interfaces.length && select.dataset.connected !== String(!!stats))) {
     select.dataset.signature = signature; select.dataset.connected = String(!!stats);
     select.replaceChildren(...(interfaces.length ? interfaces.map(iface => {
-      const option = node('option', '', `${iface.name}${iface.default ? ' · 默认' : ''}${iface.state === 'down' ? ' · 关闭' : ''}`); option.value = iface.name; return option;
+      const option = node('option', '', `${iface.name}${iface.default ? ' · 默认路由' : ''}${iface.state === 'down' ? ' · 关闭' : ''}`); option.value = iface.name; return option;
     }) : [Object.assign(node('option', '', stats ? '未发现网卡' : '未连接'), { value:'' })]));
   }
   select.value = state?.networkInterface || ''; select.disabled = !interfaces.length;

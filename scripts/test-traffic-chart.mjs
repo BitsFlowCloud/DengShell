@@ -102,3 +102,43 @@ const retained={};const minute=Array.from({length:62},(_,i)=>frameAt(i-49));reme
 assert.equal(retained.interfaceCharts.get('eth0').length,30,'history is bounded to the latest thirty seconds');
 assert.equal(trafficChartRuns(trafficChartModel(retained.interfaceCharts.get('eth0'),now).points,'tx',x=>x,y=>y).length,1,'returning after more than the visible window retrieves a full recent curve');
 console.log('Network history: true background backfill, ordered deduplication, NIC isolation, real error gaps and 30s retention passed.');
+
+/* Default NIC choice must favor usable Ethernet links over a default bridge. */
+const {preferredNetworkInterface,selectNetworkInterface}=context;
+const bridge={name:'br0',up:true,state:'up',default:true};
+const ethernet=name=>({name,up:true,state:'up',default:false});
+const loopback={name:'lo',up:true,state:'unknown',loopback:true};
+for(const name of ['eno1','enp3s0','ens18','enx001122334455','eth0','en0']) {
+ const devices=[bridge,ethernet(name),loopback];
+ assert.equal(preferredNetworkInterface(devices).name,name,`${name} beats a default-route bridge`);
+ assert.equal(devices[0],bridge,'selection does not alter metadata ordering or default-route flags');
+}
+assert.equal(preferredNetworkInterface([ethernet('eth0'),{...ethernet('ens18'),default:true},bridge]).name,'ens18','default route wins among active Ethernet links');
+for(const state of ['down','lowerlayerdown','notpresent']) assert.equal(preferredNetworkInterface([bridge,{...ethernet('ens18'),state}]).name,'br0','an unavailable Ethernet link cannot displace an active bridge');
+assert.equal(preferredNetworkInterface([bridge,loopback]).name,'br0','bridge-only servers keep working');
+assert.equal(preferredNetworkInterface([loopback,{name:'wlan0',up:true}]).name,'wlan0','non-Ethernet active links remain supported');
+assert.equal(preferredNetworkInterface([loopback]).name,'lo','loopback-only fallback remains available');
+assert.equal(preferredNetworkInterface([]),undefined,'empty discovery has no fabricated interface');
+assert.equal(preferredNetworkInterface([{name:'br0',state:'unknown'},{name:'ens18',state:'unknown'}]).name,'ens18','counter-only first frames prefer Ethernet before metadata arrives');
+const automatic={networkDefaultResolved:true};
+selectNetworkInterface(automatic,[bridge]);assert.equal(automatic.networkInterface,'br0');
+selectNetworkInterface(automatic,[bridge,ethernet('ens18')]);assert.equal(automatic.networkInterface,'ens18','late Ethernet discovery replaces an automatic bridge choice');
+selectNetworkInterface(automatic,[ethernet('ens18'),{...bridge,rx:999999,tx:999999}]);assert.equal(automatic.networkInterface,'ens18','traffic spikes or response ordering never select a different interface');
+const manual={networkInterface:'br0',networkInterfaceManual:true};
+selectNetworkInterface(manual,[bridge,ethernet('ens18')]);assert.equal(manual.networkInterface,'br0','an explicit in-session choice stays selected');
+const remembered={};selectNetworkInterface(remembered,[bridge,ethernet('ens18')],'br0');assert.equal(remembered.networkInterface,'br0','a saved manual choice survives reconnect');
+selectNetworkInterface(manual,[ethernet('ens18')],'br0');assert.equal(manual.networkInterface,'ens18','missing manual NIC falls back to a usable Ethernet link');
+selectNetworkInterface(manual,[bridge,ethernet('ens18')],'br0');assert.equal(manual.networkInterface,'br0','saved NIC returns after temporary disappearance');
+const stale={};selectNetworkInterface(stale,[bridge,ethernet('ens18')],'eth9');assert.equal(stale.networkInterface,'ens18','a stale saved name never disables Ethernet preference');
+selectNetworkInterface(stale,[],'eth9');assert.equal(stale.networkInterface,'ens18','empty/transient discovery does not erase the last selected name');
+assert.equal(remembered.networkInterface,'br0','another session keeps its own choice');
+
+// Exercise rendering too: the selected label and graph must use the same NIC.
+const renderState={profileId:'network-fixture',connected:true,ready:true,networkStats:{sampledAt:new Date().toISOString(),interfaces:[bridge,ethernet('ens18')]},interfaceCharts:new Map([['br0',[{rx:10}]],['ens18',[{rx:20}]]])};
+const elements=new Map();context.$=selector=>{if(!elements.has(selector))elements.set(selector,{dataset:{},setAttribute(){},replaceChildren(...items){this.children=items;}});return elements.get(selector)};
+context.current=()=>renderState;context.readSaved=()=>'';context.node=(_tag,_class,textContent)=>({textContent});
+let drawn;context.drawCharts=points=>{drawn=points};context.renderNetwork(null);
+assert.equal(elements.get('#network-interface').value,'ens18');
+assert.equal(elements.get('#network-interface').children[0].textContent,'br0 · 默认路由','the actual server route remains accurately labeled');
+assert.equal(drawn,renderState.interfaceCharts.get('ens18'),'graph uses Ethernet counters, not bridge counters');
+console.log('Default NIC: en*/eth* preference, link-state fallback, delayed discovery, manual/saved choices, session isolation and matching graph selection passed.');

@@ -1,18 +1,34 @@
 {
-  "version": 1,
+  "version": 2,
   "fallback": {
-    "id": "noto-sans-mono-cjk-sc",
-    "name": "Noto Sans Mono CJK SC",
+    "id": "builtin:maple-mono-cn",
+    "name": "Maple Mono CN",
     "family": "Deng CJK",
-    "file": "assets/fonts/noto-sans-mono-cjk-sc.woff2",
-    "kind": "builtin",
-    "license": "assets/fonts/licenses/noto-sans-mono-cjk-sc.txt",
+    "upstream": "Maple Mono CN",
+    "description": "圆润等宽 · 中英混排",
+    "version": "v7.9",
+    "file": "assets/fonts/maple-mono-cn.woff2",
+    "license": "assets/fonts/licenses/maple-mono-cn.txt",
     "licenseName": "SIL Open Font License 1.1",
-    "source": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/Mono/NotoSansMonoCJKsc-Regular.otf",
-    "sourceSha256": "ec04cc376b34887cedbdf84074e2e226ed2761eeabdcb9173fc1dd7bfd153ef7",
-    "sha256": "bcd3895141721ebaf8ef51714d69bf46e7016aaa5125489414d0a9e5e532208b",
-    "bytes": 11411520,
-    "boldStyle": "synthetic"
+    "source": "https://github.com/subframe7536/maple-font/releases/download/v7.9/MapleMono-CN.zip",
+    "sourceFile": "MapleMono-CN-Regular.ttf",
+    "sourceSha256": "e6338c3dca9a3bed3fb81f43c8bb8feca3b6ad54829f5a3229527d030a321dbd",
+    "archiveSha256": "cb1e79b2c23dff772ae351784ef2b84454a61b3920e9b20bd5db4bf207e4472d",
+    "sha256": "878c92099ed723d22f4bd1dbb2fb03ba452296f025662f4d12cd3463f9807743",
+    "bytes": 5337732,
+    "unicodeMappings": 22138,
+    "subsetInputSha256": "8c4b7a81826bf14334c7169463a1b38eef2874418b6046097b3963f6363ef2f6",
+    "subsetLanguages": [
+      "en",
+      "zh-Hans",
+      "zh-Hant"
+    ],
+    "derivativeFamily": "Deng UI Maple",
+    "preservedOriginalForCompatibility": false,
+    "kind": "builtin",
+    "boldStyle": "synthetic",
+    "cellWidthEm": 0.6,
+    "asciiGlyphCount": 95
   },
   "fonts": [
     {
@@ -25,8 +41,8 @@
       "licenseName": "SIL Open Font License 1.1",
       "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/jetbrainsmono/JetBrainsMono[wght].ttf",
       "sourceSha256": "48715a42ec242c21e9f02692891e147d022299a52e48d5e413e1a942193ffeda",
-      "sha256": "7b7f3419196f675a973d30cb70078749120caddea86c8547ebf54a8db2ca13af",
-      "bytes": 71736,
+      "sha256": "5946fe5a26632e0dc322265ddb4db4fd98258bf9df7a30e8f8547f15bfadcea8",
+      "bytes": 60676,
       "axes": {
         "wght": {
           "min": 100.0,
@@ -38,7 +54,16 @@
       "weightRange": "100 800",
       "boldStyle": "variable",
       "cellWidthEm": 0.6,
-      "asciiGlyphCount": 95
+      "asciiGlyphCount": 95,
+      "unicodeMappings": 854,
+      "subsetInputSha256": "7b7f3419196f675a973d30cb70078749120caddea86c8547ebf54a8db2ca13af",
+      "subsetLanguages": [
+        "en",
+        "zh-Hans",
+        "zh-Hant"
+      ],
+      "derivativeFamily": "Deng JetBrains Mono",
+      "preservedOriginalForCompatibility": false
     },
     {
       "id": "fira-code",
@@ -63,7 +88,16 @@
       "weightRange": "300 700",
       "boldStyle": "variable",
       "cellWidthEm": 0.6,
-      "asciiGlyphCount": 95
+      "asciiGlyphCount": 95,
+      "unicodeMappings": 1551,
+      "subsetInputSha256": "9a0a9fc5a9963d90870252eccbe43aa8df6909d038d4ba0b2a8752d40664e66b",
+      "subsetLanguages": [
+        "en",
+        "zh-Hans",
+        "zh-Hant"
+      ],
+      "derivativeFamily": "Fira Code Light",
+      "preservedOriginalForCompatibility": true
     },
     {
       "id": "source-code-pro",
@@ -75,8 +109,8 @@
       "licenseName": "SIL Open Font License 1.1",
       "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/sourcecodepro/SourceCodePro[wght].ttf",
       "sourceSha256": "b400fc584e10aff25d0e775ce181b4fc1c5ea1b5dc37b81aeb2084375b945790",
-      "sha256": "d5354036d08c4a7cea27a1e02bd3c1bc2fbfdd8c85818a35ee890068eb4a4217",
-      "bytes": 89484,
+      "sha256": "9871f38ad8417d70893f8a63e3aa31ab68e7aa218d3a4f2e8438b2fa1323fe3b",
+      "bytes": 73924,
       "axes": {
         "wght": {
           "min": 200.0,
@@ -88,7 +122,16 @@
       "weightRange": "200 900",
       "boldStyle": "variable",
       "cellWidthEm": 0.6,
-      "asciiGlyphCount": 95
+      "asciiGlyphCount": 95,
+      "unicodeMappings": 1138,
+      "subsetInputSha256": "d5354036d08c4a7cea27a1e02bd3c1bc2fbfdd8c85818a35ee890068eb4a4217",
+      "subsetLanguages": [
+        "en",
+        "zh-Hans",
+        "zh-Hant"
+      ],
+      "derivativeFamily": "Deng Source Code Pro",
+      "preservedOriginalForCompatibility": false
     },
     {
       "id": "ibm-plex-mono",
@@ -100,401 +143,68 @@
       "licenseName": "SIL Open Font License 1.1",
       "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/ibmplexmono/IBMPlexMono-Regular.ttf",
       "sourceSha256": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46",
-      "sha256": "13b16cd770a73f60304510221c3e7186d396ba6ca5d64c52b5c6fb983d0e900a",
-      "bytes": 39176,
+      "sha256": "1689f1921b2df5674041b66c8687e879e722084f87c6f3c7c4fadf1382623d3a",
+      "bytes": 29836,
       "fallback": "Deng CJK",
       "bold": {
         "file": "assets/fonts/ibm-plex-mono-bold.woff2",
         "license": "assets/fonts/licenses/ibm-plex-mono-bold.txt",
         "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/ibmplexmono/IBMPlexMono-Bold.ttf",
         "sourceSha256": "ac27abd6450a64dd94467580a02fe6235156d5b92f2926ebbc8e7489df64e0be",
-        "sha256": "9f9e5597981645d576b209a25021c5221e8644a4580581f44e8b4ef954d95d03",
-        "bytes": 40348,
-        "weight": "700"
+        "sha256": "f67ec709d249a5fd95f9b308d0af5cef5c5604670b9cdf872f2bc418ddb4a047",
+        "bytes": 30504,
+        "weight": "700",
+        "unicodeMappings": 761,
+        "subsetInputSha256": "9f9e5597981645d576b209a25021c5221e8644a4580581f44e8b4ef954d95d03",
+        "subsetLanguages": [
+          "en",
+          "zh-Hans",
+          "zh-Hant"
+        ],
+        "derivativeFamily": "Deng IBM Plex Mono Bold",
+        "preservedOriginalForCompatibility": false
       },
       "boldStyle": "separate",
       "cellWidthEm": 0.6,
-      "asciiGlyphCount": 95
+      "asciiGlyphCount": 95,
+      "unicodeMappings": 761,
+      "subsetInputSha256": "13b16cd770a73f60304510221c3e7186d396ba6ca5d64c52b5c6fb983d0e900a",
+      "subsetLanguages": [
+        "en",
+        "zh-Hans",
+        "zh-Hant"
+      ],
+      "derivativeFamily": "Deng IBM Plex Mono",
+      "preservedOriginalForCompatibility": false
     },
     {
-      "id": "roboto-mono",
-      "name": "Roboto Mono",
-      "family": "Deng Roboto Mono",
-      "file": "assets/fonts/roboto-mono.woff2",
-      "kind": "builtin",
-      "license": "assets/fonts/licenses/roboto-mono.txt",
+      "id": "maple-mono-cn",
+      "name": "Maple Mono CN",
+      "family": "Deng CJK",
+      "upstream": "Maple Mono CN",
+      "description": "圆润等宽 · 中英混排",
+      "version": "v7.9",
+      "file": "assets/fonts/maple-mono-cn.woff2",
+      "license": "assets/fonts/licenses/maple-mono-cn.txt",
       "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/robotomono/RobotoMono[wght].ttf",
-      "sourceSha256": "66a80e79d17e4c7cabd162e2916578a4cc08fd19eef6e2a643305eae9c567b2b",
-      "sha256": "aafaa5d57a7180d02d1c6a5925523e06b3bcde4b182544a4d793d5ee87e61817",
-      "bytes": 105204,
-      "axes": {
-        "wght": {
-          "min": 100.0,
-          "default": 400.0,
-          "max": 700.0
-        }
-      },
-      "fallback": "Deng CJK",
-      "weightRange": "100 700",
-      "boldStyle": "variable",
-      "cellWidthEm": 0.60009765625,
-      "asciiGlyphCount": 95
-    },
-    {
-      "id": "inconsolata",
-      "name": "Inconsolata",
-      "family": "Deng Inconsolata",
-      "file": "assets/fonts/inconsolata.woff2",
+      "source": "https://github.com/subframe7536/maple-font/releases/download/v7.9/MapleMono-CN.zip",
+      "sourceFile": "MapleMono-CN-Regular.ttf",
+      "sourceSha256": "e6338c3dca9a3bed3fb81f43c8bb8feca3b6ad54829f5a3229527d030a321dbd",
+      "archiveSha256": "cb1e79b2c23dff772ae351784ef2b84454a61b3920e9b20bd5db4bf207e4472d",
+      "sha256": "878c92099ed723d22f4bd1dbb2fb03ba452296f025662f4d12cd3463f9807743",
+      "bytes": 5337732,
+      "unicodeMappings": 22138,
+      "subsetInputSha256": "8c4b7a81826bf14334c7169463a1b38eef2874418b6046097b3963f6363ef2f6",
+      "subsetLanguages": [
+        "en",
+        "zh-Hans",
+        "zh-Hant"
+      ],
+      "derivativeFamily": "Deng UI Maple",
+      "preservedOriginalForCompatibility": false,
       "kind": "builtin",
-      "license": "assets/fonts/licenses/inconsolata.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/inconsolata/Inconsolata[wdth,wght].ttf",
-      "sourceSha256": "23ded25b447074d00659392bf9b1123d89df55cb07b0ad9bfef3366d199b5fcb",
-      "sha256": "cd7799cfc96d08e3d16b3670abe125e0df4c7c4ea9f2ad67eafd515f9ae458cc",
-      "bytes": 151792,
-      "axes": {
-        "wght": {
-          "min": 200.0,
-          "default": 400.0,
-          "max": 900.0
-        },
-        "wdth": {
-          "min": 50.0,
-          "default": 100.0,
-          "max": 200.0
-        }
-      },
-      "fallback": "Deng CJK",
-      "weightRange": "200 900",
-      "boldStyle": "variable",
-      "cellWidthEm": 0.5,
-      "asciiGlyphCount": 95
-    },
-    {
-      "id": "fira-mono",
-      "name": "Fira Mono",
-      "family": "Deng Fira Mono",
-      "file": "assets/fonts/fira-mono.woff2",
-      "kind": "builtin",
-      "license": "assets/fonts/licenses/fira-mono.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/firamono/FiraMono-Regular.ttf",
-      "sourceSha256": "2e00b0cf3106a3d792f35711b7722740b76c02ee7300ea8c60f940584b7a8ac9",
-      "sha256": "72f2b37a6657fc4f0074cefee2cbb102dfbd99a58ae50f1fa3d97d96ab1eb4df",
-      "bytes": 63684,
-      "fallback": "Deng CJK",
-      "bold": {
-        "file": "assets/fonts/fira-mono-bold.woff2",
-        "license": "assets/fonts/licenses/fira-mono-bold.txt",
-        "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/firamono/FiraMono-Bold.ttf",
-        "sourceSha256": "61f0ca3ae72a83deb807040f314e1b8b4e40b08213df243db9fd430095cab305",
-        "sha256": "7fadcf6dd12221c220531f2110425caa727a0c24e01010c567b9db5468b5b021",
-        "bytes": 68472,
-        "weight": "700"
-      },
-      "boldStyle": "separate",
-      "cellWidthEm": 0.6,
-      "asciiGlyphCount": 95
-    },
-    {
-      "id": "space-mono",
-      "name": "Space Mono",
-      "family": "Deng Space Mono",
-      "file": "assets/fonts/space-mono.woff2",
-      "kind": "builtin",
-      "license": "assets/fonts/licenses/space-mono.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/spacemono/SpaceMono-Regular.ttf",
-      "sourceSha256": "95837e182baeeada83368f7748db28357f0a1b75c6b84ff7065b5edf933c8e18",
-      "sha256": "a3281287939a152ec1485709aff1a77515b4f0d657a24fcda3a5a439aa39adb2",
-      "bytes": 34932,
-      "fallback": "Deng CJK",
-      "bold": {
-        "file": "assets/fonts/space-mono-bold.woff2",
-        "license": "assets/fonts/licenses/space-mono-bold.txt",
-        "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/spacemono/SpaceMono-Bold.ttf",
-        "sourceSha256": "405e73d41afb7e5906efce206a326af5c956f38e255f35421c260e861e599c59",
-        "sha256": "aa90806275743a460cb47b707d975c27358473cd6068bba1d4c62d13d747b120",
-        "bytes": 35324,
-        "weight": "700"
-      },
-      "boldStyle": "separate",
-      "cellWidthEm": 0.612,
-      "asciiGlyphCount": 95
-    },
-    {
-      "id": "cutive-mono",
-      "name": "Cutive Mono",
-      "family": "Deng Cutive Mono",
-      "file": "assets/fonts/cutive-mono.woff2",
-      "kind": "builtin",
-      "license": "assets/fonts/licenses/cutive-mono.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/cutivemono/CutiveMono-Regular.ttf",
-      "sourceSha256": "96a36a00079058684982f61ee334323f8b501d7b68dcecd6049a4f9177e3a62c",
-      "sha256": "838a23082061b6eef65b292c3fe2083d88b3051dc0551f5525f512020ab660c2",
-      "bytes": 30780,
-      "fallback": "Deng CJK",
-      "boldStyle": "synthetic",
-      "cellWidthEm": 0.60546875,
-      "asciiGlyphCount": 95
-    },
-    {
-      "id": "pt-mono",
-      "name": "PT Mono",
-      "family": "Deng PT Mono",
-      "file": "assets/fonts/pt-mono.woff2",
-      "kind": "builtin",
-      "license": "assets/fonts/licenses/pt-mono.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/ptmono/PTM55FT.ttf",
-      "sourceSha256": "cbe732b3b8fd211fd986ebdfc9b870ddeca4faab0bb5425fc509b37f9b4ac804",
-      "sha256": "13cb20c5922107121b5683997c2b5f66c6eab299826b54d5ea058369cbd79f2a",
-      "bytes": 72300,
-      "fallback": "Deng CJK",
       "boldStyle": "synthetic",
       "cellWidthEm": 0.6,
-      "asciiGlyphCount": 95
-    },
-    {
-      "id": "anonymous-pro",
-      "name": "Anonymous Pro",
-      "family": "Deng Anonymous Pro",
-      "file": "assets/fonts/anonymous-pro.woff2",
-      "kind": "builtin",
-      "license": "assets/fonts/licenses/anonymous-pro.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/anonymouspro/AnonymousPro-Regular.ttf",
-      "sourceSha256": "46d8b9a5f4b38fc9d30f3cdd676d4c6f78a9bef949bb1a8304216cc731eb87f8",
-      "sha256": "3e850a7b6493dace3ff1e0dfabefceaf436d675ca50df3ee6fa83923c9123282",
-      "bytes": 51820,
-      "fallback": "Deng CJK",
-      "bold": {
-        "file": "assets/fonts/anonymous-pro-bold.woff2",
-        "license": "assets/fonts/licenses/anonymous-pro-bold.txt",
-        "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/anonymouspro/AnonymousPro-Bold.ttf",
-        "sourceSha256": "52895657e7d48860089ebfac63a27244f37a2218ec9c5019a0b37fe885c0fc0c",
-        "sha256": "cf500b805f46a3a2a35026d1b48209bbef84b8d267dddfb3c0001481d275d16f",
-        "bytes": 50008,
-        "weight": "700"
-      },
-      "boldStyle": "separate",
-      "cellWidthEm": 0.5458984375,
-      "asciiGlyphCount": 95
-    },
-    {
-      "id": "overpass-mono",
-      "name": "Overpass Mono",
-      "family": "Deng Overpass Mono",
-      "file": "assets/fonts/overpass-mono.woff2",
-      "kind": "builtin",
-      "license": "assets/fonts/licenses/overpass-mono.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/overpassmono/OverpassMono[wght].ttf",
-      "sourceSha256": "49f230e10251608f0ae1a2ce46be768d7b9ddcbe5cdca2e9f6b762fcbce1ae4f",
-      "sha256": "7c8ddb7ac754254bbef648125756116ffed2f685ecd9a6be66745f42646db6d7",
-      "bytes": 103716,
-      "axes": {
-        "wght": {
-          "min": 300.0,
-          "default": 300.0,
-          "max": 700.0
-        }
-      },
-      "fallback": "Deng CJK",
-      "weightRange": "300 700",
-      "boldStyle": "variable",
-      "cellWidthEm": 0.616,
-      "asciiGlyphCount": 95
-    },
-    {
-      "id": "red-hat-mono",
-      "name": "Red Hat Mono",
-      "family": "Deng Red Hat Mono",
-      "file": "assets/fonts/red-hat-mono.woff2",
-      "kind": "builtin",
-      "license": "assets/fonts/licenses/red-hat-mono.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/redhatmono/RedHatMono[wght].ttf",
-      "sourceSha256": "253377ac29ccce89cb1b5fb297c69812ffe993b0c436322b3656323ff30fd14f",
-      "sha256": "fd6fbc390c05af4a05efb1e608c16084595308bab7f0a06e3c53e2b791366cfa",
-      "bytes": 30028,
-      "axes": {
-        "wght": {
-          "min": 300.0,
-          "default": 400.0,
-          "max": 700.0
-        }
-      },
-      "fallback": "Deng CJK",
-      "weightRange": "300 700",
-      "boldStyle": "variable",
-      "cellWidthEm": 0.6,
-      "asciiGlyphCount": 95
-    },
-    {
-      "id": "dm-mono",
-      "name": "DM Mono",
-      "family": "Deng DM Mono",
-      "file": "assets/fonts/dm-mono.woff2",
-      "kind": "builtin",
-      "license": "assets/fonts/licenses/dm-mono.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/dmmono/DMMono-Regular.ttf",
-      "sourceSha256": "55b4c98f123daebb3ed27947ba47b2af00554fc6284d639a540bcef5e6258ad2",
-      "sha256": "8bf6fa1c275a47b29bcff0f49d430e64e556becf80c7b26b9bfcdcafc6e5cc60",
-      "bytes": 20656,
-      "fallback": "Deng CJK",
-      "boldStyle": "synthetic",
-      "cellWidthEm": 0.6,
-      "asciiGlyphCount": 95
-    },
-    {
-      "id": "spline-sans-mono",
-      "name": "Spline Sans Mono",
-      "family": "Deng Spline Sans Mono",
-      "file": "assets/fonts/spline-sans-mono.woff2",
-      "kind": "builtin",
-      "license": "assets/fonts/licenses/spline-sans-mono.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/splinesansmono/SplineSansMono[wght].ttf",
-      "sourceSha256": "e20c1df32aa2f886e828cfcc81ca5c405d3f3b160990f6b892923e2e449bf525",
-      "sha256": "6175043a95919a89c276599235f84832de5450e608d3f781e018bfdfd435e040",
-      "bytes": 58540,
-      "axes": {
-        "wght": {
-          "min": 300.0,
-          "default": 400.0,
-          "max": 700.0
-        }
-      },
-      "fallback": "Deng CJK",
-      "weightRange": "300 700",
-      "boldStyle": "variable",
-      "cellWidthEm": 0.6,
-      "asciiGlyphCount": 95
-    },
-    {
-      "id": "geist-mono",
-      "name": "Geist Mono",
-      "family": "Deng Geist Mono",
-      "file": "assets/fonts/geist-mono.woff2",
-      "kind": "builtin",
-      "license": "assets/fonts/licenses/geist-mono.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/geistmono/GeistMono[wght].ttf",
-      "sourceSha256": "d00e590b8eb3a59acc329b2d044fd143ae935090b7da33199ebee27cc7de8196",
-      "sha256": "09853cd11045cf50e8ac07faf08bd5420f181b924f4c65b93b8ee49259a03734",
-      "bytes": 71124,
-      "axes": {
-        "wght": {
-          "min": 100.0,
-          "default": 400.0,
-          "max": 900.0
-        }
-      },
-      "fallback": "Deng CJK",
-      "weightRange": "100 900",
-      "boldStyle": "variable",
-      "cellWidthEm": 0.6,
-      "asciiGlyphCount": 95
-    },
-    {
-      "id": "azeret-mono",
-      "name": "Azeret Mono",
-      "family": "Deng Azeret Mono",
-      "file": "assets/fonts/azeret-mono.woff2",
-      "kind": "builtin",
-      "license": "assets/fonts/licenses/azeret-mono.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/azeretmono/AzeretMono[wght].ttf",
-      "sourceSha256": "f13962c26c1baa864aff7768364001f9bca6e506f41b9a3037c0d6a31e2ca736",
-      "sha256": "d2adfc91f95f083a70f58c05bcbc8b6dca7778f34e03b1942b222b975a9a40a8",
-      "bytes": 46764,
-      "axes": {
-        "wght": {
-          "min": 100.0,
-          "default": 100.0,
-          "max": 900.0
-        }
-      },
-      "fallback": "Deng CJK",
-      "weightRange": "100 900",
-      "boldStyle": "variable",
-      "cellWidthEm": 0.65,
-      "asciiGlyphCount": 95
-    },
-    {
-      "id": "martian-mono",
-      "name": "Martian Mono",
-      "family": "Deng Martian Mono",
-      "file": "assets/fonts/martian-mono.woff2",
-      "kind": "builtin",
-      "license": "assets/fonts/licenses/martian-mono.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/martianmono/MartianMono[wdth,wght].ttf",
-      "sourceSha256": "c3467843ec1c2574b05fbcfd7147c7bfbcf63ddca8fc2bcb9d117f1bfb1b22e7",
-      "sha256": "d6225f99b93f92d2b51a8becd0610c0cfe570ad223acb61a7abb6356f96a3b05",
-      "bytes": 63444,
-      "axes": {
-        "wght": {
-          "min": 100.0,
-          "default": 400.0,
-          "max": 800.0
-        },
-        "wdth": {
-          "min": 75.0,
-          "default": 112.5,
-          "max": 112.5
-        }
-      },
-      "fallback": "Deng CJK",
-      "weightRange": "100 800",
-      "boldStyle": "variable",
-      "cellWidthEm": 0.75,
-      "asciiGlyphCount": 95
-    },
-    {
-      "id": "chivo-mono",
-      "name": "Chivo Mono",
-      "family": "Deng Chivo Mono",
-      "file": "assets/fonts/chivo-mono.woff2",
-      "kind": "builtin",
-      "license": "assets/fonts/licenses/chivo-mono.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/chivomono/ChivoMono[wght].ttf",
-      "sourceSha256": "725256f30b7b1b25dd001a96ff8d4a23773197bb886cd847a97ff8eabc9c1d9d",
-      "sha256": "e66b3226d16cd466568280d6c062127e66262bf3e9919ecda5e7c742e100b860",
-      "bytes": 52004,
-      "axes": {
-        "wght": {
-          "min": 100.0,
-          "default": 500.0,
-          "max": 900.0
-        }
-      },
-      "fallback": "Deng CJK",
-      "weightRange": "100 900",
-      "boldStyle": "variable",
-      "cellWidthEm": 0.6,
-      "asciiGlyphCount": 95
-    },
-    {
-      "id": "fragment-mono",
-      "name": "Fragment Mono",
-      "family": "Deng Fragment Mono",
-      "file": "assets/fonts/fragment-mono.woff2",
-      "kind": "builtin",
-      "license": "assets/fonts/licenses/fragment-mono.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/fragmentmono/FragmentMono-Regular.ttf",
-      "sourceSha256": "0fe011f425873c2e0fc73a189e394e340ad48d2b9a99a576bdeec75cee000460",
-      "sha256": "6989d5279da255f6c188a43d3ce5f5674d95b2a74d0a2793502e489a89b1b0fe",
-      "bytes": 46044,
-      "fallback": "Deng CJK",
-      "boldStyle": "synthetic",
-      "cellWidthEm": 0.618,
       "asciiGlyphCount": 95
     }
   ]

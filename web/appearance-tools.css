@@ -1,5 +1,5 @@
-@font-face { font-family:"Deng UI"; src:url("assets/fonts/ui-source-sans-3.woff2") format("woff2"); font-weight:200 900; font-style:normal; font-display:swap; }
-:root { font-family:"Deng UI","Deng CJK",system-ui,sans-serif; font-synthesis:weight; }
+@font-face { font-family:"Deng UI IBM Plex"; src:url("assets/ui-fonts/ibm-plex-sans-sc.woff2") format("woff2"); font-weight:400; font-style:normal; font-display:swap; }
+:root { font-family:"Deng UI IBM Plex",system-ui,sans-serif; font-synthesis:weight; }
 button,input,select,textarea { font-family:inherit; }
 /* Explicit grid locations keep visual order and splitter direction independent. */
 .app-shell > .sidebar { grid-column:1; grid-row:1; }

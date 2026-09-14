@@ -265,6 +265,9 @@ function openServerGroupEditor(id = '', parentID = '') {
   closeServerGroupMenu();
   const group = serverManager.nodes.find(item => item.id === id), form = $('#server-group-form');
   form.reset(); form.elements.id.value = group?.id || ''; form.elements.name.value = group?.name || ''; form.elements.emoji.value = group?.emoji || '';
+  form.elements.backgroundColor.value = group?.backgroundColor || '';
+  $('#group-background-color').value = group?.backgroundColor || '#eaf1f7';
+  updateGroupColorPreview();
   $('#server-group-error').hidden = true; $('#server-group-error').textContent = '';
   renderServerGroupChoices(group?.parentId || parentID, $('#group-parent'), group?.id || '');
   $('#server-group-editor-title').textContent = group ? '编辑分组' : parentID ? '新建子分组' : '新建分组';
@@ -272,22 +275,44 @@ function openServerGroupEditor(id = '', parentID = '') {
   renderGroupEmojiPicker(); updateGroupEmojiPreview(); $('#server-group-dialog').showModal(); form.elements.name.focus();
 }
 function closeServerGroupMenu() { const menu = $('#server-group-menu'); if (menu) menu.hidden = true; serverManager.menuGroup = ''; serverManager.menuProfile = ''; }
+async function deleteServerGroupTree(id) {
+  if (serverManager.deletingGroup) return;
+  serverManager.deletingGroup = id;
+  closeServerGroupMenu();
+  try {
+    const plan = await api(`/api/group-nodes/${encodeURIComponent(id)}/deletion`);
+    const scope = `「${plan.name}」及其全部子分组：共 ${plan.groups} 个分组、${plan.servers} 个连接、${plan.trashed} 个回收站连接。`;
+    if (!await ask({title: '重要操作 · 第 1 / 3 次确认', description: scope + '\n将永久删除这些本地 SSH 连接配置及保存的登录凭据，无法从回收站恢复。', confirm: '已核对范围，继续'})) return;
+    if (!await ask({title: '重要操作 · 第 2 / 3 次确认', description: scope + '\n对应 SSH 会话将断开，连接记录及每台服务器的终端历史将清理。请先保存远程文件，未保存的编辑器草稿会保留。\n全局历史列表、密钥管理器、代理和远程服务器文件保留。', confirm: '已了解影响，继续'})) return;
+    const name = await ask({title: '永久删除 · 第 3 / 3 次确认', description: `最后确认：${scope}\n请输入分组名称「${plan.name}」以永久删除。`, input: true, confirm: '永久删除全部上述连接'});
+    if (name === null) return;
+    if (name !== plan.name) { toast('分组名称不匹配，未删除任何数据'); return; }
+    const result = await post(`/api/group-nodes/${encodeURIComponent(id)}/deletion`, { revision: plan.revision, name, confirmations: 3 });
+    const removed = new Set(result.profileIds);
+    for (const profileID of removed) credentials.delete(profileID);
+    for (const state of [...sessions.values()]) if (removed.has(state.profileId)) dropSessionView(state.id);
+    await loadProfiles();
+    toast(`已删除 ${plan.groups} 个分组及 ${removed.size} 个连接配置`);
+  } finally { serverManager.deletingGroup = ''; }
+}
+function updateGroupColorPreview() {
+  const color = $('#server-group-form').elements.backgroundColor.value;
+  const preview = $('#group-color-preview');
+  preview.textContent = color || '跟随主题';
+  preview.style.backgroundColor = color || '';
+  preview.style.color = color ? serverGroupColorText(color) : '';
+}
 function openServerGroupMenu(id, anchor) {
   if (serverManager.menuGroup === id && !$('#server-group-menu').hidden) { closeServerGroupMenu(); return; }
   const tree = serverGroupTree(), group = tree.byID.get(id); if (!group) return;
   serverManager.menuGroup = id; serverManager.menuProfile = '';
   const menu = $('#server-group-menu');
-  const erase = serverManagerButton('删除空分组', async () => {
-    closeServerGroupMenu();
-    if (!await ask({ title: `删除空分组「${group.name}」？`, confirm: '删除分组' })) return;
-    await remove(`/api/group-nodes/${encodeURIComponent(id)}`); await loadProfiles();
-  }, 'server-danger');
-  erase.disabled = !!((tree.children.get(id) || []).length || (tree.members.get(id) || []).length || tree.trashCounts.get(id));
-  erase.title = erase.disabled ? '请先移走子分组、服务器，以及“已删除”中属于此分组的连接' : '删除此空分组';
+  const erase = serverManagerButton('删除分组及全部连接', () => deleteServerGroupTree(id), 'server-danger');
+  erase.title = '永久删除此分组、子分组及其连接，需要三次确认';
   menu.replaceChildren(
     serverManagerButton('添加服务器', () => { closeServerGroupMenu(); showConnectionForm(null, id); }),
     serverManagerButton('新建子分组', () => openServerGroupEditor('', id)),
-    serverManagerButton('名称、图标与层级', () => openServerGroupEditor(id)), erase,
+    serverManagerButton('名称、背景色与层级', () => openServerGroupEditor(id)), erase,
   );
   for (const button of menu.children) button.setAttribute('role', 'menuitem');
   menu.hidden = false;
@@ -339,6 +364,8 @@ function initializeServerManager() {
   $('#group-emoji-search').oninput = renderGroupEmojiPicker;
   $('#server-group-form').elements.emoji.oninput = updateGroupEmojiPreview;
   $('#clear-group-emoji').onclick = () => { $('#server-group-form').elements.emoji.value = ''; updateGroupEmojiPreview(); };
+  $('#group-background-color').oninput = event => { $('#server-group-form').elements.backgroundColor.value = event.target.value; updateGroupColorPreview(); };
+  $('#clear-group-color').onclick = () => { $('#server-group-form').elements.backgroundColor.value = ''; updateGroupColorPreview(); };
   $('#server-group-form').onsubmit = safe(async event => {
     event.preventDefault(); const form = event.currentTarget, values = Object.fromEntries(new FormData(form));
     const button = $('#save-server-group'); button.disabled = true; $('#server-group-error').hidden = true;

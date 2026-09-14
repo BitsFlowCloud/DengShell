@@ -8,10 +8,11 @@ import (
 )
 
 type ServerGroup struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	ParentID string `json:"parentId"`
-	Emoji    string `json:"emoji"`
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	ParentID        string `json:"parentId"`
+	Emoji           string `json:"emoji"`
+	BackgroundColor string `json:"backgroundColor,omitempty"`
 }
 
 func groupIndex(groups []ServerGroup) map[string]ServerGroup {
@@ -27,6 +28,9 @@ func validateGroupGraph(groups []ServerGroup) error {
 	for _, group := range groups {
 		if group.ID == "" || group.Name == "" {
 			return errors.New("分组 ID 或名称为空")
+		}
+		if err := validateGroupInput(group); err != nil {
+			return err
 		}
 		if _, exists := byID[group.ID]; exists {
 			return errors.New("分组 ID 重复")
@@ -131,6 +135,11 @@ func (s *Store) assignProfileGroupLocked(profile *Profile) error {
 	return nil
 }
 func validateGroupInput(group ServerGroup) error {
+	if group.BackgroundColor != "" {
+		if len(group.BackgroundColor) != 7 || group.BackgroundColor[0] != '#' || strings.Trim(group.BackgroundColor[1:], "0123456789abcdefABCDEF") != "" {
+			return errors.New("分组背景色必须是六位十六进制颜色")
+		}
+	}
 	if group.Name == "" || len(group.Name) > 100 || strings.ContainsAny(group.Name, "\x00\r\n") {
 		return errors.New("请填写有效分组名称（最多 100 字节）")
 	}

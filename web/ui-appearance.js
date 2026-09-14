@@ -1,13 +1,13 @@
 'use strict';
 window.DengUIAppearance = (() => {
-  const defaultID = 'builtin:ui-noto-sans';
+  const defaultID = 'builtin:ui-ibm-plex-sans-sc';
   const defaults = { light: '#243b4e', dark: '#d4dfe8' };
   const roles = ['--text', '--text-secondary', '--muted', '--text-faint'];
   const validColor = value => typeof value === 'string' && /^#[\da-f]{6}$/i.test(value);
-  let catalog, catalogPromise, dialog, licenseDialog, operation = 0, activeID = defaultID;
+  let catalog, catalogPromise, dialog, licenseDialog, operation = 0, selection = 0, activeID = defaultID;
   let runtime = window.CLOUDSHELL?.uiFontRuntime || { availableIds: [], activeId: defaultID };
   const faces = new Map();
-  const available = id => id.startsWith('builtin:ui-') || runtime.availableIds.includes(id);
+  const available = id => id === defaultID || catalog?.fonts.some(font => font.id === id) || runtime.availableIds.includes(id);
   const fonts = () => [...(catalog?.fonts || []), ...managedAssets.filter(a => a.kind === 'ui-font').map(a => ({ ...a, family: `Deng UI custom ${a.id}` }))];
   const resolveID = desired => available(desired) ? desired : available(activeID) ? activeID : defaultID;
   async function initCatalog() {
@@ -18,7 +18,7 @@ window.DengUIAppearance = (() => {
     const key = font.id + (preview ? ':preview' : '');
     if (!faces.has(key)) faces.set(key, (async () => {
       const url = preview ? new URL(font.preview, location.href).href : await assetURL(font);
-      const face = new FontFace(font.family + (preview ? ' Preview' : ''), `url(${JSON.stringify(url)})`, { weight: '400', display: 'swap' });
+      const face = new FontFace(font.family + (preview ? ' Preview' : ''), `url(${JSON.stringify(url)})`, { weight: font.weightRange || '400', display: 'swap' });
       await face.load(); document.fonts.add(face); return face;
     })().catch(error => { faces.delete(key); throw new Error(`界面字体「${font.name}」无法加载：${error.message}`); }));
     return faces.get(key);
@@ -39,7 +39,7 @@ window.DengUIAppearance = (() => {
       await Promise.all([faceFor(catalog.fonts[0]), faceFor(font)]);
       if (generation !== operation) return;
       activeID = font.id;
-      document.documentElement.style.setProperty('--font-ui', `${JSON.stringify(font.family)}, "Deng UI Sans", "Deng CJK", system-ui, sans-serif`);
+      document.documentElement.style.setProperty('--font-ui', `${JSON.stringify(font.family)}, "Deng UI IBM Plex", system-ui, sans-serif`);
       document.documentElement.dataset.uiFont = activeID;
     } catch (error) {
       // Keep the usable face and the saved selection when a resource fails.
@@ -61,7 +61,7 @@ window.DengUIAppearance = (() => {
     const desired = appearance.uiFontId || defaultID, pending = !available(desired);
     dialog.querySelector('#ui-font-status').textContent = pending
       ? '已保存字体选择。请关闭并重新启动 DengShell 后使用；当前界面继续使用原字体。'
-      : `当前界面字体：${fonts().find(f => f.id === activeID)?.name || 'Noto 黑体'}。选择内置字体立即生效并保存。`;
+      : `当前界面字体：${fonts().find(f => f.id === activeID)?.name || 'IBM Plex Sans SC'}。内置和已下载字体可直接切换并保存。`;
     dialog.querySelector('#ui-font-status').classList.toggle('pending', pending);
     for (const card of dialog.querySelectorAll('[data-ui-font-id]')) {
       const selected = card.dataset.uiFontId === desired;
@@ -70,18 +70,21 @@ window.DengUIAppearance = (() => {
       card.querySelector('.ui-font-state').textContent = selected ? pending ? '已选择 · 重启后生效' : '已选择 ✓' : available(card.dataset.uiFontId) ? '点击使用' : '需重启';
     }
   }
-  async function selectFont(font) {
+  async function selectFont(font, stillWanted = () => true) {
+    const request = ++selection;
     // A startup-registered face is validated before saving the selection.
     if (available(font.id)) await faceFor(font);
+    if (request !== selection || !stillWanted()) return false;
     await chooseAppearance({ uiFontId: font.id });
     runtime = await api('/api/ui-fonts/runtime');
     renderStatus();
+    return true;
   }
   async function showLicense(font) {
     const response = await fetch(font.license);
     if (!response.ok) throw new Error('无法读取字体许可');
     licenseDialog.querySelector('h2').textContent = font.name + ' · 字体许可';
-    licenseDialog.querySelector('p').textContent = `来源：${font.upstream}（${font.version}）。${font.licenseName}。程序内字体转换为 WOFF2 并使用 Deng UI 名称，完整保留字形。`;
+    licenseDialog.querySelector('p').textContent = `来源：${font.upstream}（${font.version}）。${font.licenseName}。字体来源、版权及许可随资源保留。`;
     licenseDialog.querySelector('pre').textContent = await response.text();
     licenseDialog.showModal();
   }
@@ -93,11 +96,16 @@ window.DengUIAppearance = (() => {
       const choice = node('button', 'ui-font-choice'); choice.type = 'button';
       const title = node('strong', '', font.name), detail = node('span', 'ui-font-detail', font.description || '导入的界面字体');
       const preview = node('span', 'ui-font-sample', font.preview ? catalog.previewText : '简体中文 · 繁體中文 · English 012345');
-      if (font.preview) faceFor(font, true).then(() => { preview.style.fontFamily = `${JSON.stringify(font.family + ' Preview')}, "Deng UI Sans", sans-serif`; }).catch(() => {});
-      else if (available(font.id)) preview.style.fontFamily = `${JSON.stringify(font.family)}, "Deng UI Sans", sans-serif`;
+      if (font.preview) faceFor(font, true).then(() => { preview.style.fontFamily = `${JSON.stringify(font.family + ' Preview')}, "Deng UI IBM Plex", sans-serif`; }).catch(() => {});
+      else if (available(font.id)) faceFor(font).then(() => { preview.style.fontFamily = `${JSON.stringify(font.family)}, "Deng UI IBM Plex", sans-serif`; }).catch(() => { preview.textContent = '字体副本无法预览，请重新下载或导入'; });
       const state = node('span', 'ui-font-state'); choice.append(title, detail, preview, state);
       choice.onclick = safe(async () => { choice.disabled = true; try { await selectFont(font); } finally { choice.disabled = false; } });
       const actions = node('div', 'ui-font-actions');
+      if (font.licenseText) {
+        const license = node('button', 'text-button', font.licenseName || '字体许可');
+        license.onclick = () => { licenseDialog.querySelector('h2').textContent = font.name + ' · 字体许可'; licenseDialog.querySelector('p').textContent = '下载副本的原作者版权与许可'; licenseDialog.querySelector('pre').textContent = font.licenseText; licenseDialog.showModal(); };
+        actions.append(license);
+      }
       if (font.license) {
         const license = node('button', 'text-button', '开源许可 · OFL 1.1'); license.onclick = safe(() => showLicense(font)); actions.append(license);
       } else {
@@ -147,9 +155,10 @@ window.DengUIAppearance = (() => {
   }
   function initialize() {
     dialog = document.createElement('dialog'); dialog.id = 'ui-appearance-dialog'; dialog.setAttribute('aria-labelledby', 'ui-appearance-title');
-    dialog.innerHTML = `<div class="dialog-heading"><div><h2 id="ui-appearance-title">界面字体与文字颜色</h2><p>调整软件界面的标题、正文和说明文字。</p></div><button type="button" class="icon-button" id="close-ui-appearance" aria-label="关闭界面外观设置"><svg><use href="#i-close"/></svg></button></div>
+    dialog.innerHTML = `<div class="dialog-heading"><div><h2 id="ui-appearance-title">字体设置 · 界面字体</h2><p>调整软件界面的标题、正文和说明文字。</p></div><button type="button" class="icon-button" id="close-ui-appearance" aria-label="关闭界面外观设置"><svg><use href="#i-close"/></svg></button></div>
+      <nav class="font-kind-tabs" aria-label="字体设置分类"><button type="button" aria-pressed="true">界面字体</button><button type="button" id="switch-shell-fonts" aria-pressed="false">Shell 字体</button></nav>
       <section class="ui-text-settings" aria-labelledby="ui-text-title"><h3 id="ui-text-title">文字颜色</h3><p>浅色与深色模式分别保存。每行可预览颜色，点击应用后生效。</p><div id="ui-text-colors"></div></section>
-      <section aria-labelledby="ui-font-title"><div class="ui-font-heading"><h3 id="ui-font-title">界面字体</h3><button type="button" class="upload-button" id="import-ui-font">导入字体…</button></div><p>内置 5 套开源字体，支持英文、简体与繁体中文。导入支持 TTF / OTF / WOFF / WOFF2（最大 64 MiB），重启软件后启用。</p><p id="ui-font-status" role="status"></p><div id="ui-font-list"></div><input type="file" id="ui-font-picker" accept=".ttf,.otf,.woff,.woff2" hidden></section>`;
+      <section aria-labelledby="ui-font-title"><div class="ui-font-heading"><h3 id="ui-font-title">已安装字体</h3><button type="button" class="upload-button" id="import-ui-font">导入字体…</button></div><p>内置 IBM Plex Sans SC。在线下载后可直接切换；手动导入支持 TTF / OTF / WOFF / WOFF2（最大 64 MiB），重启软件后启用。</p><div class="font-library-entry"><p>更多黑体、宋体、圆体与手写风格</p><button type="button" class="upload-button" id="online-ui-fonts">在线字体库 · 20 款</button></div><p id="ui-font-status" role="status"></p><div id="ui-font-list"></div><input type="file" id="ui-font-picker" accept=".ttf,.otf,.woff,.woff2" hidden></section>`;
     document.body.append(dialog);
     licenseDialog = document.createElement('dialog'); licenseDialog.id = 'ui-font-license';
     licenseDialog.innerHTML = '<div class="dialog-heading"><h2>字体许可</h2><button type="button" class="icon-button" aria-label="关闭字体许可"><svg><use href="#i-close"/></svg></button></div><p></p><pre tabindex="0"></pre>';
@@ -165,6 +174,8 @@ window.DengUIAppearance = (() => {
       dialog.querySelector('#ui-text-colors').append(row);
     }
     dialog.querySelector('#close-ui-appearance').onclick = () => dialog.close();
+    dialog.querySelector('#switch-shell-fonts').onclick = safe(async () => { dialog.close(); await openAppearance('font'); });
+    dialog.querySelector('#online-ui-fonts').onclick = safe(() => window.DengFontLibrary.open('ui-font'));
     dialog.querySelector('#import-ui-font').onclick = safe(importFont);
     dialog.querySelector('#ui-font-picker').onchange = safe(async event => {
       const file = event.target.files[0]; event.target.value = ''; if (!file) return;
@@ -175,8 +186,10 @@ window.DengUIAppearance = (() => {
         await finishImport(await post('/api/assets', { kind: 'ui-font', name: file.name.replace(/\.[^.]+$/, ''), filename: file.name, data }));
       } finally { button.disabled = false; }
     });
-    document.querySelector('#manage-ui-appearance').onclick = safe(async () => { setSettingsMenu(false); await loadProfiles(); await render(); dialog.showModal(); });
+    document.querySelector('#manage-ui-appearance').onclick = safe(open);
     window.addEventListener('cloudshell:theme', () => applyColors());
   }
-  return { initialize, apply, acceptConfig };
+  async function open() { setSettingsMenu(false); if (document.querySelector('#appearance-dialog')?.dataset.kind === 'font') document.querySelector('#appearance-dialog').close(); await loadProfiles(); await render(); if (!dialog.open) dialog.showModal(); }
+  async function useFont(id, stillWanted = () => true) { await initCatalog(); const font = fonts().find(f => f.id === id); if (!font) throw new Error('界面字体不存在，请重新下载或导入'); return selectFont(font, stillWanted); }
+  return { initialize, apply, acceptConfig, open, useFont };
 })();

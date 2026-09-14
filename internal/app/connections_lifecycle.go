@@ -76,10 +76,14 @@ func (s *Store) Purge(id string) error {
 		}
 	}
 	s.config.ConnectionHistory = history
+	s.config.Appearance = cloneAppearance(s.config.Appearance)
+	delete(s.config.Appearance.Layout, "dengshell.history."+id)
+	delete(s.config.Appearance.Layout, "dengshell.nic."+id)
 	if err := s.writeLocked(); err != nil {
 		s.config = old
 		return err
 	}
+	delete(s.historyState, id)
 	return nil
 }
 func (s *Store) MarkConnected(id string, at time.Time) error {
@@ -139,6 +143,7 @@ func (a *App) trashProfile(id string) error {
 	return nil
 }
 func (a *App) registerConnectionManagementHTTP(mux *http.ServeMux) {
+	a.registerGroupDeletionHTTP(mux)
 	mux.HandleFunc("GET /api/config/storage", func(w http.ResponseWriter, r *http.Request) {
 		dir, err := filepath.Abs(a.store.dir)
 		if err != nil {

@@ -104,6 +104,7 @@ func (s *Store) commandHistoryForProfile(id, operation, command string, clear, l
 
 func (a *App) commandHistory(id, operation, command string, clear bool) (CommandHistory, error) {
 	a.mu.Lock()
+	defer a.mu.Unlock()
 	live := false
 	for _, session := range a.sessions {
 		if session.ProfileID == id {
@@ -111,7 +112,6 @@ func (a *App) commandHistory(id, operation, command string, clear bool) (Command
 			break
 		}
 	}
-	a.mu.Unlock()
 	return a.store.commandHistoryForProfile(id, operation, command, clear, live)
 }
 

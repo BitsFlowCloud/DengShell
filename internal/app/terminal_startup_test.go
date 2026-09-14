@@ -111,12 +111,6 @@ func terminalStartupFixture(t *testing.T, blocked string) (*App, *Session, strin
 							mark()
 							continue
 						}
-						if blocked == "exec" {
-							_ = request.Reply(true, nil)
-							_, _ = io.WriteString(channel, "__DENGSHELL_SHELL__/bin/bash\n__DENGSHELL_USER__fixture\n__DENGSHELL_HOST__fixture\n")
-							_, _ = channel.SendRequest("exit-status", false, ssh.Marshal(struct{ Status uint32 }{0}))
-							return
-						}
 						_ = request.Reply(false, nil)
 					default:
 						_ = request.Reply(false, nil)
@@ -134,13 +128,12 @@ func terminalStartupFixture(t *testing.T, blocked string) (*App, *Session, strin
 		client.Close()
 		t.Fatal(err)
 	}
-	if blocked == "exec" {
-		if err := files.Mkdir("/tmp"); err != nil {
-			t.Fatal(err)
-		}
-	}
 	ctx, cancel := context.WithCancel(a.ctx)
 	s := &Session{ID: randomID(), client: client, files: files, ctx: ctx, cancel: cancel}
+	if blocked == "exec" {
+		// Exercise the terminal exec deadline independently of optional preparation.
+		s.preparedIntegration = &terminalIntegration{Shell: "bash", Nonce: randomID(), command: "exec /bin/bash --rcfile /fixture -i"}
+	}
 	a.sessions[s.ID] = s
 	httpServer := httptest.NewServer(a.Handler(fstest.MapFS{}))
 	a.baseURL = httpServer.URL

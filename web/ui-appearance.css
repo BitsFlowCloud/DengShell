@@ -1,5 +1,5 @@
 /* UI families are independent of the terminal's grid and per-font colors. */
-:root { --font-ui: "Deng UI Sans", "Deng UI", "Deng CJK", system-ui, sans-serif; font-family: var(--font-ui); }
+:root { --font-ui: "Deng UI IBM Plex", system-ui, sans-serif; font-family: var(--font-ui); }
 .welcome-state, .traffic-grid text, .traffic-empty, .latency-grid text, .latency-time, .latency-empty { font-family: var(--font-ui); }
 button, input, select { font-family: inherit; }
 :root[data-ui-text-custom] :is(.file-table td:first-child, .meter b, .meter em, .disk-percent) { color: var(--text); }

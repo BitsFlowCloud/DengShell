@@ -18,6 +18,7 @@ type App struct {
 	uiFontMu         sync.Mutex
 	uiFontsAtStartup map[string]bool
 	activeUIFontID   string
+	fontLibrary      fontLibraryState
 	ctx              context.Context
 	cancel           context.CancelFunc
 	store            *Store
@@ -117,6 +118,7 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 	a.registerConnectionManagementHTTP(mux)
 	a.registerFinalShellImportHTTP(mux)
 	a.registerSettingsHTTP(mux)
+	a.registerFontLibraryHTTP(mux)
 	a.registerDiagnosticsHTTP(mux)
 	a.registerMTRInstallationHTTP(mux)
 	a.registerUpdateHTTP(mux)

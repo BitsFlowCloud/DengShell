@@ -53,6 +53,45 @@ func TestPromptStyleShellHooksColorAndRestoreOriginal(t *testing.T) {
 	}
 }
 
+func TestPromptStylePreservesHiddenTitlesAndLiteralEscapes(t *testing.T) {
+	for _, tc := range []struct {
+		name, shell, prefix, visible, colored string
+	}{
+		{"ubuntu-title", "bash", `\[\e]0;\u@\h: \w\a\]`, `\u@\h:\w\$ `, `\[\e[38;2;17;34;51m\]\u\[\e[39m\]@\[\e[38;2;171;205;239m\]\h\[\e[39m\]:\w\$ `},
+		{"title-ST-full-host", "bash", `\[\033]2;\u@\H: \w\033\\\]`, `\u@\H:\w\$ `, `\[\e[38;2;17;34;51m\]\u\[\e[39m\]@\[\e[38;2;171;205;239m\]\H\[\e[39m\]:\w\$ `},
+		{"literal-backslashes", "bash", `literal \\u@\\h `, `\u@\h:\w\$ `, `\[\e[38;2;17;34;51m\]\u\[\e[39m\]@\[\e[38;2;171;205;239m\]\h\[\e[39m\]:\w\$ `},
+		{"zsh-title", "zsh", "%{\x1b]0;%n@%m: %~\a%}", "%n@%m:%~%# ", "%F{#112233}%n%f@%F{#abcdef}%m%f:%~%# "},
+		{"zsh-nested-hidden", "zsh", "%{\x1b]2;%{%n%}@%M: %~\x1b\\%}", "%n@%M:%~%# ", "%F{#112233}%n%f@%F{#abcdef}%M%f:%~%# "},
+		{"literal-percent", "zsh", "literal %%n@%%m ", "%n@%m:%~%# ", "%F{#112233}%n%f@%F{#abcdef}%m%f:%~%# "},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			executable, args := testLoginShell(t, tc.shell)
+			dir := t.TempDir()
+			style, hook := filepath.Join(dir, "style"), filepath.Join(dir, "hook")
+			if err := os.WriteFile(style, []byte("#112233\n#abcdef\n"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			body, err := shellIntegrationAssets.ReadFile("shell_integration/prompt-" + tc.shell + ".sh")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(hook, bytes.ReplaceAll(body, []byte("@DENGSHELL_STYLE_FILE@"), []byte(style)), 0600); err != nil {
+				t.Fatal(err)
+			}
+			original := tc.prefix + tc.visible
+			script := "PS1=" + terminalQuote(original) + "; . " + terminalQuote(hook) + "; __dengshell_apply_prompt_style; first=$PS1; __dengshell_apply_prompt_style; __dengshell_apply_prompt_style; [ \"$PS1\" = \"$first\" ] || exit 47; printf '%s\\0' \"$PS1\"; printf '\\n\\n' > " + terminalQuote(style) + "; __dengshell_apply_prompt_style; printf '%s' \"$PS1\""
+			output, err := exec.Command(executable, append(args, "-c", script)...).CombinedOutput()
+			if err != nil {
+				t.Fatal(err, string(output))
+			}
+			want := tc.prefix + tc.colored + "\x00" + original
+			if string(output) != want {
+				t.Fatalf("hidden title/literal escapes changed, or visible colors/reset failed:\n got %q\nwant %q", output, want)
+			}
+		})
+	}
+}
+
 func TestPromptStyleValidationNeverExecutesFileContent(t *testing.T) {
 	shell, err := exec.LookPath("bash")
 	if err != nil {

@@ -1,6 +1,6 @@
 'use strict';
 
-let appearance = { uiFontId: 'builtin:ui-noto-sans', uiTextColors: {}, fontId: 'builtin:jetbrains-mono', fontColors: {}, fontBold: {}, chartStyles: {}, backgroundId: 'builtin:none', backgroundOpacity: .42, backgroundVersion: 2, uiScale: Number(window.CLOUDSHELL?.uiScale) || 1, terminalFontSize: 14, startupAnimation: window.DengShellSplash?.enabled !== false };
+let appearance = { uiFontId: 'builtin:ui-ibm-plex-sans-sc', uiTextColors: {}, fontId: 'builtin:jetbrains-mono', fontColors: {}, fontBold: {}, chartStyles: {}, backgroundId: 'builtin:none', backgroundOpacity: .42, backgroundVersion: 2, uiScale: Number(window.CLOUDSHELL?.uiScale) || 1, terminalFontSize: 14, startupAnimation: window.DengShellSplash?.enabled !== false };
 const appearanceMapFields = new Set(['fontColors', 'fontBold', 'chartStyles', 'uiTextColors']);
 const appearanceOwnedElsewhere = new Set(['layout', 'windowWidth', 'windowHeight', 'windowMaximised', 'terminalBold']);
 let appearanceSaved = appearanceSnapshot(appearance);
@@ -8,6 +8,7 @@ let managedAssets = [], managedProxies = [], fontCatalog = null, backgroundCatal
 let terminalFontFamily = 'monospace', appearanceReady, appearanceSave = Promise.resolve(), mediaGeneration = 0;
 const fontLoads = new Map(), assetData = new Map();
 const proportionalTerminalFonts = new Set();
+const terminalFallbackFaces = new Map();
 let activeFontID = '', activeBackgroundID = '', effectiveScale = 1, appearanceOperation = 0;
 const logicalWidth = () => innerWidth / effectiveScale;
 const logicalHeight = () => innerHeight / effectiveScale;
@@ -59,17 +60,32 @@ async function loadFace(font) {
   return fontLoads.get(font.id);
 }
 async function alignedTerminalFontFamily(font) {
-  const family = `"${font.family}", "${fontCatalog.fallback.family}", monospace`;
-  if (font.kind === 'builtin') return family;
   // Uploaded display fonts may have proportional Latin glyphs. Keep their CJK
   // appearance, but use an explicitly named monospace Latin fallback in a grid.
   const canvas = document.createElement('canvas'), context = canvas.getContext('2d');
   context.font = `100px "${font.family}"`; context.fontKerning = 'none';
   const widths = [...'iWm0 .|'].map(char => context.measureText(char).width);
-  if (Math.max(...widths)-Math.min(...widths) < .1) return family;
+  let fallbackFamily = fontCatalog.fallback.family;
+  const family = () => `"${font.family}", "${fallbackFamily}", monospace`;
+  if (Math.max(...widths)-Math.min(...widths) < .1) {
+    // Narrow faces (e.g. Iosevka) use 0.5 em cells, while Maple's Han glyphs
+    // occupy 1.2 em. Scale only the fallback face to fit exactly two cells.
+    const ratio = Math.min(1, widths[0] / 60);
+    if (ratio < .995) {
+      const key = ratio.toFixed(6), alias = `Deng CJK fit ${key}`;
+      if (!terminalFallbackFaces.has(key)) terminalFallbackFaces.set(key, (async () => {
+        const url = await assetURL(fontCatalog.fallback);
+        const face = new FontFace(alias, `url(${JSON.stringify(url)})`, { weight: '400', sizeAdjust: `${ratio * 100}%` });
+        if (!('sizeAdjust' in face)) throw new Error('当前浏览器内核不支持窄字体的中文对齐，请更新系统 WebView 后使用此字体');
+        await face.load(); document.fonts.add(face); return face;
+      })().catch(error => { terminalFallbackFaces.delete(key); throw error; }));
+      await terminalFallbackFaces.get(key); fallbackFamily = alias;
+    }
+    return family();
+  }
   proportionalTerminalFonts.add(font.id);
   const mono = allFonts().find(item => item.id === 'builtin:jetbrains-mono'); await loadFace(mono);
-  return `"${mono.family}", ${family}`;
+  return `"${mono.family}", ${family()}`;
 }
 
 // xterm 6's DOM renderer measures each glyph with integer offsetWidth / 32.
@@ -270,6 +286,7 @@ function persistAppearance(patch = {}, alreadyApplied = false) {
   return saving;
 }
 async function chooseAppearance(patch) {
+  window.DengFontLibrary?.selectionChanged(patch);
   const previous = { ...appearance }, operation = ++appearanceOperation;
   appearance = { ...appearance, ...patch };
   try { await applyAppearance(); if (operation !== appearanceOperation) return; await persistAppearance(patch, true); if ($('#appearance-dialog').open) renderAssets(); }
@@ -319,13 +336,14 @@ async function openAppearance(kind) {
   setSettingsMenu(false); assetKind = kind;
   await initializeAppearanceCatalogs();
   const isFont = kind === 'font';
-  $('#appearance-title').textContent = isFont ? '终端字体' : '背景管理器';
+  $('#appearance-title').textContent = isFont ? '字体设置 · Shell 字体' : '背景管理器';
   $('#appearance-description').textContent = isFont ? '每款字体单独设置加粗和颜色，点击字体即可应用。' : '背景立即生效，可拖动此面板观察终端。';
   $('#import-asset span').textContent = isFont ? '导入字体' : '导入背景';
   $('#asset-picker').accept = isFont ? '.ttf,.otf,.woff,.woff2' : '.png,.jpg,.jpeg,.webp';
   $('#background-strength').hidden = isFont; $('#font-preview').hidden = !isFont;
   $('#asset-list').classList.toggle('font-list', isFont);
   $('#appearance-dialog').dataset.kind = kind;
+  $('#shell-font-navigation').hidden = !isFont; $('#shell-font-online-entry').hidden = !isFont;
   renderAppearanceControls(); renderAssets();
   if (!$('#appearance-dialog').open) $('#appearance-dialog').show();
   positionAppearancePalette();
@@ -344,7 +362,7 @@ function renderAssets() {
     card.classList.toggle('selected', selected);
     const choose = card.querySelector('.asset-choice'); choose.setAttribute('aria-pressed', String(selected)); choose.title = `使用 ${asset.name}`;
     card.querySelector('.asset-caption strong').textContent = asset.name;
-    card.querySelector('.asset-caption span').textContent = isFont && proportionalTerminalFonts.has(asset.id) ? `${selected ? '使用中 · ' : ''}英文采用等宽回退` : selected ? '正在使用 ✓' : asset.id.startsWith('builtin:') ? '内置' : '自定义';
+    card.querySelector('.asset-caption span').textContent = isFont && proportionalTerminalFonts.has(asset.id) ? `${selected ? '使用中 · ' : ''}英文采用等宽回退` : selected ? '正在使用 ✓' : asset.id.startsWith('builtin:') ? '内置' : asset.libraryId ? '已下载 · 可离线使用' : '自定义';
     if (isFont) reflectFontCardControls(card);
     // Existing cards retain their inputs, disclosure state, keyboard focus and scroll position.
     if (list.children[index] !== card) list.insertBefore(card, list.children[index] || null);
@@ -562,6 +580,9 @@ function initializeAppearance() {
   });
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && !$('#monitor-backdrop').hidden) $('#monitor-backdrop').click(); if (event.key === 'Escape' && !$('#settings-menu').hidden) { setSettingsMenu(false); $('#settings-button').focus(); } });
   $('#manage-backgrounds').onclick = safe(() => openAppearance('background')); $('#manage-fonts').onclick = safe(() => openAppearance('font'));
+  $('#manage-shell-fonts').onclick = safe(() => openAppearance('font'));
+  $('#switch-ui-fonts').onclick = safe(() => window.DengUIAppearance.open());
+  $('#online-shell-fonts').onclick = safe(() => window.DengFontLibrary.open('font'));
   $('#manage-proxies').onclick = showProxies; $('#manage-profile-proxies').onclick = showProxies;
   $('#close-appearance').onclick = () => $('#appearance-dialog').close(); $('#import-asset').onclick = safe(importAsset);
   $('#asset-picker').onchange = safe(async event => {

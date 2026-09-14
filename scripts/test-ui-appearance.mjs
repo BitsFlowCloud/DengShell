@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const values = new Map(), loaded = [], gates = new Map(), errors = [];
-const base = 'builtin:ui-noto-sans', slow = 'builtin:ui-sarasa', fast = 'builtin:ui-wenkai';
+const base = 'builtin:ui-ibm-plex-sans-sc', slow = 'builtin:ui-sarasa', fast = 'builtin:ui-wenkai';
 let runtime = { availableIds: [], activeId: base };
 const config = { fonts: [base, slow, fast].map(id => ({ id, name: id, family: id, file: id })) };
 const root = { dataset: { theme: 'light' }, toggleAttribute() {}, style: { setProperty: (k, v) => values.set(k, v), removeProperty: k => values.delete(k) } };

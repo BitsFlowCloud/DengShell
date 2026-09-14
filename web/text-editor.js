@@ -53,7 +53,7 @@ window.DengTextEditors = (() => {
       tab.append(select, close); doc.ui.panel.hidden = !active; return tab;
     }));
     const doc = win.active;
-    win.title.textContent = doc ? `${doc.owner} · ${doc.path}` : '文本编辑器';
+    win.title.textContent = '文本编辑器';
     win.title.title = doc ? `${doc.address}\n${doc.path}` : '';
     win.detach.disabled = !doc;
     win.merge.disabled = windows.length < 2;
@@ -99,7 +99,8 @@ window.DengTextEditors = (() => {
     const layout = node('div', 'text-editor-layout-tools');
     win.detach = button('移到新窗口', 'upload-button', () => { if (windows.length >= 12) { toast('最多同时打开 12 个编辑窗口'); return; } if (win.active) moveDoc(win.active, makeWindow()); });
     win.merge = button('合并到另一窗口', 'upload-button', () => { const target = windows.find(w => w !== win); if (target && win.active) moveDoc(win.active, target); });
-    layout.append(node('span', '', '窗口可拖动；右下角可调整大小'), win.detach, win.merge);
+    head.title = '拖动标题栏移动窗口；右下角可调整大小';
+    layout.append(win.detach, win.merge);
     win.body = node('div', 'text-editor-panels'); e.append(head, win.tabs, layout, win.body);
     e.addEventListener('pointerdown', () => raise(win), true);
     e.addEventListener('cancel', event => { event.preventDefault(); e.close(); });
@@ -153,7 +154,8 @@ window.DengTextEditors = (() => {
   function makePanel(doc) {
     const ui = {}; doc.ui = ui;
     ui.panel = node('section', 'text-editor-panel'); ui.panel.id = `text-editor-document-${++serial}`; ui.panel.setAttribute('role', 'tabpanel');
-    const owner = node('p', 'text-editor-owner', `服务器：${doc.owner} · ${doc.address}\n文件：${doc.path}`); owner.title = owner.textContent;
+    const owner = node('p', 'text-editor-owner', doc.path); owner.title = `${doc.owner} · ${doc.address}\n${doc.path}`;
+    owner.setAttribute('aria-label', `当前文件路径：${doc.path}`);
     const toolbar = node('div', 'text-editor-toolbar'), label = node('label', '', '编码'); ui.encoding = node('select'); ui.encoding.setAttribute('aria-label', '原文件编码');
     for (const [value, name] of encodings) { const option = node('option', '', name); option.value = value; ui.encoding.append(option); }
     ui.encoding.onchange = safe(() => reload(doc, ui.encoding.value)); label.append(ui.encoding);

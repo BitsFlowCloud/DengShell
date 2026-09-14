@@ -1,127 +1,19 @@
 {
   "fonts": [
     {
-      "id": "builtin:ui-noto-sans",
-      "name": "Noto 黑体",
-      "family": "Deng UI Sans",
-      "upstream": "Noto Sans CJK SC",
-      "description": "清晰均衡 · 默认",
-      "version": "f8d157532fbfaeda587e826d4cd5b21a49186f7c",
-      "file": "assets/ui-fonts/noto-sans.woff2",
-      "preview": "assets/ui-fonts/noto-sans-preview.woff2",
-      "license": "assets/ui-fonts/noto-sans-OFL.txt",
+      "id": "builtin:ui-ibm-plex-sans-sc",
+      "name": "IBM Plex Sans SC",
+      "family": "Deng UI IBM Plex",
+      "upstream": "IBM Plex Sans SC",
+      "description": "默认界面字体 · 清晰的中英文混排",
+      "version": "bf260093582f04622aacc1e9f9ca604d7ccd0c42",
+      "file": "assets/ui-fonts/ibm-plex-sans-sc.woff2",
+      "license": "assets/ui-fonts/ibm-plex-sans-sc-OFL.txt",
       "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf",
-      "sourceFile": "noto-sans.otf",
-      "sourceSha256": "2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b",
-      "archiveSha256": "2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b",
-      "sha256": "89a1993a6feccf7d125e263c8fc269c5a2699ff7ba74f59c152aa7b939433687",
-      "bytes": 11422632,
-      "unicodeMappings": 44810
-    },
-    {
-      "id": "builtin:ui-noto-serif",
-      "name": "Noto 宋体",
-      "family": "Deng UI Serif",
-      "upstream": "Noto Serif CJK SC",
-      "description": "衬线分明 · 书面阅读",
-      "version": "f8d157532fbfaeda587e826d4cd5b21a49186f7c",
-      "file": "assets/ui-fonts/noto-serif.woff2",
-      "preview": "assets/ui-fonts/noto-serif-preview.woff2",
-      "license": "assets/ui-fonts/noto-serif-OFL.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Serif/OTF/SimplifiedChinese/NotoSerifCJKsc-Regular.otf",
-      "sourceFile": "noto-serif.otf",
-      "sourceSha256": "2a2eae2628df83556c54018c41e20fa532c1b862c5256ae8b3f23feb918d12ca",
-      "archiveSha256": "2a2eae2628df83556c54018c41e20fa532c1b862c5256ae8b3f23feb918d12ca",
-      "sha256": "fb49b08692ae0df02e894d891f18d7a93011d5663b581ffe26c334630d5736f1",
-      "bytes": 16710944,
-      "unicodeMappings": 44777
-    },
-    {
-      "id": "builtin:ui-sarasa",
-      "name": "更纱 UI",
-      "family": "Deng UI Sarasa",
-      "upstream": "Sarasa UI SC",
-      "description": "紧凑利落 · 信息密集",
-      "version": "v1.0.41",
-      "file": "assets/ui-fonts/sarasa.woff2",
-      "preview": "assets/ui-fonts/sarasa-preview.woff2",
-      "license": "assets/ui-fonts/sarasa-OFL.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://github.com/be5invis/Sarasa-Gothic/releases/download/v1.0.41/SarasaUiSC-TTF-1.0.41.7z",
-      "sourceFile": "SarasaUiSC-Regular.ttf",
-      "sourceSha256": "7af09826004585298057f4e9a73c4e01804ba104ba1368351693bb6bc9ff5e84",
-      "archiveSha256": "568015e578037cdcfb7c55d522f7e861e11ecd304824d6c94965cbb2187a8d78",
-      "sha256": "52c4793a722eaf2194060991cdab8e01b2c5500161e37932989ca89632d43039",
-      "bytes": 8343512,
-      "unicodeMappings": 46272
-    },
-    {
-      "id": "builtin:ui-wenkai",
-      "name": "霞鹜文楷屏幕版",
-      "family": "Deng UI WenKai",
-      "upstream": "LXGW WenKai Screen",
-      "description": "楷书笔形 · 屏幕优化",
-      "version": "v1.522",
-      "file": "assets/ui-fonts/wenkai.woff2",
-      "preview": "assets/ui-fonts/wenkai-preview.woff2",
-      "license": "assets/ui-fonts/wenkai-OFL.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://github.com/lxgw/LxgwWenKai-Screen/releases/download/v1.522/LXGWWenKaiScreen.ttf",
-      "sourceFile": "wenkai.ttf",
-      "sourceSha256": "cd1a6fa39c4ea42fd8f4e289945789b0e510cf7016435640f8893cdad9b220f3",
-      "archiveSha256": "cd1a6fa39c4ea42fd8f4e289945789b0e510cf7016435640f8893cdad9b220f3",
-      "sha256": "11fa14097e0e83ab2c6f8bcd73f8ab5e3bafe2cee00e2c3d41205699b65229cb",
-      "bytes": 10106688,
-      "unicodeMappings": 47449
-    },
-    {
-      "id": "builtin:ui-maple",
-      "name": "Maple Mono CN",
-      "family": "Deng UI Maple",
-      "upstream": "Maple Mono CN",
-      "description": "圆润等宽 · 中英混排",
-      "version": "v7.9",
-      "file": "assets/ui-fonts/maple.woff2",
-      "preview": "assets/ui-fonts/maple-preview.woff2",
-      "license": "assets/ui-fonts/maple-OFL.txt",
-      "licenseName": "SIL Open Font License 1.1",
-      "source": "https://github.com/subframe7536/maple-font/releases/download/v7.9/MapleMono-CN.zip",
-      "sourceFile": "MapleMono-CN-Regular.ttf",
-      "sourceSha256": "e6338c3dca9a3bed3fb81f43c8bb8feca3b6ad54829f5a3229527d030a321dbd",
-      "archiveSha256": "cb1e79b2c23dff772ae351784ef2b84454a61b3920e9b20bd5db4bf207e4472d",
-      "sha256": "8c4b7a81826bf14334c7169463a1b38eef2874418b6046097b3963f6363ef2f6",
-      "bytes": 5429604,
-      "unicodeMappings": 22731
+      "source": "https://raw.githubusercontent.com/IBM/plex/bf260093582f04622aacc1e9f9ca604d7ccd0c42/packages/plex-sans-sc/fonts/complete/woff2/hinted/IBMPlexSansSC-Regular.woff2",
+      "bytes": 3813972,
+      "sha256": "dc51399ce38f7200806df891476d7216a81c8aede47284e421a54413608c407c"
     }
   ],
-  "previewText": "DengShell ABC 012345 简体中文，清晰易读。繁體中文，閱讀舒適。",
-  "coverage": {
-    "noto-sans": {
-      "unicodeMappings": 44810,
-      "missingApplicationCharacters": "",
-      "asciiAndPreviewComplete": true
-    },
-    "noto-serif": {
-      "unicodeMappings": 44777,
-      "missingApplicationCharacters": "",
-      "asciiAndPreviewComplete": true
-    },
-    "sarasa": {
-      "unicodeMappings": 46272,
-      "missingApplicationCharacters": "",
-      "asciiAndPreviewComplete": true
-    },
-    "wenkai": {
-      "unicodeMappings": 47449,
-      "missingApplicationCharacters": "",
-      "asciiAndPreviewComplete": true
-    },
-    "maple": {
-      "unicodeMappings": 22731,
-      "missingApplicationCharacters": "",
-      "asciiAndPreviewComplete": true
-    }
-  }
+  "previewText": "简体中文 · 繁體中文 · English 012345"
 }

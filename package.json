@@ -5,8 +5,9 @@
   "description": "DengShell SSH desktop workspace",
   "scripts": {
     "vendor": "node scripts/vendor.mjs",
-    "check": "node --check web/app.js && node --check web/theme.js && node --check web/workspace-tools.js && node --check web/appearance.js && node --check web/appearance-tools.js && node --check web/workspace-refinements.js && node --check web/file-browser.js && node --check web/themed-select.js && node --check web/terminal-integration.js && node --check web/mtr-installation.js && node --check web/config-document.js && node --check web/splash.js && node --check web/server-manager.js && node --check web/help-guide.js && node --check web/startup-update.js && node --check web/portable-preferences.js && node --check web/text-model.js && node --check web/file-tools.js && node --check web/desktop-tray.js && node --check web/latency-chart.js && node --check web/common-apps.js && node --check web/session-windows.js && node --check web/terminal-snapshot.js && node --check web/server-addresses.js && node --check web/window-preview.js && node --check web/window-transfers.js && node --check web/system-identity.js && node --check web/chart-styles.js && node --check web/ui-appearance.js && node --check web/finalshell-import.js && node --check web/command-composer.js && node --check web/remote-text-document.js && node --check web/text-editor.js && node --check web/server-explorer.js",
+    "check": "node --check web/app.js && node --check web/theme.js && node --check web/workspace-tools.js && node --check web/appearance.js && node --check web/appearance-tools.js && node --check web/workspace-refinements.js && node --check web/file-browser.js && node --check web/themed-select.js && node --check web/terminal-integration.js && node --check web/mtr-installation.js && node --check web/config-document.js && node --check web/splash.js && node --check web/server-manager.js && node --check web/help-guide.js && node --check web/startup-update.js && node --check web/portable-preferences.js && node --check web/text-model.js && node --check web/file-tools.js && node --check web/desktop-tray.js && node --check web/latency-chart.js && node --check web/common-apps.js && node --check web/session-windows.js && node --check web/terminal-snapshot.js && node --check web/server-addresses.js && node --check web/window-preview.js && node --check web/window-transfers.js && node --check web/system-identity.js && node --check web/chart-styles.js && node --check web/ui-appearance.js && node --check web/font-library.js && node --check web/finalshell-import.js && node --check web/command-composer.js && node --check web/remote-text-document.js && node --check web/text-editor.js && node --check web/server-explorer.js",
     "test:history": "node scripts/test-command-history.mjs",
+    "test:prompt": "node scripts/test-prompt-rendering.mjs",
     "test:latency": "node scripts/test-latency-chart.mjs",
     "test:traffic": "node scripts/test-traffic-chart.mjs",
     "test:snapshot": "node scripts/test-terminal-snapshot.mjs",
@@ -18,7 +19,8 @@
     "test:file-sort": "node scripts/test-file-sort.mjs",
     "test:commands": "node scripts/test-command-composer.mjs",
     "test:editors": "node scripts/test-file-editor-races.mjs",
-    "test:server-explorer": "node scripts/test-server-explorer.mjs"
+    "test:server-explorer": "node scripts/test-server-explorer.mjs",
+    "test:font-selection": "node scripts/test-font-selection.mjs"
   },
   "dependencies": {
     "@xterm/addon-fit": "0.11.0",

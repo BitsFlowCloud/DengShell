@@ -27,7 +27,7 @@ def zip_tree(folder, target, prefix=Path()):
 def distribution(folder, binary, windows):
     folder.mkdir(parents=True, exist_ok=False)
     copy(binary, folder/('DengShell.exe' if windows else 'dengshell'))
-    for sub, pattern, dest in [('build/font-licenses','*.txt','fonts'), ('web/vendor','*LICENSE',''), ('build/go-licenses','*','go'), ('build/installer-licenses','*','installer')]:
+    for sub, pattern, dest in [('web/assets/fonts/licenses','*.txt','fonts'), ('web/vendor','*LICENSE',''), ('build/go-licenses','*','go'), ('build/installer-licenses','*','installer')]:
         for p in (ROOT/sub).glob(pattern):
             if p.is_file(): copy(p, folder/'data/licenses'/dest/p.name)
     for name in ['LICENSE-GRAPHICS.txt','ATTRIBUTION.txt']: copy(ROOT/'web/assets/group-emoji'/name,folder/'data/licenses'/('Twemoji-'+name))
@@ -78,21 +78,21 @@ def package(args):
     copy(ROOT/'build/windows/README.txt',out/'DengShell-Windows-说明.txt')
     source = work/'source';source.mkdir()
     sourcefiles=[]
-    for pattern in ['*.go','go.mod','go.sum','package.json','package-lock.json','*.sh','*.ps1','*.syso','README.md','CHANGELOG.md','LICENSE','.gitignore']:
+    for pattern in ['.gitattributes','*.go','go.mod','go.sum','package.json','package-lock.json','*.sh','*.ps1','*.syso','README.md','CHANGELOG.md','LICENSE','.gitignore']:
         sourcefiles += list(ROOT.glob(pattern))
     for folder in ['web','internal','scripts','cmd','.github']:
         sourcefiles += [p for p in (ROOT/folder).rglob('*') if p.is_file() and '__pycache__' not in p.parts]
     sourcefiles += [p for p in (ROOT/'docs').rglob('*') if p.is_file()]
     for name in ['dengshell.png','dengshell.svg','dengshell.ico','CONNECTION-CONFIG.md','config.example.json','COMMON-APPS.md',f'RELEASE-v0.01-r{RELEASE}.md','ONLINE-UPDATE-DESIGN.md','UPDATER-CONTRACT.md','SIGNED-UPDATES.md','FONT-VALIDATION.md','BACKGROUND-PROMPTS-v0.01.json','windows/app.manifest','windows/README.txt','linux/README.txt','linux/Dockerfile','linux/.dockerignore','linux/COMPATIBILITY.json']:
         sourcefiles.append(ROOT/'build'/name)
-    for folder in ['go-licenses','font-licenses','installer-licenses']:
+    for folder in ['go-licenses','font-licenses','font-library-site','installer-licenses']:
         sourcefiles += [p for p in (ROOT/'build'/folder).glob('*') if p.is_file()]
-    for name in ['FINALSHELL-IMPORT.md','COMMANDS-AND-EDITORS.md',f'FUNCTIONAL-AUDIT-r{RELEASE}.md','linux/Arch.Dockerfile']:
+    for name in ['FINALSHELL-IMPORT.md','COMMANDS-AND-EDITORS.md','FONT-REFORM-REPORT.md','FUNCTIONAL-RECHECK-20260914.md',f'FUNCTIONAL-AUDIT-r{RELEASE}.md','linux/Arch.Dockerfile']:
         sourcefiles.append(ROOT/'build'/name)
     for p in sorted(set(sourcefiles)):copy(p,source/p.relative_to(ROOT))
     copy(linuxbinary.parent/'build-info.json',source/'build/linux/native/build-info.json')
     zip_tree(source,out/'DengShell-source.zip',Path('DengShell'))
-    notes=f'R20 至 R{RELEASE} 累计更新：服务器目录分栏与多级导航、FinalShell 私钥自动关联、命令参数与排序、多窗口文本编辑、字体与文字颜色、Bash/Zsh/Fish 兼容和 Arch 自动更新；修复 Windows 更新文件误判及重启后窗口隐藏。'
+    notes=f'R30 至 R{RELEASE} 累计更新：精简内置字体并加入在线字体库，分组背景色与三次确认删除，紧凑连接列表及跨服务器文本编辑；优化 SSH 初始化，修复提示符重复、默认网卡选择、字体切换竞态与连接历史残留。'
     for binary,artifact,platform,name in [(winbinary,winbinary,'windows-amd64','up.exe'),(linuxbinary,out/'up.deb','linux-amd64','up.deb'),(linuxbinary,out/'DengShell-linux-x64.pkg.tar.zst','linux-amd64-pacman','up.pkg.tar.zst')]:
         copy(artifact,site/name)
         info={'schemaVersion':2,'build':BUILD,'product':'DengShell','platform':platform,'version':'v0.01','notes':notes,'sha256':digest(artifact),'size':artifact.stat().st_size,'executableSHA256':digest(binary)}

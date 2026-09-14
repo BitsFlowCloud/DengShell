@@ -61,8 +61,11 @@ func (value *Appearance) UnmarshalJSON(data []byte) error {
 		}
 		next.BackgroundVersion = 2
 	}
-	if next.UIFontID == "" {
+	if next.UIFontID == "" || retiredBuiltinUIFont(next.UIFontID) {
 		next.UIFontID = defaultUIFontID
+	}
+	if strings.HasPrefix(next.FontID, "builtin:") && !builtinTerminalFont(next.FontID) {
+		next.FontID = "builtin:jetbrains-mono"
 	}
 	if next.UITextColors == nil {
 		next.UITextColors = map[string]string{}
@@ -137,6 +140,9 @@ func (s *Store) saveAppearanceLocked(value Appearance) (Appearance, error) {
 	}
 	if err := validateUIAppearance(value, s.config.Assets); err != nil {
 		return Appearance{}, err
+	}
+	if validBuiltinAssetID(value.FontID) && !builtinTerminalFont(value.FontID) {
+		return Appearance{}, errors.New("所选内置终端字体不存在，请从在线字体库下载或重新选择")
 	}
 	if err := validateChartStyles(value.ChartStyles); err != nil {
 		return Appearance{}, err

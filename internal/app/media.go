@@ -23,12 +23,17 @@ const maxFontBytes = 64 << 20
 const maxBackgroundBytes = 32 << 20
 
 type ManagedAsset struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Kind      string    `json:"kind"`
-	MIMEType  string    `json:"mimeType"`
-	Size      int64     `json:"size"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Kind        string    `json:"kind"`
+	MIMEType    string    `json:"mimeType"`
+	Size        int64     `json:"size"`
+	CreatedAt   time.Time `json:"createdAt"`
+	LibraryID   string    `json:"libraryId,omitempty"`
+	LicenseName string    `json:"licenseName,omitempty"`
+	LicenseText string    `json:"licenseText,omitempty"`
+	SourceURL   string    `json:"sourceUrl,omitempty"`
+	WeightRange string    `json:"weightRange,omitempty"`
 }
 
 type AssetContent struct {
@@ -92,6 +97,10 @@ func (a *App) ImportLocalAsset(kind, path, name string) (ManagedAsset, error) {
 }
 
 func (s *Store) ImportAsset(kind, filename, name string, data []byte) (ManagedAsset, error) {
+	return s.importAsset(kind, filename, name, data, nil)
+}
+
+func (s *Store) importAsset(kind, filename, name string, data []byte, library *LibraryFont) (ManagedAsset, error) {
 	limit, err := assetLimit(kind)
 	if err != nil {
 		return ManagedAsset{}, err
@@ -108,6 +117,10 @@ func (s *Store) ImportAsset(kind, filename, name string, data []byte) (ManagedAs
 		return ManagedAsset{}, err
 	}
 	asset := ManagedAsset{ID: randomID(), Name: name, Kind: kind, MIMEType: mime, Size: int64(len(data)), CreatedAt: time.Now()}
+	if library != nil {
+		asset.LibraryID, asset.LicenseName, asset.LicenseText = library.ID, library.LicenseName, library.LicenseText
+		asset.SourceURL, asset.WeightRange = library.Project, library.WeightRange
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	dir := filepath.Join(s.dir, "assets")

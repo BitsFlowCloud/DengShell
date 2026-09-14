@@ -1,5 +1,10 @@
 /* Split server manager. UI state uses the portable encrypted preference store. */
 'use strict';
+function serverGroupColorText(color) {
+  const channels = [1,3,5].map(i => parseInt(color.slice(i,i+2),16)/255).map(v => v <= .04045 ? v/12.92 : ((v+.055)/1.055)**2.4);
+  const luminance = channels[0]*.2126 + channels[1]*.7152 + channels[2]*.0722;
+  return luminance > .179 ? '#000000' : '#ffffff';
+}
 function saveServerExplorer() {
   save('dengshell.server-manager', { treeWidth: serverManager.treeWidth, includeChildren: serverManager.includeChildren, selectedGroup: serverManager.selectedGroup });
 }
@@ -41,6 +46,11 @@ function renderServerExplorer(tree, query) {
   function rowFor(group, depth, total, all = false) {
     const row = node('div', 'server-folder-wrap'); row.dataset.groupId = group.id; row.style.setProperty('--folder-depth', depth);
     const heading = node('div', 'server-folder-row'); heading.dataset.level = String(depth + 1); heading.classList.toggle('server-folder-selected', group.id === serverManager.selectedGroup); heading.classList.toggle('server-folder-ancestor', ancestors.has(group.id) && group.id !== serverManager.selectedGroup); if (all) heading.classList.add('server-folder-all');
+    if (/^#[0-9a-f]{6}$/i.test(group.backgroundColor || '')) {
+      heading.classList.add('server-folder-colored');
+      heading.style.setProperty('--folder-color', group.backgroundColor);
+      heading.style.setProperty('--folder-color-text', serverGroupColorText(group.backgroundColor));
+    }
     const children = all ? [] : tree.children.get(group.id) || [], expanded = !!query || !serverManager.collapsed.has(group.id);
     const caret = node(children.length ? 'button' : 'span', 'server-folder-caret');
     if (children.length) {

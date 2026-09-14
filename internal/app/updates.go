@@ -25,7 +25,7 @@ const ApplicationVersion = "v0.01"
 
 // Increase this integer for every published build, including packaging-only
 // releases. Display versions alone do not distinguish the v0.01 revisions.
-const ApplicationBuild uint64 = 20260914030
+const ApplicationBuild uint64 = 20260914040
 const UpdateManifestURL = "https://ds.free-vps.org/up.deb.json"
 const updateTimeout = 3 * time.Second
 const maximumUpdateSize int64 = 1 << 30

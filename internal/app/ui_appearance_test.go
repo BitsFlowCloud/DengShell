@@ -22,10 +22,10 @@ func TestUIFontRestartBoundaryAndDeletion(t *testing.T) {
 		t.Fatal(err)
 	}
 	// A previously usable built-in remains active while a new import is pending.
-	if _, err = a.store.PatchAppearance(preferencePatch(t, `{"uiFontId":"builtin:ui-sarasa"}`)); err != nil {
+	if _, err = a.store.PatchAppearance(preferencePatch(t, `{"uiFontId":"builtin:ui-ibm-plex-sans-sc"}`)); err != nil {
 		t.Fatal(err)
 	}
-	if got := a.uiFontRuntime(); got.ActiveID != "builtin:ui-sarasa" {
+	if got := a.uiFontRuntime(); got.ActiveID != "builtin:ui-ibm-plex-sans-sc" {
 		t.Fatal(got)
 	}
 	asset, err := a.store.ImportAsset("ui-font", "ui.woff2", "测试界面字体", font)
@@ -49,7 +49,7 @@ func TestUIFontRestartBoundaryAndDeletion(t *testing.T) {
 		if err = json.Unmarshal(response.Body.Bytes(), &got); err != nil {
 			t.Fatal(err)
 		}
-		if got.ActiveID != "builtin:ui-sarasa" || got.PendingID != asset.ID || len(got.AvailableIDs) != 0 {
+		if got.ActiveID != "builtin:ui-ibm-plex-sans-sc" || got.PendingID != asset.ID || len(got.AvailableIDs) != 0 {
 			t.Fatalf("activated without restart: %+v", got)
 		}
 	}
@@ -82,7 +82,7 @@ func TestUITextColorsMigrationValidationAndPatchIsolation(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, patch := range []string{
-		`{"fontColors":{"builtin:fira-code":"#123456"},"fontBold":{"builtin:fira-code":true},"backgroundOpacity":0.6,"uiFontId":"builtin:ui-wenkai","uiTextColors":{"light":"#ABCDEF"}}`,
+		`{"fontColors":{"builtin:fira-code":"#123456"},"fontBold":{"builtin:fira-code":true},"backgroundOpacity":0.6,"uiFontId":"builtin:ui-ibm-plex-sans-sc","uiTextColors":{"light":"#ABCDEF"}}`,
 		`{"uiTextColors":{"dark":"#FEDCBA"}}`,
 		`{"uiTextColors":{"light":"#243B4E"}}`,
 	} {
@@ -117,7 +117,7 @@ func TestUITextColorsMigrationValidationAndPatchIsolation(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := reopened.List().Appearance
-	if len(got.UITextColors) != 1 || got.UITextColors["dark"] != "#fedcba" || got.UIFontID != "builtin:ui-wenkai" || got.FontColors["builtin:fira-code"] != "#123456" || !got.FontBold["builtin:fira-code"] || got.BackgroundOpacity != .6 {
+	if len(got.UITextColors) != 1 || got.UITextColors["dark"] != "#fedcba" || got.UIFontID != "builtin:ui-ibm-plex-sans-sc" || got.FontColors["builtin:fira-code"] != "#123456" || !got.FontBold["builtin:fira-code"] || got.BackgroundOpacity != .6 {
 		t.Fatalf("patch/reset changed unrelated settings: %+v", got)
 	}
 }

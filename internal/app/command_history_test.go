@@ -25,7 +25,7 @@ func historyStoreFixture(t *testing.T) (*Store, string) {
 	return s, p.ID
 }
 
-func TestCommandHistoryDeletedProfileFlushAndClear(t *testing.T) {
+func TestCommandHistoryTrashedProfileFlushAndPurgeClear(t *testing.T) {
 	for _, mode := range []string{"live session without prior history", "persisted history", "previously loaded profile"} {
 		t.Run(mode, func(t *testing.T) {
 			a, err := New(t.TempDir())
@@ -49,10 +49,7 @@ func TestCommandHistoryDeletedProfileFlushAndClear(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			if err := a.store.Delete(p.ID); err != nil {
-				t.Fatal(err)
-			}
-			if err := a.store.Purge(p.ID); err != nil {
+			if err := a.trashProfile(p.ID); err != nil {
 				t.Fatal(err)
 			}
 			handler := a.Handler(fstest.MapFS{"index.html": {Data: []byte("fixture")}})
@@ -84,6 +81,12 @@ func TestCommandHistoryDeletedProfileFlushAndClear(t *testing.T) {
 			}
 			if _, err := reopened.commandHistory(p.ID, randomID(), "KNOWN_AFTER_REOPEN", false); err != nil {
 				t.Fatal("persisted deleted profile history lost ownership", err)
+			}
+			if err := reopened.Purge(p.ID); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := reopened.commandHistory(p.ID, randomID(), "AFTER_PURGE", false); err == nil {
+				t.Fatal("permanent deletion must reject late history writes")
 			}
 		})
 	}

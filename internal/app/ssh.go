@@ -27,6 +27,7 @@ type Session struct {
 	fileWriteIdentity   string // immutable verified server identity for text-save locks
 	client              *ssh.Client
 	files               *sftp.Client
+	preparedIntegration *terminalIntegration // immutable before session publication
 	fileOwners          fileOwnerCache
 	cancel              context.CancelFunc
 	ctx                 context.Context
@@ -219,32 +220,54 @@ func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret 
 		return nil, explainSSHAuthentication(err, p.Auth, trace)
 	}
 	client := ssh.NewClient(sshConn, chans, reqs)
+	sessionCtx, sessionCancel := context.WithCancel(a.ctx)
+	writeIdentity := strings.Join([]string{address, fingerprint, p.User, p.Proxy.Type, p.Proxy.Host, strconv.Itoa(p.Proxy.Port), p.Proxy.User}, "\x00")
+	s := &Session{ID: randomID(), ProfileID: p.ID, Fingerprint: fingerprint, connectionHost: p.Host, connectionPeer: directSSHServerPeer(client.RemoteAddr(), p.Proxy.Type), fileWriteIdentity: writeIdentity, client: client, ctx: sessionCtx, cancel: sessionCancel}
+	appearance := a.store.List().Appearance
+	s.promptUsernameColor, s.promptHostnameColor = appearance.PromptUsernameColor, appearance.PromptHostnameColor
+	// Independent SSH channels: stage the shell while the SFTP handshake/home
+	// request is in flight. Neither client nor metadata is published half-ready.
+	preparationCtx, cancelPreparation := context.WithCancel(dialCtx)
+	prepared := make(chan terminalIntegration, 1)
+	go func() { prepared <- s.prepareTerminalIntegrationContext(preparationCtx) }()
+	finishPreparation := func() {
+		if s.preparedIntegration == nil {
+			integration := <-prepared
+			s.preparedIntegration = &integration
+		}
+	}
+	connected := false
+	defer func() {
+		cancelPreparation()
+		finishPreparation()
+		if !connected {
+			s.Close()
+		}
+	}()
 	files, err := sftp.NewClient(client)
 	if err != nil {
-		client.Close()
 		return nil, fmt.Errorf("SSH 已连接，但 SFTP 不可用：%w", err)
 	}
+	s.files = files
 	home, err := files.Getwd()
 	if err != nil {
-		client.Close()
 		return nil, fmt.Errorf("读取远程目录：%w", err)
 	}
-	if !stop() {
-		client.Close()
+	s.Home = home
+	finishPreparation()
+	if err := sessionCtx.Err(); err != nil {
+		return nil, err
+	}
+	if !stop() || dialCtx.Err() != nil {
 		return nil, dialCtx.Err()
 	}
 	conn.SetDeadline(time.Time{})
-	sessionCtx, sessionCancel := context.WithCancel(a.ctx)
-	writeIdentity := strings.Join([]string{address, fingerprint, p.User, p.Proxy.Type, p.Proxy.Host, strconv.Itoa(p.Proxy.Port), p.Proxy.User}, "\x00")
-	s := &Session{ID: randomID(), ProfileID: p.ID, Home: home, Fingerprint: fingerprint, connectionHost: p.Host, connectionPeer: directSSHServerPeer(client.RemoteAddr(), p.Proxy.Type), fileWriteIdentity: writeIdentity, client: client, files: files, ctx: sessionCtx, cancel: sessionCancel}
-	appearance := a.store.List().Appearance
-	s.promptUsernameColor, s.promptHostnameColor = appearance.PromptUsernameColor, appearance.PromptHostnameColor
 	a.mu.Lock()
 	if err := a.store.MarkConnected(p.ID, time.Now()); err != nil {
 		a.mu.Unlock()
-		s.Close()
 		return nil, fmt.Errorf("无法保存成功连接记录：%w", err)
 	}
+	connected = true
 	a.sessions[s.ID] = s
 	a.mu.Unlock()
 	go func() { <-sessionCtx.Done(); a.disconnect(s.ID) }()
