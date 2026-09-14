@@ -12,7 +12,7 @@ function Buttons { @($root.FindAll([System.Windows.Automation.TreeScope]::Descen
 function Find-Button([string]$Name){for($n=0;$n -lt 80;$n++){foreach($b in (Buttons)){if($b.Current.Name -eq $Name){return $b}};Start-Sleep -Milliseconds 100};throw "Native button unavailable: $Name"}
 function Invoke-Button([string]$Name){$b=Find-Button $Name;$invoke=$b.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern);$invoke.Invoke();Start-Sleep -Milliseconds 250}
 try{
- Invoke-Button '打开服务器分组'
+ Invoke-Button '管理服务器'
  Invoke-Button '1级目录，QA 一级目录，2个连接'
  Find-Button '选择 主连接'|Out-Null
  Find-Button '选择 深层连接'|Out-Null
