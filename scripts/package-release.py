@@ -53,6 +53,13 @@ def package(args):
     for p in [out,work,site/'downloads']: p.mkdir(parents=True,exist_ok=True)
     winbinary, linuxbinary = args.windows_binary.resolve(), args.linux_binary.resolve()
     reference = (args.windows_reference or args.windows_binary).resolve()
+    # Validate the actual packed EXE with the same debug/pe reader used by old
+    # Windows updaters. Normalize UPX's empty COFF pointer before any hashes or
+    # signatures are made, keeping the caller's frozen input unchanged.
+    prepared_windows = work/'DengShell-validated.exe'
+    subprocess.run(['go', 'run', './cmd/prepare-windows-image',
+                    '-in', str(winbinary), '-out', str(prepared_windows)], cwd=ROOT, check=True)
+    winbinary = prepared_windows
     binaries = [reference.read_bytes(),linuxbinary.read_bytes()]
     assets = {}
     for folder in [ROOT/'web',ROOT/'internal/app/shell_integration']:
