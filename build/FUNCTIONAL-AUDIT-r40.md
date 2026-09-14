@@ -23,6 +23,14 @@ Linux 以 Ubuntu 22.04 / glibc 2.35 构建。在 Ubuntu 22.04、Ubuntu 24.04、D
 
 GitHub 附件仅包含 Windows 安装版及绿色 ZIP、Linux DEB / RPM / pacman / 通用包和源码 ZIP。官网同时发布三个平台的固定路径更新文件与签名清单；发布前必须校验三组二进制与清单匹配，发布后重新读取公网文件核对。
 
+## 最终 Windows 验证结果
+
+[Windows 原生验证运行记录](https://github.com/BitsFlowCloud/DengShell/actions/runs/34863710447) 全部通过，包括 Windows 后端测试、真实 WebView2 鼠标选择深层目录和连接、控制面板卸载登记、卸载保留配置、R20 升级到 R40，以及本版更新助手的重新启动测试。两种更新测试都先将窗口隐藏到托盘，完成后自动显示主窗口且不处于最小化状态。
+
+- 最终 Windows EXE：`630ff9874037f469634ed7ff70cf32c186268e5b400b8d4c395dfb8a0e08cb65`。
+- 最终 Windows 安装器：`ded8212fbc8419435906956ff780dcfbc20645c77747b1c44275625c486c6e94`。
+- 与该运行记录相比，最终源码仅继续完善验证说明；程序源文件和全部内嵌资源与被测文件保持一致。
+
 ## 验证边界
 
 Linux 为 X11 / 软件渲染容器，不能代表所有实体显卡、Wayland、托盘、缩放和桌面 polkit 授权代理。Windows 验证在 GitHub Windows 运行器进行，不能代表每台 Windows 10 / 11 实体电脑或所有安全软件。没有生成或声称验证 macOS、ARM、32 位或 musl 客户端。测试只使用独立配置及临时 SSH 密钥，不覆盖实际用户数据。
