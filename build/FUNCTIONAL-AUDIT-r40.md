@@ -24,7 +24,7 @@
 
 Windows 原生界面、安装／卸载及更新重启由仓库 `Windows release validation` 工作流验证；以本构建对应的 Actions 结果和附件 SHA-256 为准。Linux 使用 Ubuntu 22.04 / glibc 2.35 构建，验证矩阵见 [COMPATIBILITY.json](linux/COMPATIBILITY.json)，包括 Ubuntu 22.04/24.04、Debian 12、Fedora、openSUSE 和 Arch 的原生启动与包管理器安装／卸载。
 
-同名 R40 使用更高内部构建号，Windows / DEB / pacman 的更新清单继续使用原发行密钥签名。Linux 包版本修订号为 `20260915041`，使包管理器能区分本次替换版本与旧 R40；RPM 与通用包沿用手动安装方式。
+同名 R40 使用更高内部构建号，Windows / DEB / pacman 的更新清单继续使用原发行密钥签名。Linux 包内部修订号为 `41`（仍为 R40 发行，兼容旧 pacman 更新器的构建号校验），使包管理器能区分本次替换版本与旧 R40；RPM 与通用包沿用手动安装方式。
 
 GitHub 仅保留 Windows 安装版、绿色 ZIP、Linux DEB/RPM/pacman/通用包和源码 ZIP。发布后核对官网安装文件、三个更新入口与签名清单。
 

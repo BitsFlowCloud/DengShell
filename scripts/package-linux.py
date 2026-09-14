@@ -197,7 +197,7 @@ parser.add_argument('--inspect-binary', type=Path)
 parser.add_argument('--build-info', type=Path)
 parser.add_argument('--stage', type=Path)
 parser.add_argument('--version', default='0.1.0')
-parser.add_argument('--release', default=re.search(r'const ApplicationBuild uint64 = (\d+)', (ROOT/'internal/app/updates.go').read_text()).group(1))
+parser.add_argument('--release', default=str(int(re.search(r'const ApplicationBuild uint64 = (\d+)', (ROOT/'internal/app/updates.go').read_text()).group(1)) % 1000))
 parser.add_argument('--output', type=Path, default=ROOT / 'build/linux')
 args = parser.parse_args()
 if not re.fullmatch(r'[0-9]+(?:\.[0-9]+)*', args.version) or not re.fullmatch(r'[0-9]+', args.release):

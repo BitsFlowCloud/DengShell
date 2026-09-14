@@ -10,6 +10,8 @@ import argparse, hashlib, json, re, shutil, subprocess, tarfile, zipfile
 ROOT = Path(__file__).resolve().parent.parent
 BUILD = int(re.search(r'const ApplicationBuild uint64 = (\d+)', (ROOT/'internal/app/updates.go').read_text()).group(1))
 RELEASE = int(re.search(r'const ApplicationRelease = (\d+)', (ROOT/'internal/app/updates.go').read_text()).group(1))
+# Old pacman updaters bind pkgrel to the last three build digits.
+# Public R40 naming is independent of this internal package revision.
 LABEL = f'{str(BUILD)[:8]}-r{RELEASE}'
 
 def digest(p):
@@ -71,7 +73,7 @@ def package(args):
     linux = distribution(work/'DengShell-linux-x64',linuxbinary,False)
     zip_tree(win,out/'DengShell-windows-x64.zip')
     subprocess.run(['python3',str(ROOT/'scripts/package-windows.py'),'--stage',str(win),'--output',str(out/'DengShell-Setup-x64.exe')],check=True)
-    subprocess.run(['python3',str(ROOT/'scripts/package-linux.py'),'--stage',str(linux),'--build-info',str(linuxbinary.parent/'build-info.json'),'--version','0.1.0','--release',str(BUILD),'--output',str(out)],check=True)
+    subprocess.run(['python3',str(ROOT/'scripts/package-linux.py'),'--stage',str(linux),'--build-info',str(linuxbinary.parent/'build-info.json'),'--version','0.1.0','--release',str(BUILD % 1000),'--output',str(out)],check=True)
     copy(winbinary,out/'DengShell.exe')
     copy(out/'up.deb',out/'DengShell-linux-x64.deb')
     copy(out/'up.deb',out/'DengShell-ubuntu-x64.deb')
