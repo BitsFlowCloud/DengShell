@@ -45,6 +45,7 @@ func TestTextEncodingsRoundTripWithoutNewlineOrBOMChanges(t *testing.T) {
 	}
 }
 func fileToolFixture(t *testing.T) (*App, *Session, string) {
+	requirePOSIXFilesystemFixture(t)
 	t.Helper()
 	root := t.TempDir()
 	cc, sc := net.Pipe()

@@ -93,6 +93,7 @@ func transferFrame(reader io.Reader) ([]byte, error) {
 }
 
 func uploadSFTPFixture(t *testing.T, delay time.Duration) (*App, *Session, string, *uploadTestLink) {
+	requirePOSIXFilesystemFixture(t)
 	t.Helper()
 	root := t.TempDir()
 	clientEnd, requestEnd := net.Pipe()

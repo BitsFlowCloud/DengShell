@@ -13,6 +13,7 @@ import (
 )
 
 func testLoginShell(t *testing.T, name string) (string, []string) {
+	requireLinuxShellFixture(t)
 	t.Helper()
 	executable := os.Getenv("DENGSHELL_TEST_" + strings.ToUpper(name))
 	if executable == "" {

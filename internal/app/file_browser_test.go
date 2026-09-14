@@ -14,6 +14,7 @@ import (
 )
 
 func TestDirectoryNavigatorListsRealFoldersAndDirectorySymlinks(t *testing.T) {
+	requirePOSIXFilesystemFixture(t)
 	root := t.TempDir()
 	if err := os.Mkdir(filepath.Join(root, "实际目录"), 0700); err != nil {
 		t.Fatal(err)

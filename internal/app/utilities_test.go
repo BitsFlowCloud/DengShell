@@ -206,6 +206,7 @@ type utilityTestFixture struct {
 }
 
 func newUtilityTestFixture(t *testing.T) utilityTestFixture {
+	requireLinuxShellFixture(t)
 	t.Helper()
 	root := t.TempDir()
 	bin := filepath.Join(root, "bin")

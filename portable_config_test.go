@@ -15,6 +15,10 @@ func TestPortableConfigurationFollowsExecutableAndNeverOldUserDirectory(t *testi
 	}
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(t.TempDir(), "previous-config"))
 	t.Setenv("APPDATA", filepath.Join(t.TempDir(), "previous-appdata"))
+	folder, err := filepath.EvalSymlinks(folder) // Windows may expand an 8.3 temporary path.
+	if err != nil {
+		t.Fatal(err)
+	}
 	got, err := portableDirectoryForExecutable(executable)
 	if err != nil || got != filepath.Join(folder, "data") {
 		t.Fatal("portable config used old user directory", got, err)
