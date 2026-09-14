@@ -6,7 +6,7 @@
 
 - JSON 继续使用 schema 2，增加 `signingKeyID`、`issuedAt`、`expiresAt`、`signature`。旧 r20 会忽略新增字段，**旧客户端仍不验证签名**。
 - 用户需要通过可信途径先获得 r21 或更新客户端。首次从旧无签名更新链升级，本身不能反向得到独立签名保护。
-- R28 同时提供新的 Windows 与 Linux 发行包。R20 客户端仍不验证签名，给旧描述补签名不等于升级旧程序；更新到本版后才具有客户端强制验证。GitHub Release 与官网更新端点分别发布，上传 GitHub 不会自动替换官网文件。
+- R40 同时提供新的 Windows 与 Linux 发行包。R20 客户端仍不验证签名，给旧描述补签名不等于升级旧程序；更新到本版后才具有客户端强制验证。GitHub Release 与官网更新端点分别发布，上传 GitHub 不会自动替换官网文件。
 - Windows Authenticode / SmartScreen 与这里的更新描述签名不同；本轮没有购买证书或给 PE 添加 Authenticode。
 
 ## 发行密钥

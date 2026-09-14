@@ -1,4 +1,4 @@
-DengShell v0.01 · 原生 Linux x64 发行说明
+DengShell v0.01 R40 · 原生 Linux x64 发行说明
 
 本发行包使用 Ubuntu 22.04 容器构建（glibc 2.35 基线），原生 GTK3 + WebKitGTK 4.1 桌面窗口，不需要 Go、Node、Chrome 或浏览器服务。
 
@@ -12,7 +12,7 @@ DengShell v0.01 · 原生 Linux x64 发行说明
 
 安装
 Debian / Ubuntu：
-  sudo apt install ./up.deb
+  sudo apt install ./DengShell-linux-x64.deb
 Fedora：
   sudo dnf install ./DengShell-linux-x64.rpm
 openSUSE：
@@ -49,7 +49,7 @@ DEB、RPM和通用安装版的数据位于 ${XDG_CONFIG_HOME:-$HOME/.config}/den
 DEB 在线升级沿用 up.deb / up.deb.json；RPM 和通用包按照应用提示下载相应安装包更新。
 
 主要功能
-分组和多级服务器管理、SSH密钥/代理、20款中英文字体与独立配色/粗体、终端背景、快捷命令和常用应用、真实SFTP文件管理与文本编辑、实时终端与低开销按需监控、ICMP一分钟丢包率和MTR诊断。
+分组和多级服务器管理、SSH密钥/代理、IBM Plex Sans SC 界面字体、五款 Shell 字体、20/30 款在线字体库与独立配色/粗体、终端背景、快捷命令和常用应用、真实SFTP文件管理与文本编辑、实时终端与低开销按需监控、ICMP一分钟丢包率和MTR诊断。
 上传最多4个文件同时传输，多出的排队；每个文件最多32个SFTP分块并行。进度按服务器已确认写入统计，重试从头开始，暂不支持断点续传。
 终端复制 Ctrl+Shift+C，粘贴 Ctrl+Shift+V；Ctrl+C 保留中断。文本编辑 Ctrl+S 保存。系统关联打开的是本地副本，外部修改需要手动上传。
 ICMP经过系统路由/TUN，不是SSH按键计时。进程仅在展开时采集，静态信息约30秒刷新。
@@ -60,7 +60,7 @@ ICMP经过系统路由/TUN，不是SSH按键计时。进程仅在展开时采集
 原生程序和构建证据：build/linux/native/dengshell、build-info.json。
 镜像基础摘要和 Go1.27.1 的 SHA256 固定在 build/linux/Dockerfile；完整构建依赖版本和实际镜像ID记录在 build-info.json。apt安全更新会改变新建镜像的依赖版本；需要逐字节复现时应保存并复用记录的完整构建镜像，设置 DENGSHELL_LINUX_BUILDER 为其镜像ID。
 脚本强制 GOAMD64=v1、CGO原生编译并拒绝 GLIBC符号需求超过2.35、错误架构、缺少GTK/WebKit链接或含构建机RPATH的程序。
-构建后由 scripts/package-linux.py --stage <仅包含dengshell和data的发行资源目录> --release 28 生成 DEB、RPM、pacman .pkg.tar.zst、tar.gz 与 linux-packages.json。整体发布使用 scripts/package-release.py。
+构建后由 scripts/package-linux.py --stage <仅包含dengshell和data的发行资源目录> --release 40 生成 DEB、RPM、pacman .pkg.tar.zst、tar.gz 与 linux-packages.json。整体发布使用 scripts/package-release.py。
 
 官方依赖参考：
 https://v2.wails.io/docs/gettingstarted/installation/
@@ -76,6 +76,6 @@ Arch Linux / 兼容 pacman 的 x86-64 桌面：
 卸载：sudo pacman -R dengshell（用户配置目录保留）。
 Arch 依赖 gtk3、webkit2gtk-4.1、bash、iputils、glibc、pacman、libarchive、polkit；托盘可选 libayatana-appindicator。
 Windows、Debian/Ubuntu 和 Arch pacman 支持内置更新，确认后安装并重启。
-旧 Arch 版需先手动安装一次 R28，此后通过软件启动检查更新。
+R28 起的 Arch 版可直接更新；更早版本先手动安装一次本次 R40，此后通过软件启动检查更新。
 Arch 使用 pkexec 请求系统授权，再执行 pacman -U 安装已验证签名的包；不添加 pacman 仓库。
-R20 至 R28 全部变化见 CHANGELOG.md；本轮验证边界见 FUNCTIONAL-AUDIT-r28.md。
+R30～R40 累计变化见 CHANGELOG.md；本轮验证边界见 FUNCTIONAL-AUDIT-r40.md。
