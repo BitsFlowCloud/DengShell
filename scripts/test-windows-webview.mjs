@@ -26,7 +26,7 @@ try{
  await evaluate('closeServerGroupMenu();serverManager.treeWidth=360;saveServerExplorer();document.documentElement.dataset.theme="light";fitServerExplorer()');
  await evaluate('window.DengPortablePreferences.flush()');
  for(const theme of ['light','dark']){await evaluate(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`);await pause(250);const shot=await cdp('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,`windows-native-manager-${theme}.png`),Buffer.from(shot.data,'base64'));}
- await cdp('Page.reload');await check('typeof serverManager!=="undefined" && serverManager.initialized');assert.equal(await evaluate('serverManager.treeWidth'),360);assert.equal(await evaluate('serverManager.includeChildren'),false);
+ await cdp('Page.reload');await pause(500);await check('typeof serverManager!=="undefined" && serverManager.initialized');assert.equal(await evaluate('serverManager.treeWidth'),360);assert.equal(await evaluate('serverManager.includeChildren'),false);
  assert.deepEqual(errors,[]);fs.writeFileSync(path.join(output,'windows-webview-validation.json'),JSON.stringify({passed:true,nativeWebView2:true,directorySelection:true,descendantFilter:true,clickWithoutSSH:true,contextMenu:true,persistedLayout:true,lightAndDarkScreenshots:true,uncaughtErrors:errors,actualSSHRequests:sshRequests},null,2));
  console.log('PASS: actual Windows WebView2 directory navigation, selection, context menu, saved layout and both themes.');
 }finally{ws.close();}

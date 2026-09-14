@@ -13,10 +13,11 @@ public static class DengQA {
  [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc f,IntPtr l);
  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h,out uint p);
  [DllImport("user32.dll",CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr h,StringBuilder s,int n);
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)] public static extern int GetClassName(IntPtr h,StringBuilder s,int n);
  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
  [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h,int command);
- public static IntPtr Find(uint pid) { IntPtr found=IntPtr.Zero;EnumWindows((h,l)=>{uint p;GetWindowThreadProcessId(h,out p);var s=new StringBuilder(256);GetWindowText(h,s,256);if(p==pid && s.ToString().Contains("DengShell")){found=h;return false;}return true;},IntPtr.Zero);return found; }
+ public static IntPtr Find(uint pid) { IntPtr found=IntPtr.Zero;EnumWindows((h,l)=>{uint p;GetWindowThreadProcessId(h,out p);var s=new StringBuilder(256);GetClassName(h,s,256);if(p==pid && s.ToString()=="DengShellWindow"){found=h;return false;}return true;},IntPtr.Zero);return found; }
 }
 '@
 function Wait-QA([scriptblock]$Condition,[string]$Name,[int]$Seconds=60){$deadline=[DateTime]::UtcNow.AddSeconds($Seconds);do{if(& $Condition){return};Start-Sleep -Milliseconds 250}while([DateTime]::UtcNow -lt $deadline);throw "Timed out: $Name"}
