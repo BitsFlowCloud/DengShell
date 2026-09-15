@@ -10,8 +10,46 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 )
+
+// Cold process startup and full package verification share this bounded budget.
+// Four seconds was shorter than valid preparation on some Windows machines.
+const updateHelperReadyTimeout = 60 * time.Second
+
+type updateHelperExitPendingError struct{ error }
+
+func updateStageMessage(stage string) string {
+	switch stage {
+	case "plan":
+		return "正在读取更新计划…"
+	case "hash":
+		return "正在校验更新文件…"
+	case "format":
+		return "正在检查安装文件…"
+	case "ready":
+		return "准备完成，正在关闭旧程序…"
+	case "install":
+		return "正在安装更新…"
+	case "restart":
+		return "正在启动新版本…"
+	}
+	return "正在启动更新助手…"
+}
+
+func recordUpdateStage(file, stage string) {
+	stamp := time.Now().UTC().Format(time.RFC3339Nano)
+	fmt.Fprintf(os.Stdout, "%s [%s] %s\n", stamp, stage, updateStageMessage(stage))
+	data, _ := json.Marshal(struct {
+		Stage string `json:"stage"`
+		Time  string `json:"time"`
+		PID   int    `json:"pid"`
+	}{stage, stamp, os.Getpid()})
+	// A reader ignores a partial snapshot and retries. The ready marker remains
+	// the authoritative handshake, including for older update helpers.
+	_ = os.WriteFile(filepath.Join(filepath.Dir(file), "helper-status.json"), data, 0600)
+}
 
 type updatePlan struct {
 	PackageFormat    string `json:"packageFormat,omitempty"`
@@ -42,6 +80,7 @@ func handleUpdateHelper() bool {
 	return true
 }
 func readUpdatePlan(file string) (updatePlan, error) {
+	recordUpdateStage(file, "plan")
 	var p updatePlan
 	b, e := os.ReadFile(file)
 	if e != nil {
@@ -56,6 +95,7 @@ func readUpdatePlan(file string) (updatePlan, error) {
 	if err := app.ValidateUpdateBuild(p.ConfigDir, p.Build, p.Version); err != nil {
 		return p, err
 	}
+	recordUpdateStage(file, "hash")
 	hash, e := app.FileSHA256(p.Staged)
 	if e != nil || hash != p.PackageSHA256 {
 		return p, errors.New("下载文件校验失败")
@@ -67,12 +107,14 @@ func runUpdateHelper(file string) error {
 	if e != nil {
 		return e
 	}
+	recordUpdateStage(file, "format")
 	if e = validatePlatformUpdate(plan); e != nil {
 		return e
 	}
 	if e = os.WriteFile(filepath.Join(filepath.Dir(file), "ready"), []byte("ready"), 0600); e != nil {
 		return e
 	}
+	recordUpdateStage(file, "ready")
 	if e = waitForUpdateParent(plan.ParentPID, 120*time.Second); e != nil {
 		return e
 	}
@@ -83,6 +125,7 @@ func runUpdateHelper(file string) error {
 	if e = app.ValidateUpdateBuild(plan.ConfigDir, plan.Build, plan.Version); e != nil {
 		return e
 	}
+	recordUpdateStage(file, "install")
 	target, e := applyPlatformUpdate(plan)
 	if e != nil {
 		restartPreviousUpdate(plan)
@@ -94,6 +137,7 @@ func runUpdateHelper(file string) error {
 		restartPreviousUpdate(plan)
 		return errors.New("安装后的程序 SHA-256 不匹配")
 	}
+	recordUpdateStage(file, "restart")
 	cmd := exec.Command(target, "--config", plan.ConfigDir)
 	cmd.Dir = filepath.Dir(target)
 	prepareRestartedApplication(cmd)
@@ -154,7 +198,7 @@ func copyUpdateFile(source, target string, mode os.FileMode) error {
 	}
 	return e
 }
-func launchUpdateHelper(job app.UpdateDownload, configDir string) error {
+func launchUpdateHelper(job app.UpdateDownload, configDir string, progress func(string)) error {
 	target, e := os.Executable()
 	if e != nil {
 		return e
@@ -186,8 +230,11 @@ func launchUpdateHelper(job app.UpdateDownload, configDir string) error {
 	if e = copyUpdateFile(target, helper, 0700); e != nil {
 		return e
 	}
-	_ = os.Remove(filepath.Join(dir, "ready"))
-	_ = os.Remove(filepath.Join(dir, "error.txt"))
+	for _, name := range []string{"ready", "error.txt", "helper-status.json"} {
+		if err := os.Remove(filepath.Join(dir, name)); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("无法清理上次更新状态：%w", err)
+		}
+	}
 	data, e := json.Marshal(plan)
 	if e != nil {
 		return e
@@ -198,36 +245,111 @@ func launchUpdateHelper(job app.UpdateDownload, configDir string) error {
 	}
 	cmd := exec.Command(helper, "--dengshell-update-helper", planFile)
 	prepareUpdaterProcess(cmd)
-	log, e := os.OpenFile(filepath.Join(dir, "installer.log"), os.O_CREATE|os.O_WRONLY, 0600)
+	log, e := os.OpenFile(filepath.Join(dir, "installer.log"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 	if e != nil {
 		return e
 	}
 	defer log.Close()
 	cmd.Stdout = log
 	cmd.Stderr = log
+	fmt.Fprintf(log, "%s [launch] 启动更新助手，准备期限 %s\n", time.Now().UTC().Format(time.RFC3339Nano), updateHelperReadyTimeout)
 	if e = cmd.Start(); e != nil {
+		fmt.Fprintf(log, "[launch-error] %v\n", e)
 		return e
 	}
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
-	deadline := time.NewTimer(4 * time.Second)
+	err := waitUpdateHelperReady(dir, done, updateHelperReadyTimeout, cmd.Process.Kill, progress)
+	if err != nil {
+		fmt.Fprintf(log, "%s [preparation-error] %v\n", time.Now().UTC().Format(time.RFC3339Nano), err)
+	}
+	return err
+}
+
+func readUpdateHelperError(dir string, fallback error) error {
+	f, err := os.Open(filepath.Join(dir, "error.txt"))
+	if err == nil {
+		defer f.Close()
+		if b, err := io.ReadAll(io.LimitReader(f, 4096)); err == nil && strings.TrimSpace(string(b)) != "" {
+			return errors.New(string(b))
+		}
+	}
+	return fallback
+}
+
+// Used by the actual desktop launch path and by process-level regression tests.
+func waitUpdateHelperReady(dir string, done <-chan error, timeout time.Duration, terminate func() error, progress func(string)) error {
+	deadline := time.NewTimer(timeout)
 	defer deadline.Stop()
-	ticker := time.NewTicker(40 * time.Millisecond)
+	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
+	stage := "startup"
+	report := func() {
+		if progress != nil {
+			progress(updateStageMessage(stage))
+		}
+	}
+	report()
+	check := func() (bool, error) {
+		if f, err := os.Open(filepath.Join(dir, "helper-status.json")); err == nil {
+			var status struct {
+				Stage string `json:"stage"`
+			}
+			if json.NewDecoder(io.LimitReader(f, 4096)).Decode(&status) == nil && status.Stage != "" && status.Stage != stage {
+				stage = status.Stage
+				report()
+			}
+			f.Close()
+		}
+		_, err := os.Stat(filepath.Join(dir, "ready"))
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return err == nil, err
+	}
+	stop := func(reason error) error {
+		if err := terminate(); err != nil && !errors.Is(err, os.ErrProcessDone) {
+			return &updateHelperExitPendingError{fmt.Errorf("%w；结束更新助手失败：%v", reason, err)}
+		}
+		// Reap it before allowing a retry to reuse the plan and handshake files.
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			return &updateHelperExitPendingError{fmt.Errorf("%w；更新助手仍在退出，请重新启动程序后重试", reason)}
+		}
+		return reason
+	}
+	readyResult := func() error {
+		select {
+		case err := <-done:
+			return readUpdateHelperError(dir, fmt.Errorf("更新助手提前退出: %v", err))
+		default:
+			return nil
+		}
+	}
 	for {
 		select {
 		case e := <-done:
-			if b, re := os.ReadFile(filepath.Join(dir, "error.txt")); re == nil {
-				return errors.New(string(b))
-			}
-			return fmt.Errorf("更新助手提前退出: %v", e)
+			return readUpdateHelperError(dir, fmt.Errorf("更新助手提前退出: %v", e))
 		case <-ticker.C:
-			if _, e = os.Stat(filepath.Join(dir, "ready")); e == nil {
-				return nil
+			ready, err := check()
+			if err != nil {
+				return stop(fmt.Errorf("无法读取更新助手状态：%w", err))
+			}
+			if ready {
+				return readyResult()
 			}
 		case <-deadline.C:
-			_ = cmd.Process.Kill()
-			return errors.New("更新助手没有及时就绪，程序保持运行")
+			// A ready marker may have arrived between the last poll and deadline.
+			ready, err := check()
+			if err != nil {
+				return stop(fmt.Errorf("无法读取更新助手状态：%w", err))
+			}
+			if ready {
+				return readyResult()
+			}
+			err = readUpdateHelperError(dir, fmt.Errorf("更新助手准备超时（%s，%s），程序保持运行；详情见更新目录中的 installer.log", timeout, strings.TrimSuffix(updateStageMessage(stage), "…")))
+			return stop(err)
 		}
 	}
 }

@@ -25,7 +25,7 @@ const ApplicationVersion = "v0.01"
 
 // Increase this integer for every published build, including packaging-only
 // releases. Display versions alone do not distinguish the v0.01 revisions.
-const ApplicationBuild uint64 = 20260915042
+const ApplicationBuild uint64 = 20260915043
 
 // Public revision stays R40 when a replacement build is published.
 const ApplicationRelease = 40
@@ -49,7 +49,9 @@ type UpdatePackage struct {
 type UpdateStatus struct {
 	Status         string         `json:"status"`
 	CurrentVersion string         `json:"currentVersion"`
+	CurrentBuild   uint64         `json:"currentBuild"`
 	LatestVersion  string         `json:"latestVersion,omitempty"`
+	LatestBuild    uint64         `json:"latestBuild,omitempty"`
 	Notes          string         `json:"notes,omitempty"`
 	Source         string         `json:"source"`
 	Platform       string         `json:"platform"`
@@ -105,7 +107,7 @@ func updateClient(timeout time.Duration) *http.Client {
 func noUpdate(reason string) UpdateStatus {
 	platform := currentUpdatePlatform()
 	source, _ := updateAddress(platform)
-	return UpdateStatus{Status: "none", CurrentVersion: ApplicationVersion, Source: source, Platform: platform, Reason: reason}
+	return UpdateStatus{Status: "none", CurrentVersion: ApplicationVersion, CurrentBuild: ApplicationBuild, Source: source, Platform: platform, Reason: reason}
 }
 func FileSHA256(path string) (string, error) {
 	f, e := os.Open(path)
@@ -249,6 +251,7 @@ func checkUpdateTrusted(ctx context.Context, client *http.Client, address, platf
 	result.Reason = ""
 	result.InstallerReady = true
 	result.LatestVersion = descriptor.Version
+	result.LatestBuild = descriptor.Build
 	result.Notes = descriptor.Notes
 	result.Package = &UpdatePackage{Format: updatePackageFormat(platform), Build: descriptor.Build, Version: descriptor.Version, URL: artifact, SHA256: descriptor.SHA256, Size: descriptor.Size, ExecutableSHA256: descriptor.ExecutableSHA256, expiresAt: descriptor.ExpiresAt}
 	return result

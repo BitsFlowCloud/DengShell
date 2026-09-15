@@ -118,6 +118,9 @@ func TestUpdateDescriptorIdentityAndValidation(t *testing.T) {
 			if got.Status == "available" && (!got.InstallerReady || got.Package.URL != "https://ds.free-vps.org/up.deb") {
 				t.Fatalf("wrong installer %+v", got)
 			}
+			if got.Status == "available" && (got.CurrentBuild != ApplicationBuild || got.LatestBuild != d.Build) {
+				t.Fatalf("same-version update is missing its distinguishable builds: %+v", got)
+			}
 		})
 	}
 }

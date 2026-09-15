@@ -20,7 +20,8 @@
     "test:commands": "node scripts/test-command-composer.mjs",
     "test:editors": "node scripts/test-file-editor-races.mjs",
     "test:server-explorer": "node scripts/test-server-explorer.mjs",
-    "test:font-selection": "node scripts/test-font-selection.mjs"
+    "test:font-selection": "node scripts/test-font-selection.mjs",
+    "test:startup-update": "node scripts/test-startup-update.mjs"
   },
   "dependencies": {
     "@xterm/addon-fit": "0.11.0",

@@ -41,7 +41,8 @@ func TestWindowHandoffRestoreFailureDoubleCancel(t *testing.T) {
 	// before the native launcher notices its cancelled WaitTerminalHandoff.
 	handler := a.Handler(fstest.MapFS{})
 	request := func(method, path string) *httptest.ResponseRecorder {
-		req := httptest.NewRequest(method, "http://wails.localhost"+path, bytes.NewReader([]byte(`{}`)))
+		// This fixture has a running HTTP listener, whose Host must match.
+		req := httptest.NewRequest(method, a.URL()+path, bytes.NewReader([]byte(`{}`)))
 		req.Header.Set("X-CloudShell-Token", a.Token())
 		out := httptest.NewRecorder()
 		handler.ServeHTTP(out, req)

@@ -198,7 +198,8 @@ func TestWindowHandoffHTTPStatusAndCancellation(t *testing.T) {
 			request := func(method, path string, body any) *httptest.ResponseRecorder {
 				t.Helper()
 				data, _ := json.Marshal(body)
-				req := httptest.NewRequest(method, "http://wails.localhost"+path, bytes.NewReader(data))
+				// Use the running fixture's origin, as the native bridge does.
+				req := httptest.NewRequest(method, a.URL()+path, bytes.NewReader(data))
 				req.Header.Set("X-CloudShell-Token", a.Token())
 				r := httptest.NewRecorder()
 				handler.ServeHTTP(r, req)

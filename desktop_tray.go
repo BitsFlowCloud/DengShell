@@ -140,7 +140,14 @@ func (d *Desktop) InstallUpdate(id string) error {
 	if err = d.CaptureWindowState(); err != nil {
 		return err
 	}
-	if err = launchUpdateHelper(job, d.app.ConfigDirectory()); err != nil {
+	if err = launchUpdateHelper(job, d.app.ConfigDirectory(), func(message string) {
+		runtime.EventsEmit(d.ctx, "dengshell:update-progress", message)
+	}); err != nil {
+		var pending *updateHelperExitPendingError
+		if errors.As(err, &pending) {
+			// Do not let another attempt reuse a live helper's plan and markers.
+			success = true
+		}
 		return err
 	}
 	d.mu.Lock()
