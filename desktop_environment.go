@@ -41,8 +41,9 @@ func recordRuntimeReady(configDir string) error {
 	return os.Rename(file.Name(), runtimeSuccessPath(configDir))
 }
 
-// Configuration follows the real executable, never the current working directory
-// or a legacy user profile. An explicit --config continues to override it.
+// Portable binaries keep data beside the executable. A macOS application bundle
+// uses Application Support: installed/signed bundles must never contain user data.
+// An explicit --config continues to override either default.
 func portableConfigDir() (string, error) {
 	executable, err := os.Executable()
 	if err != nil {
@@ -59,7 +60,24 @@ func portableDirectoryForExecutable(executable string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if runtime.GOOS == "darwin" && macOSApplicationBundle(absolute) != "" {
+		root, err := os.UserConfigDir()
+		if err != nil {
+			return "", err
+		}
+		return filepath.Join(root, "DengShell"), nil
+	}
 	return filepath.Join(filepath.Dir(absolute), "data"), nil
+}
+
+func macOSApplicationBundle(executable string) string {
+	macos := filepath.Dir(filepath.Clean(executable))
+	contents := filepath.Dir(macos)
+	bundle := filepath.Dir(contents)
+	if filepath.Base(macos) == "MacOS" && filepath.Base(contents) == "Contents" && strings.HasSuffix(filepath.Base(bundle), ".app") {
+		return bundle
+	}
+	return ""
 }
 
 func desktopInstanceID(configDir string) string {

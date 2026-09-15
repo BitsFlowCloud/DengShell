@@ -4,7 +4,9 @@ package app
 
 import (
 	"context"
+	"net/netip"
 	"os/exec"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -31,6 +33,36 @@ func TestParseICMPReplyTimeoutAndLocalFailure(t *testing.T) {
 	unreachable := parsePingOutput("192.0.2.10", "From 192.0.2.1 icmp_seq=1 Destination Host Unreachable\n1 packets transmitted, 0 received, +1 errors, 100% packet loss", 1)
 	if unreachable.Address != "192.0.2.1" || !unreachable.Responded {
 		t.Fatal("ICMP error source was mislabeled as the target", unreachable)
+	}
+}
+
+func TestMacOSPingArgumentsAndBSDExitStatus(t *testing.T) {
+	for _, tc := range []struct {
+		platform, address, tool string
+		args                    []string
+	}{
+		{"darwin", "127.0.0.1", "/sbin/ping", []string{"-n", "-c", "1", "-W", "1000", "-t", "1", "127.0.0.1"}},
+		{"darwin", "::1", "/sbin/ping6", []string{"-n", "-c", "1", "-X", "1", "::1"}},
+		{"linux", "127.0.0.1", "ping", []string{"-4", "-n", "-c", "1", "-W", "1.000", "--", "127.0.0.1"}},
+	} {
+		tool, args := pingCommandForPlatform(tc.platform, netip.MustParseAddr(tc.address), time.Second)
+		if tool != tc.tool || !reflect.DeepEqual(args, tc.args) {
+			t.Fatalf("%s %s: %s %q", tc.platform, tc.address, tool, args)
+		}
+	}
+	output := "1 packets transmitted, 0 packets received, 100.0% packet loss"
+	if got := parsePingOutputForPlatform("darwin", "::1", output, 2); got.Status != "timeout" {
+		t.Fatal("BSD packet loss was not recognized", got)
+	}
+	if got := parsePingOutputForPlatform("darwin", "::1", output, 1); got.Status != "unavailable" {
+		t.Fatal("BSD invocation error was counted as packet loss", got)
+	}
+	if got := parsePingOutputForPlatform("linux", "::1", output, 2); got.Status != "unavailable" {
+		t.Fatal("Linux local failure was counted as packet loss", got)
+	}
+	output = "1 packets transmitted, 1 packets received, 0.0% packet loss\nround-trip min/avg/max/stddev = 0.041/0.041/0.041/0.000 ms"
+	if got := parsePingOutputForPlatform("darwin", "::1", output, 0); got.Status != "reply" || got.Milliseconds != .041 {
+		t.Fatal("BSD ICMP round trip was not parsed", got)
 	}
 }
 

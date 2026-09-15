@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -39,18 +40,21 @@ func ProbeICMP(ctx context.Context, targetIP string, timeout time.Duration) ICMP
 		result.Error = "ICMP 检测已取消"
 		return result
 	}
-	path, err := exec.LookPath("ping")
+	tool, args := pingCommandForPlatform(runtime.GOOS, address, timeout)
+	path, err := exec.LookPath(tool)
 	if err != nil {
 		result.Error = "本机没有 ping 工具，请安装 iputils-ping"
 		return result
 	}
-	probeCtx, cancel := context.WithTimeout(ctx, timeout+250*time.Millisecond)
-	defer cancel()
-	family := "-4"
-	if address.Is6() && !address.Is4In6() {
-		family = "-6"
+	processTimeout := timeout
+	if runtime.GOOS == "darwin" && address.Is6() {
+		// Apple's ping6 -X accepts whole seconds. Its -W means something
+		// unrelated to a receive timeout; allow the rounded deadline to finish.
+		processTimeout = ((timeout + time.Second - 1) / time.Second) * time.Second
 	}
-	command := exec.CommandContext(probeCtx, path, family, "-n", "-c", "1", "-W", strconv.FormatFloat(timeout.Seconds(), 'f', 3, 64), "--", targetIP)
+	probeCtx, cancel := context.WithTimeout(ctx, processTimeout+250*time.Millisecond)
+	defer cancel()
+	command := exec.CommandContext(probeCtx, path, args...)
 	command.Env = append(os.Environ(), "LC_ALL=C", "LANG=C", "IPUTILS_PING_PTR_LOOKUP=0")
 	output, err := command.CombinedOutput()
 	if ctx.Err() != nil {
@@ -65,7 +69,36 @@ func ProbeICMP(ctx context.Context, targetIP string, timeout time.Duration) ICMP
 		result.Error = "无法启动本机 ping：" + err.Error()
 		return result
 	}
-	return parsePingOutput(targetIP, string(output), command.ProcessState.ExitCode())
+	return parsePingOutputForPlatform(runtime.GOOS, targetIP, string(output), command.ProcessState.ExitCode())
+}
+
+func pingCommandForPlatform(platform string, address netip.Addr, timeout time.Duration) (string, []string) {
+	if platform == "darwin" {
+		seconds := strconv.FormatInt(int64((timeout+time.Second-1)/time.Second), 10)
+		if address.Is6() {
+			return "/sbin/ping6", []string{"-n", "-c", "1", "-X", seconds, address.String()}
+		}
+		milliseconds := strconv.FormatInt(int64((timeout+time.Millisecond-1)/time.Millisecond), 10)
+		return "/sbin/ping", []string{"-n", "-c", "1", "-W", milliseconds, "-t", seconds, address.String()}
+	}
+	family := "-4"
+	if address.Is6() {
+		family = "-6"
+	}
+	return "ping", []string{family, "-n", "-c", "1", "-W", strconv.FormatFloat(timeout.Seconds(), 'f', 3, 64), "--", address.String()}
+}
+
+func parsePingOutputForPlatform(platform, address, output string, exitCode int) ICMPProbeResult {
+	if platform == "darwin" {
+		// BSD uses 2 for no response; iputils uses 1. Keep invocation errors
+		// distinct even when an error contains packet statistics.
+		if exitCode == 2 {
+			exitCode = 1
+		} else if exitCode == 1 {
+			exitCode = 2
+		}
+	}
+	return parsePingOutput(address, output, exitCode)
 }
 
 func parsePingOutput(address, output string, exitCode int) ICMPProbeResult {

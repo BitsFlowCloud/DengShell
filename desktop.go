@@ -30,6 +30,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -446,6 +447,10 @@ func runDesktopBackend(application desktopBackend, assets fs.FS, configDir, deta
 		},
 		DragAndDrop: &options.DragAndDrop{EnableFileDrop: true, DisableWebViewDrop: false},
 		Linux:       &linux.Options{ProgramName: "dengshell", Icon: desktopIcon, WebviewGpuPolicy: linux.WebviewGpuPolicyOnDemand},
+		Mac: &mac.Options{
+			DisableZoom: true, DisableEscapeExitsFullscreen: true,
+			About: &mac.AboutInfo{Title: "DengShell", Message: app.ApplicationVersion + " · SSH 终端与服务器管理", Icon: desktopIcon},
+		},
 		Windows: &windows.Options{
 			WindowClassName: "DengShellWindow", DisableWindowIcon: false,
 			IsZoomControlEnabled: false, DisablePinchZoom: true,

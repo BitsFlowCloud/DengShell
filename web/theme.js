@@ -18,7 +18,7 @@
     control.checked = preference === 'system';
     document.getElementById('follow-system-theme-hint').textContent = control.checked
       ? `当前${resolved() === 'dark' ? '深色' : '浅色'} · 手动切换明暗后关闭跟随`
-      : '开启后随 Windows / Linux 系统自动切换';
+      : '开启后随系统自动切换';
   }
   function apply() {
     const theme = resolved();
