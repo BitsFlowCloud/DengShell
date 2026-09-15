@@ -52,7 +52,10 @@ try{
   $plan=@{schema=2;build=$(if($mode -eq 'legacy'){$build}else{$build+1});version='v0.01';parentPID=$running.Id;target=$target;staged=$staged;configDir=$caseConfig;oldSHA256=(Get-FileHash $target).Hash.ToLowerInvariant();packageSHA256=$expected;executableSHA256=$expected;platform='windows-amd64'}
   $planFile=Join-Path $job 'plan.json';[IO.File]::WriteAllText($planFile,($plan|ConvertTo-Json),[Text.UTF8Encoding]::new($false))
   $worker=Start-Process $helper -ArgumentList @('--dengshell-update-helper',('"'+$planFile+'"')) -WindowStyle Hidden -PassThru
-  Wait-QA {Test-Path (Join-Path $job 'ready')} "$mode helper validates actual packed update"
+  $readyWatch=[Diagnostics.Stopwatch]::StartNew()
+  $readyBudget=$(if($mode -eq 'legacy'){4}else{60})
+  Wait-QA {Test-Path (Join-Path $job 'ready')} "$mode helper validates actual update within client preparation budget" $readyBudget
+  $report["$mode-helperReadyMilliseconds"]=$readyWatch.ElapsedMilliseconds
   Remove-Item (Join-Path $caseConfig 'runtime-success-v1-windows-amd64') -ErrorAction SilentlyContinue;Stop-QA $running
   Wait-QA {Test-Path (Join-Path $caseConfig 'update-result.json')} "$mode helper completes replacement"
   Check-QA ((Get-Content (Join-Path $caseConfig 'update-result.json') -Raw | ConvertFrom-Json).status -eq 'installed') "$mode update reports successful installation"
