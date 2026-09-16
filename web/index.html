@@ -7,34 +7,34 @@
   <meta name="referrer" content="no-referrer">
   <script src="bootstrap.js"></script>
   <script>if(location.protocol!=='wails:'&&location.hostname!=='wails.localhost'){const nonce=new URLSearchParams(location.search).get('window');if(/^[A-Za-z0-9_-]{24,96}$/.test(nonce||'')){window.CLOUDSHELL.detachedNonce=nonce;window.CLOUDSHELL.startupAnimation=false;}}</script>
-  <script src="theme.js?v=20260915-v001-r40-b42"></script>
+  <script src="theme.js?v=20260916-v001-r40-b44"></script>
   <link rel="stylesheet" href="vendor/xterm.css">
-  <link rel="stylesheet" href="style.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="theme.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="workspace-tools.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="appearance.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="workspace-refinements.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="file-browser.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="themed-select.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="config-document.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="startup-update.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="desktop-polish.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="splash.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="server-manager.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="help-guide.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="appearance-tools.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="font-library.css?v=20260915-v001-r40-b42">
+  <link rel="stylesheet" href="style.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="theme.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="workspace-tools.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="appearance.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="workspace-refinements.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="file-browser.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="themed-select.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="config-document.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="startup-update.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="desktop-polish.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="splash.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="server-manager.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="help-guide.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="appearance-tools.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="font-library.css?v=20260916-v001-r40-b44">
   <link rel="icon" href="assets/dengshell.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="file-tools.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="desktop-tray.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="latency-chart.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="common-apps.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="session-windows.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="system-identity.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="chart-styles.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="light-theme.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="ui-appearance.css?v=20260915-v001-r40-b42">
-  <link rel="stylesheet" href="finalshell-import.css?v=20260915-v001-r40-b42">
+  <link rel="stylesheet" href="file-tools.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="desktop-tray.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="latency-chart.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="common-apps.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="session-windows.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="system-identity.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="chart-styles.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="light-theme.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="ui-appearance.css?v=20260916-v001-r40-b44">
+  <link rel="stylesheet" href="finalshell-import.css?v=20260916-v001-r40-b44">
 </head>
 <body>
   <svg class="icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -77,8 +77,18 @@
   </defs></svg>
 
   <header class="titlebar">
-    <div class="brand"><img class="brand-logo" src="assets/dengshell.svg" alt=""><span class="brand-name"><strong>DengShell</strong></span><span class="version" id="app-version">v0.01</span></div>
-    <nav class="session-bar" aria-label="SSH 会话"><button id="connection-button" class="connection-button" title="打开服务器分组" aria-label="打开服务器分组"><svg><use href="#i-folder"/></svg></button><div id="session-tabs" class="session-tabs"></div><button class="icon-button add-session" id="add-session" aria-label="添加会话" title="添加会话"><svg><use href="#i-plus"/></svg></button><button class="icon-button" id="toggle-monitor" aria-label="系统与磁盘信息" title="系统与磁盘信息" aria-expanded="false"><svg><use href="#i-cpu"/></svg></button><button class="icon-button header-pill reset-pill" id="reset-layout" aria-label="恢复默认布局" title="恢复默认布局与终端字号"><svg><use href="#i-layout"/></svg></button><button class="icon-button theme-toggle header-pill theme-pill" id="theme-toggle" aria-label="深色模式" aria-pressed="false" title="切换到深色模式"><svg class="theme-moon"><use href="#i-moon"/></svg><svg class="theme-sun"><use href="#i-sun"/></svg></button><button class="icon-button header-pill font-pill" id="manage-fonts" title="终端字体" aria-label="终端字体"><svg><use href="#i-type"/></svg></button><button class="icon-button header-pill help-pill" id="help-button" title="使用手册与功能引导" aria-label="使用手册与功能引导" aria-haspopup="dialog"><svg><use href="#i-help-book"/></svg></button><button class="icon-button header-pill settings-pill" id="settings-button" title="设置" aria-label="设置" aria-haspopup="menu" aria-expanded="false"><svg><use href="#i-settings"/></svg></button><div class="window-controls" id="window-controls" hidden><button data-window-action="minimise" title="最小化" aria-label="最小化"><svg><use href="#i-minimise"/></svg></button><button data-window-action="toggle-maximise" id="window-maximise" title="最大化" aria-label="最大化"><svg><use href="#i-maximise"/></svg></button><button data-window-action="close" class="window-close" title="关闭窗口" aria-label="关闭窗口"><svg><use href="#i-close"/></svg></button></div></nav>
+    <div class="brand">
+      <button class="icon-button brand-settings" id="settings-button" title="设置" aria-label="设置" aria-haspopup="menu" aria-controls="settings-menu" aria-expanded="false"><img class="brand-logo" src="assets/dengshell.svg" alt="" draggable="false"></button>
+      <button class="icon-button theme-toggle header-pill theme-pill" id="theme-toggle" aria-label="深色模式" aria-pressed="false" title="切换到深色模式"><svg class="theme-moon"><use href="#i-moon"/></svg><svg class="theme-sun"><use href="#i-sun"/></svg></button>
+      <span class="brand-name"><strong>DengShell</strong></span><span class="version" id="app-version">v0.01</span>
+    </div>
+    <nav class="session-bar" aria-label="SSH 会话">
+      <button id="connection-button" class="connection-button" title="打开服务器分组" aria-label="打开服务器分组"><svg><use href="#i-folder"/></svg></button>
+      <div id="session-tabs" class="session-tabs"></div>
+      <button class="icon-button add-session" id="add-session" aria-label="添加会话" title="添加会话"><svg><use href="#i-plus"/></svg></button>
+      <button class="icon-button" id="toggle-monitor" aria-label="系统与磁盘信息" title="系统与磁盘信息" aria-expanded="false"><svg><use href="#i-cpu"/></svg></button>
+      <div class="window-controls" id="window-controls" hidden><button data-window-action="minimise" title="最小化" aria-label="最小化"><svg><use href="#i-minimise"/></svg></button><button data-window-action="toggle-maximise" id="window-maximise" title="最大化" aria-label="最大化"><svg><use href="#i-maximise"/></svg></button><button data-window-action="close" class="window-close" title="关闭窗口" aria-label="关闭窗口"><svg><use href="#i-close"/></svg></button></div>
+    </nav>
   </header>
 
   <div class="app-shell" id="app-shell">
@@ -194,6 +204,8 @@
     <button role="menuitem" id="manage-chart-styles"><svg><use href="#i-network"/></svg>曲线样式<span>网速与延迟</span></button>
     <button role="menuitem" id="manage-backgrounds"><svg><use href="#i-image"/></svg>背景管理器<span>终端背景</span></button>
     <button role="menuitem" id="manage-proxies"><svg><use href="#i-network"/></svg>代理管理器<span>连接路径</span></button>
+    <button role="menuitem" id="reset-layout" title="恢复默认布局与终端字号" aria-label="恢复默认布局"><svg><use href="#i-layout"/></svg>恢复默认布局<span>布局与字号</span></button>
+    <button role="menuitem" id="help-button" aria-label="使用手册与功能引导" aria-haspopup="dialog"><svg><use href="#i-help-book"/></svg>使用手册与功能引导<span>帮助</span></button>
     <div class="scale-setting"><label for="ui-scale">界面缩放</label><select id="ui-scale" aria-label="界面缩放"><option value="0.75">75%</option><option value="0.9">90%</option><option value="1">100%</option><option value="1.1">110%</option><option value="1.25">125%</option><option value="1.5">150%</option><option value="1.75">175%</option><option value="2">200%</option></select></div>
     <p id="scale-effective" hidden></p>
     
@@ -222,42 +234,43 @@
   <dialog id="exit-dialog"><form id="exit-form"><h2>退出 DengShell？</h2><p id="exit-description">确认关闭应用。</p><div class="dialog-buttons"><button type="button" id="cancel-exit">继续使用</button><button class="primary-button" type="submit" id="confirm-exit">退出</button></div></form></dialog>
 
   <div id="toast" class="toast" role="status" hidden></div>
-  <script src="splash.js?v=20260915-v001-r40-b42"></script>
+  <script src="splash.js?v=20260916-v001-r40-b44"></script>
   <script src="vendor/xterm.js"></script>
   <script src="vendor/addon-fit.js"></script>
   <script src="vendor/addon-serialize.js"></script>
-  <script src="command-composer.js?v=20260915-v001-r40-b42"></script>
-  <script src="workspace-tools.js?v=20260915-v001-r40-b42"></script>
-  <script src="appearance.js?v=20260915-v001-r40-b42"></script>
-  <script src="ui-appearance.js?v=20260915-v001-r40-b42"></script>
-  <script src="font-library.js?v=20260915-v001-r40-b42"></script>
-  <script src="file-browser.js?v=20260915-v001-r40-b42"></script>
-  <script src="latency-chart.js?v=20260915-v001-r40-b42"></script>
-  <script src="workspace-refinements.js?v=20260915-v001-r40-b42"></script>
-  <script src="themed-select.js?v=20260915-v001-r40-b42"></script>
-  <script src="terminal-integration.js?v=20260915-v001-r40-b42"></script>
-  <script src="mtr-installation.js?v=20260915-v001-r40-b42"></script>
-  <script src="config-document.js?v=20260915-v001-r40-b42"></script>
-  <script src="finalshell-import.js?v=20260915-v001-r40-b42"></script>
-  <script src="startup-update.js?v=20260915-v001-r40-b42"></script>
-  <script src="portable-preferences.js?v=20260915-v001-r40-b42"></script>
-  <script src="server-manager.js?v=20260915-v001-r40-b42"></script>
-  <script src="server-explorer.js?v=20260915-v001-r40-b42"></script>
-  <script src="help-guide.js?v=20260915-v001-r40-b42"></script>
-  <script src="chart-styles.js?v=20260915-v001-r40-b42"></script>
-  <script src="appearance-tools.js?v=20260915-v001-r40-b42"></script>
-  <script src="terminal-snapshot.js?v=20260915-v001-r40-b42"></script>
-  <script src="server-addresses.js?v=20260915-v001-r40-b42"></script>
-  <script src="window-preview.js?v=20260915-v001-r40-b42"></script>
-  <script src="window-transfers.js?v=20260915-v001-r40-b42"></script>
-  <script src="session-windows.js?v=20260915-v001-r40-b42"></script>
-  <script src="system-identity.js?v=20260915-v001-r40-b42"></script>
-  <script src="app.js?v=20260915-v001-r40-b42"></script>
-  <script src="common-apps.js?v=20260915-v001-r40-b42"></script>
-  <script src="text-model.js?v=20260915-v001-r40-b42"></script>
-  <script src="remote-text-document.js?v=20260915-v001-r40-b42"></script>
-  <script src="text-editor.js?v=20260915-v001-r40-b42"></script>
-  <script src="file-tools.js?v=20260915-v001-r40-b42"></script>
-  <script src="desktop-tray.js?v=20260915-v001-r40-b42"></script>
+  <script src="command-composer.js?v=20260916-v001-r40-b44"></script>
+  <script src="workspace-tools.js?v=20260916-v001-r40-b44"></script>
+  <script src="appearance.js?v=20260916-v001-r40-b44"></script>
+  <script src="ui-appearance.js?v=20260916-v001-r40-b44"></script>
+  <script src="font-library.js?v=20260916-v001-r40-b44"></script>
+  <script src="file-browser.js?v=20260916-v001-r40-b44"></script>
+  <script src="latency-chart.js?v=20260916-v001-r40-b44"></script>
+  <script src="workspace-refinements.js?v=20260916-v001-r40-b44"></script>
+  <script src="themed-select.js?v=20260916-v001-r40-b44"></script>
+  <script src="terminal-integration.js?v=20260916-v001-r40-b44"></script>
+  <script src="mtr-installation.js?v=20260916-v001-r40-b44"></script>
+  <script src="config-document.js?v=20260916-v001-r40-b44"></script>
+  <script src="finalshell-import.js?v=20260916-v001-r40-b44"></script>
+  <script src="startup-update.js?v=20260916-v001-r40-b44"></script>
+  <script src="portable-preferences.js?v=20260916-v001-r40-b44"></script>
+  <script src="server-manager.js?v=20260916-v001-r40-b44"></script>
+  <script src="server-explorer.js?v=20260916-v001-r40-b44"></script>
+  <script src="help-guide.js?v=20260916-v001-r40-b44"></script>
+  <script src="chart-styles.js?v=20260916-v001-r40-b44"></script>
+  <script src="appearance-tools.js?v=20260916-v001-r40-b44"></script>
+  <script src="terminal-snapshot.js?v=20260916-v001-r40-b44"></script>
+  <script src="server-addresses.js?v=20260916-v001-r40-b44"></script>
+  <script src="window-preview.js?v=20260916-v001-r40-b44"></script>
+  <script src="window-transfers.js?v=20260916-v001-r40-b44"></script>
+  <script src="session-windows.js?v=20260916-v001-r40-b44"></script>
+  <script src="session-tabs-layout.js?v=20260916-v001-r40-b44"></script>
+  <script src="system-identity.js?v=20260916-v001-r40-b44"></script>
+  <script src="app.js?v=20260916-v001-r40-b44"></script>
+  <script src="common-apps.js?v=20260916-v001-r40-b44"></script>
+  <script src="text-model.js?v=20260916-v001-r40-b44"></script>
+  <script src="remote-text-document.js?v=20260916-v001-r40-b44"></script>
+  <script src="text-editor.js?v=20260916-v001-r40-b44"></script>
+  <script src="file-tools.js?v=20260916-v001-r40-b44"></script>
+  <script src="desktop-tray.js?v=20260916-v001-r40-b44"></script>
 </body>
 </html>

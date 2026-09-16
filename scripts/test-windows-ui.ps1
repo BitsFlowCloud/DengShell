@@ -26,6 +26,13 @@ function Buttons { @($root.FindAll([System.Windows.Automation.TreeScope]::Descen
 function Find-Button([string]$Name){for($n=0;$n -lt 80;$n++){foreach($b in (Buttons)){if($b.Current.Name -eq $Name){return $b}};Start-Sleep -Milliseconds 100};throw "Native button unavailable: $Name"}
 function Invoke-Button([string]$Name){$b=Find-Button $Name;$r=$b.Current.BoundingRectangle;if($r.Width -le 0 -or $r.Height -le 0){throw "Button has no visible rectangle: $Name"};Write-Host ("Native click: {0}; rectangle={1}; offscreen={2}; desktop={3}" -f $Name,$r,$b.Current.IsOffscreen,[System.Windows.Forms.SystemInformation]::VirtualScreen);[DengMouse]::SetCursorPos([int]($r.X+$r.Width/2),[int]($r.Y+$r.Height/2))|Out-Null;[DengMouse]::mouse_event(2,0,0,0,[UIntPtr]::Zero);[DengMouse]::mouse_event(4,0,0,0,[UIntPtr]::Zero);Start-Sleep -Milliseconds 350}
 try{
+ Invoke-Button '设置'
+ Find-Button '恢复默认布局'|Out-Null
+ Invoke-Button '使用手册与功能引导'
+ Find-Button '关闭手册'|Out-Null
+ Invoke-Button '关闭手册'
+ Invoke-Button '设置'
+ Invoke-Button '恢复默认布局'
  Invoke-Button '管理服务器'
  Invoke-Button '1级目录，QA 一级目录，2个连接'
  Find-Button '选择 主连接'|Out-Null
@@ -40,7 +47,7 @@ try{
  $bitmap=New-Object System.Drawing.Bitmap([int]$r.Width,[int]$r.Height)
  $g=[System.Drawing.Graphics]::FromImage($bitmap)
  try{$g.CopyFromScreen([int]$r.X,[int]$r.Y,0,0,$bitmap.Size);$bitmap.Save((Join-Path $Output 'windows-native-manager.png'),[System.Drawing.Imaging.ImageFormat]::Png)}finally{$g.Dispose();$bitmap.Dispose()}
- @{passed=$true;nativeWebView2=$true;method='Windows UI Automation on the exact packed release';directorySelection=$true;deepFolder=$true;singleClickSelection=$true;contextMenu=$true}|ConvertTo-Json|Set-Content -Encoding UTF8 (Join-Path $Output 'windows-ui-validation.json')
+ @{passed=$true;nativeWebView2=$true;method='Windows UI Automation on the exact packed release';directorySelection=$true;deepFolder=$true;singleClickSelection=$true;contextMenu=$true;leftSettingsMenu=$true;manualFromSettings=$true;restoreLayoutFromSettings=$true}|ConvertTo-Json|Set-Content -Encoding UTF8 (Join-Path $Output 'windows-ui-validation.json')
  Write-Host 'PASS: native Windows directory navigation, single-click selection and context menu.'
 } catch {
  (Buttons)|ForEach-Object {$_.Current.Name}|Set-Content -Encoding UTF8 (Join-Path $Output 'windows-ui-controls.txt')

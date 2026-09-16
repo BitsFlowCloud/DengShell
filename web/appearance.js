@@ -329,7 +329,7 @@ function setSettingsMenu(open) {
 }
 function positionSettings() {
   const menu = $('#settings-menu'), rect = $('#settings-button').getBoundingClientRect();
-  menu.style.left = `${Math.max(8, Math.min(rect.right / effectiveScale - menu.offsetWidth, logicalWidth() - menu.offsetWidth - 8))}px`;
+  menu.style.left = `${Math.max(8, Math.min(rect.left / effectiveScale, logicalWidth() - menu.offsetWidth - 8))}px`;
   menu.style.top = `${rect.bottom / effectiveScale + 6}px`;
 }
 async function openAppearance(kind) {
@@ -584,7 +584,7 @@ function initializeAppearance() {
     event.preventDefault(); buttons[event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (index + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length].focus();
   });
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && !$('#monitor-backdrop').hidden) $('#monitor-backdrop').click(); if (event.key === 'Escape' && !$('#settings-menu').hidden) { setSettingsMenu(false); $('#settings-button').focus(); } });
-  $('#manage-backgrounds').onclick = safe(() => openAppearance('background')); $('#manage-fonts').onclick = safe(() => openAppearance('font'));
+  $('#manage-backgrounds').onclick = safe(() => openAppearance('background'));
   $('#manage-shell-fonts').onclick = safe(() => openAppearance('font'));
   $('#switch-ui-fonts').onclick = safe(() => window.DengUIAppearance.open());
   $('#online-shell-fonts').onclick = safe(() => window.DengFontLibrary.open('font'));

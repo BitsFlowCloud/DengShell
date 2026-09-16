@@ -4,20 +4,14 @@
 .brand-name strong { line-height:1; }
 .titlebar .brand #app-version { display:inline-block; margin:0; font-size:11px; line-height:1; font-weight:450; letter-spacing:.15px; }
 .header-pill { width:37px; height:28px; border-radius:30px; margin-left:7px; flex-shrink:0; }
-#reset-layout { margin-left:auto; color:#649589; background:#e4f1eb; }
-#theme-toggle { margin-left:7px; color:#ab8b58; background:#f8edda; }
-#manage-fonts { margin-left:7px; color:#9a7f9e; background:#f2eaf4; }
-#manage-fonts:hover { background:#e8dceb; }
-[data-theme="dark"] #manage-fonts { color:#d0b6d5; background:#44354a; }
-[data-theme="dark"] #manage-fonts:hover { background:#55415d; }
-#settings-button { margin-left:7px; color:#8291b4; background:#e9edf8; }
-#reset-layout:hover { background:#d5e8df; } #theme-toggle:hover { background:#f1e2c5; } #settings-button:hover { background:#dce3f4; }
+#theme-toggle { color:#ab8b58; background:#f8edda; }
+#settings-button { color:#8291b4; background:#e9edf8; }
+#theme-toggle:hover { background:#f1e2c5; } #settings-button:hover { background:#dce3f4; }
 .header-pill svg { width:16px; height:16px; }
 #connection-button.failed { color:#c28475; background:#c2847515; }
-[data-theme="dark"] #reset-layout { color:#a6cdbc; background:#284137; }
 [data-theme="dark"] #theme-toggle { color:#dbc69f; background:#42392d; }
 [data-theme="dark"] #settings-button { color:#bdc6e1; background:#303b53; }
-[data-theme="dark"] #reset-layout:hover { background:#345243; } [data-theme="dark"] #theme-toggle:hover { background:#574832; } [data-theme="dark"] #settings-button:hover { background:#414e6a; }
+[data-theme="dark"] #theme-toggle:hover { background:#574832; } [data-theme="dark"] #settings-button:hover { background:#414e6a; }
 .server-addresses { margin:5px 0 10px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
 .address-copy { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; padding:6px; border-radius:9px; background:var(--surface-inset,#f4f7f9); text-align:center; cursor:copy; }
 .address-copy b { font-size:10px; font-weight:500; color:var(--muted); }
@@ -75,7 +69,6 @@
 #exit-dialog { width:420px; }
 #exit-dialog h2 { margin:0 0 14px; }
 [data-narrow="true"] .header-pill { width:30px; margin-left:5px!important; }
-[data-narrow="true"] #reset-layout { margin-left:auto!important; }
 [data-narrow="true"] .diagnostics-toolbar { gap:6px; }
 [data-narrow="true"] .diagnostics-footer { flex-wrap:wrap; }
 [data-short="true"] .disk-section { min-height:190px; }

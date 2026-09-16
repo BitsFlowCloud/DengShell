@@ -38,6 +38,18 @@
 
 /* Defined outlines with a restrained selected fill, without a heavy bottom edge. */
 .session-tabs{gap:8px;padding:1px 0}
+/* Six tabs per row at most; narrower windows use fewer columns. */
+.titlebar { height:auto; flex-shrink:0; align-items:start; }
+.titlebar .session-bar { height:auto; min-height:42px; align-items:flex-start; padding:4px 0; }
+.session-bar > :is(.connection-button,.add-session,#toggle-monitor) { margin-top:2px; }
+.titlebar .window-controls { margin-top:1px; }
+.session-tabs { flex:1; display:grid; grid-template-columns:repeat(var(--session-columns,1),minmax(0,240px)); grid-auto-rows:33px; height:auto; min-height:35px; max-height:max(35px,min(197px,calc(var(--view-height,100vh) * .3))); overflow-x:hidden; overflow-y:auto; align-content:start; scrollbar-width:thin; }
+.session-tabs .session-tab { min-width:0; max-width:none; width:100%; height:33px; gap:5px; padding-left:9px; }
+.session-tabs[data-compact-tabs="true"] .session-current-badge { display:none; }
+.drawer-backdrop { top:var(--titlebar-height,42px); }
+.connections-drawer { top:calc(var(--titlebar-height,42px) + 6px); }
+#monitor-backdrop { top:var(--titlebar-height,42px); }
+[data-narrow="true"][data-monitor-open="true"] .sidebar { top:calc(var(--titlebar-height,42px) + 6px); }
 .session-tab{position:relative;border:1px solid #afc1cec9;border-radius:12px;background:#e7eef4a6;color:#5a7284;box-shadow:none;transition:background .2s,border-color .2s,color .2s}
 .session-tab:hover{border-color:#8fabbf;background:#edf4f9}
 .session-tab.active{border-color:#86a7bb;background:#f8fbfd;color:#2e5269;box-shadow:0 1px 4px #304f6810}
