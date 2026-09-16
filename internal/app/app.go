@@ -201,6 +201,7 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 	mux.HandleFunc("POST /api/sessions/{id}/upload", a.uploadHTTP)
 	mux.HandleFunc("POST /api/sessions/{id}/upload-local", a.uploadLocal)
 	mux.HandleFunc("GET /api/sessions/{id}/stats", a.statsHTTP)
+	mux.HandleFunc("GET /api/sessions/{id}/processes", a.processesHTTP)
 	mux.HandleFunc("GET /api/sessions/{id}/network", a.networkHTTP)
 	mux.HandleFunc("GET /api/sessions/{id}/latency", a.latencyHTTP)
 	mux.HandleFunc("POST /api/transfers/{id}/retry", a.retryTransfer)

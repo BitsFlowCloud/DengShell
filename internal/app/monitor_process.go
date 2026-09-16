@@ -3,7 +3,6 @@ package app
 import (
 	"encoding/hex"
 	"math"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -99,6 +98,9 @@ END {
 
 type Process struct {
 	PID             int       `json:"pid"`
+	User            string    `json:"user,omitempty"`
+	UID             uint64    `json:"uid,omitempty"`
+	UserReady       bool      `json:"userReady,omitempty"`
 	Name            string    `json:"name"`
 	Memory          uint64    `json:"memory"`
 	MemoryReady     bool      `json:"memoryReady"`
@@ -114,11 +116,12 @@ type Process struct {
 }
 
 // Keep full lightweight counters in the backend for correct interval CPU/PID
-// reuse detection; only the two five-row rankings cross into the renderer.
+// reuse detection; display routes return only the two five-row rankings or a
+// bounded page for the full process tab.
 func topProcesses(processes []Process, metric string) []Process {
-	result := append([]Process{}, processes...)
-	sort.SliceStable(result, func(i, j int) bool {
-		a, b := result[i], result[j]
+	// Selection is O(5*n), without copying or sorting thousands of rows twice
+	// just to render the sidebar's two five-row summaries.
+	before := func(a, b Process) bool {
 		if metric == "memory" {
 			if a.MemoryReady != b.MemoryReady {
 				return a.MemoryReady
@@ -141,8 +144,23 @@ func topProcesses(processes []Process, metric string) []Process {
 			return a.Memory > b.Memory
 		}
 		return a.PID < b.PID
-	})
-	return append([]Process{}, result[:min(5, len(result))]...)
+	}
+	result := make([]Process, 0, 5)
+	for _, p := range processes {
+		at := 0
+		for at < len(result) && !before(p, result[at]) {
+			at++
+		}
+		if at >= 5 {
+			continue
+		}
+		if len(result) < 5 {
+			result = append(result, Process{})
+		}
+		copy(result[at+1:], result[at:len(result)-1])
+		result[at] = p
+	}
+	return result
 }
 
 type ProcessSampleInfo struct {

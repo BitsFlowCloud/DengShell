@@ -68,6 +68,8 @@ type Session struct {
 	networkMetadataAt   time.Time
 	previous            *rawStats
 	processPrevious     *rawStats
+	processList         processListCache
+	processUsers        processUserCache
 	staticPrevious      *Stats
 	latencyMu           sync.RWMutex
 	latency             LatencySample

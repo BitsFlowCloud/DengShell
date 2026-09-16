@@ -64,6 +64,7 @@ printf '\n__CS_DF__\n'; df -Pk 2>/dev/null
 
 const monitorMinimumInterval = 5 * time.Second
 const monitorProcessInterval = 5 * time.Second
+const processOutputLimit = 32 << 20
 const monitorStaticInterval = 30 * time.Second
 
 func monitorCommandFor(static, processes bool) string {
@@ -352,13 +353,11 @@ func (s *Session) collectProcessesOnly(ctx context.Context) error {
 	processCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
 	defer cancel()
 	started := time.Now()
-	data, err := s.processCollector.run(processCtx, s, "processes", "export LC_ALL=C\n"+processMonitorCommand, monitorOutputLimit)
+	data, err := s.processCollector.run(processCtx, s, "processes", "export LC_ALL=C\n"+processMonitorCommand, processOutputLimit)
 	if err != nil {
 		// Keep core CPU/memory/disk samples usable when the optional process
 		// scan fails. Back off retries; a stuck worker cannot multiply on clicks.
-		s.processPrevious = &rawStats{Stats: Stats{Processes: []Process{}, ProcessSample: ProcessSampleInfo{
-			SampledAt: time.Now(), Error: "进程采集未完成：" + err.Error(), IntervalMilliseconds: 30000,
-		}}}
+		s.failedProcessSample("进程采集未完成：" + err.Error())
 		s.processNextSampleAt = time.Now().Add(30 * time.Second)
 		return ctx.Err()
 	}
@@ -375,11 +374,13 @@ func (s *Session) collectProcessesOnly(ctx context.Context) error {
 		}
 	}
 	parseProcessStats(&current, lines)
-	current.ProcessSample.SampledAt = current.SampledAt
-	interval := max(monitorProcessInterval, min(30*time.Second, 2*time.Since(started)))
 	if !current.ProcessSample.Available {
-		interval = 30 * time.Second
+		s.failedProcessSample(current.ProcessSample.Error)
+		s.processNextSampleAt = time.Now().Add(30 * time.Second)
+		return nil
 	}
+	current.ProcessSample.SampledAt = current.SampledAt
+	interval := processSampleInterval(len(current.Processes), time.Since(started))
 	current.ProcessSample.IntervalMilliseconds = int(interval / time.Millisecond)
 	if s.processPrevious != nil {
 		applyProcessRates(&current, s.processPrevious)
@@ -388,6 +389,33 @@ func (s *Session) collectProcessesOnly(ctx context.Context) error {
 	// Long scans leave an idle interval instead of immediately starting again.
 	s.processNextSampleAt = time.Now().Add(interval)
 	return nil
+}
+
+func processSampleInterval(count int, elapsed time.Duration) time.Duration {
+	interval := monitorProcessInterval
+	if count > 5000 {
+		interval = 10 * time.Second
+	}
+	if count > 20000 {
+		interval = 20 * time.Second
+	}
+	if count > 50000 {
+		interval = 30 * time.Second
+	}
+	return max(interval, min(time.Minute, 3*elapsed))
+}
+
+// Retain the last successful immutable snapshot and CPU baseline on failure;
+// the list can still be searched/paged while explicitly displaying stale data.
+func (s *Session) failedProcessSample(message string) {
+	next := rawStats{Stats: Stats{Processes: []Process{}}}
+	if s.processPrevious != nil {
+		next = *s.processPrevious
+	}
+	next.ProcessSample.Available = false
+	next.ProcessSample.Error = message
+	next.ProcessSample.IntervalMilliseconds = 30000
+	s.processPrevious = &next
 }
 
 func (s *Session) cachedDisplayStats(processes, cached bool) Stats {

@@ -7,34 +7,35 @@
   <meta name="referrer" content="no-referrer">
   <script src="bootstrap.js"></script>
   <script>if(location.protocol!=='wails:'&&location.hostname!=='wails.localhost'){const nonce=new URLSearchParams(location.search).get('window');if(/^[A-Za-z0-9_-]{24,96}$/.test(nonce||'')){window.CLOUDSHELL.detachedNonce=nonce;window.CLOUDSHELL.startupAnimation=false;}}</script>
-  <script src="theme.js?v=20260916-v001-r40-b46"></script>
+  <script src="theme.js?v=20260916-v001-r40-b48"></script>
   <link rel="stylesheet" href="vendor/xterm.css">
-  <link rel="stylesheet" href="style.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="theme.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="workspace-tools.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="appearance.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="workspace-refinements.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="file-browser.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="themed-select.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="config-document.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="startup-update.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="desktop-polish.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="splash.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="server-manager.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="help-guide.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="appearance-tools.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="font-library.css?v=20260916-v001-r40-b46">
+  <link rel="stylesheet" href="style.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="theme.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="workspace-tools.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="appearance.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="process-view.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="workspace-refinements.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="file-browser.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="themed-select.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="config-document.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="startup-update.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="desktop-polish.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="splash.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="server-manager.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="help-guide.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="appearance-tools.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="font-library.css?v=20260916-v001-r40-b48">
   <link rel="icon" href="assets/dengshell.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="file-tools.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="desktop-tray.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="latency-chart.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="common-apps.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="session-windows.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="system-identity.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="chart-styles.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="light-theme.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="ui-appearance.css?v=20260916-v001-r40-b46">
-  <link rel="stylesheet" href="finalshell-import.css?v=20260916-v001-r40-b46">
+  <link rel="stylesheet" href="file-tools.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="desktop-tray.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="latency-chart.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="common-apps.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="session-windows.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="system-identity.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="chart-styles.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="light-theme.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="ui-appearance.css?v=20260916-v001-r40-b48">
+  <link rel="stylesheet" href="finalshell-import.css?v=20260916-v001-r40-b48">
 </head>
 <body>
   <svg class="icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -238,45 +239,46 @@
   <dialog id="exit-dialog"><form id="exit-form"><h2>退出 DengShell？</h2><p id="exit-description">确认关闭应用。</p><div class="dialog-buttons"><button type="button" id="cancel-exit">继续使用</button><button class="primary-button" type="submit" id="confirm-exit">退出</button></div></form></dialog>
 
   <div id="toast" class="toast" role="status" hidden></div>
-  <script src="splash.js?v=20260916-v001-r40-b46"></script>
+  <script src="splash.js?v=20260916-v001-r40-b48"></script>
   <script src="vendor/xterm.js"></script>
   <script src="vendor/addon-fit.js"></script>
   <script src="vendor/addon-serialize.js"></script>
-  <script src="command-composer.js?v=20260916-v001-r40-b46"></script>
-  <script src="workspace-tools.js?v=20260916-v001-r40-b46"></script>
-  <script src="appearance.js?v=20260916-v001-r40-b46"></script>
-  <script src="ui-appearance.js?v=20260916-v001-r40-b46"></script>
-  <script src="font-library.js?v=20260916-v001-r40-b46"></script>
-  <script src="file-browser.js?v=20260916-v001-r40-b46"></script>
-  <script src="latency-chart.js?v=20260916-v001-r40-b46"></script>
-  <script src="workspace-refinements.js?v=20260916-v001-r40-b46"></script>
-  <script src="themed-select.js?v=20260916-v001-r40-b46"></script>
-  <script src="terminal-integration.js?v=20260916-v001-r40-b46"></script>
-  <script src="mtr-installation.js?v=20260916-v001-r40-b46"></script>
-  <script src="config-document.js?v=20260916-v001-r40-b46"></script>
-  <script src="finalshell-import.js?v=20260916-v001-r40-b46"></script>
-  <script src="startup-update.js?v=20260916-v001-r40-b46"></script>
-  <script src="portable-preferences.js?v=20260916-v001-r40-b46"></script>
-  <script src="server-manager.js?v=20260916-v001-r40-b46"></script>
-  <script src="server-explorer.js?v=20260916-v001-r40-b46"></script>
-  <script src="help-guide.js?v=20260916-v001-r40-b46"></script>
-  <script src="chart-styles.js?v=20260916-v001-r40-b46"></script>
-  <script src="appearance-tools.js?v=20260916-v001-r40-b46"></script>
-  <script src="terminal-snapshot.js?v=20260916-v001-r40-b46"></script>
-  <script src="server-addresses.js?v=20260916-v001-r40-b46"></script>
-  <script src="window-preview.js?v=20260916-v001-r40-b46"></script>
-  <script src="window-transfers.js?v=20260916-v001-r40-b46"></script>
-  <script src="session-windows.js?v=20260916-v001-r40-b46"></script>
-  <script src="session-tabs-layout.js?v=20260916-v001-r40-b46"></script>
-  <script src="system-identity.js?v=20260916-v001-r40-b46"></script>
-  <script src="app.js?v=20260916-v001-r40-b46"></script>
-  <script src="common-apps.js?v=20260916-v001-r40-b46"></script>
-  <script src="text-model.js?v=20260916-v001-r40-b46"></script>
-  <script src="remote-text-document.js?v=20260916-v001-r40-b46"></script>
-  <script src="text-search.js?v=20260916-v001-r40-b46"></script>
-  <script src="text-editor-tools.js?v=20260916-v001-r40-b46"></script>
-  <script src="text-editor.js?v=20260916-v001-r40-b46"></script>
-  <script src="file-tools.js?v=20260916-v001-r40-b46"></script>
-  <script src="desktop-tray.js?v=20260916-v001-r40-b46"></script>
+  <script src="command-composer.js?v=20260916-v001-r40-b48"></script>
+  <script src="workspace-tools.js?v=20260916-v001-r40-b48"></script>
+  <script src="appearance.js?v=20260916-v001-r40-b48"></script>
+  <script src="ui-appearance.js?v=20260916-v001-r40-b48"></script>
+  <script src="font-library.js?v=20260916-v001-r40-b48"></script>
+  <script src="file-browser.js?v=20260916-v001-r40-b48"></script>
+  <script src="latency-chart.js?v=20260916-v001-r40-b48"></script>
+  <script src="workspace-refinements.js?v=20260916-v001-r40-b48"></script>
+  <script src="themed-select.js?v=20260916-v001-r40-b48"></script>
+  <script src="terminal-integration.js?v=20260916-v001-r40-b48"></script>
+  <script src="mtr-installation.js?v=20260916-v001-r40-b48"></script>
+  <script src="config-document.js?v=20260916-v001-r40-b48"></script>
+  <script src="finalshell-import.js?v=20260916-v001-r40-b48"></script>
+  <script src="startup-update.js?v=20260916-v001-r40-b48"></script>
+  <script src="portable-preferences.js?v=20260916-v001-r40-b48"></script>
+  <script src="server-manager.js?v=20260916-v001-r40-b48"></script>
+  <script src="server-explorer.js?v=20260916-v001-r40-b48"></script>
+  <script src="help-guide.js?v=20260916-v001-r40-b48"></script>
+  <script src="chart-styles.js?v=20260916-v001-r40-b48"></script>
+  <script src="appearance-tools.js?v=20260916-v001-r40-b48"></script>
+  <script src="terminal-snapshot.js?v=20260916-v001-r40-b48"></script>
+  <script src="server-addresses.js?v=20260916-v001-r40-b48"></script>
+  <script src="window-preview.js?v=20260916-v001-r40-b48"></script>
+  <script src="window-transfers.js?v=20260916-v001-r40-b48"></script>
+  <script src="session-windows.js?v=20260916-v001-r40-b48"></script>
+  <script src="session-tabs-layout.js?v=20260916-v001-r40-b48"></script>
+  <script src="system-identity.js?v=20260916-v001-r40-b48"></script>
+  <script src="app.js?v=20260916-v001-r40-b48"></script>
+  <script src="process-view.js?v=20260916-v001-r40-b48"></script>
+  <script src="common-apps.js?v=20260916-v001-r40-b48"></script>
+  <script src="text-model.js?v=20260916-v001-r40-b48"></script>
+  <script src="remote-text-document.js?v=20260916-v001-r40-b48"></script>
+  <script src="text-search.js?v=20260916-v001-r40-b48"></script>
+  <script src="text-editor-tools.js?v=20260916-v001-r40-b48"></script>
+  <script src="text-editor.js?v=20260916-v001-r40-b48"></script>
+  <script src="file-tools.js?v=20260916-v001-r40-b48"></script>
+  <script src="desktop-tray.js?v=20260916-v001-r40-b48"></script>
 </body>
 </html>

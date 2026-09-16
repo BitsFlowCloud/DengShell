@@ -25,8 +25,8 @@
     "libjavascriptcoregtk-4.1.so.0",
     "libc.so.6"
   ],
-  "sha256": "4d10f4a2f7b17f8a050f03e04ce907ffce00fddd64e34f51f29bc4c7b7e9f5ff",
-  "bytes": 49849736,
+  "sha256": "a82138b142beb0170c1978cc87ebe22ebfcbfff6b45dfeb0b31b9822b8f741dd",
+  "bytes": 49894792,
   "builderImageID": "sha256:0c7bd7129371d3ea55cfeffc17419d66d37ed1aa93e849b92ae9f202d26d0be3",
   "goVersion": "go version go1.27.1 linux/amd64",
   "compiler": "11.4.0",

@@ -420,9 +420,10 @@ function dropSessionView(id, expected = null) {
       connectionAttempts.delete(state.profileId); connecting.delete(state.profileId); connectionRequests.delete(state.profileId);
     }
   }
+  window.DengProcessView?.drop(id);
   state.navAbort?.abort(); state.ws?.close(); state.term?.dispose(); state.host?.remove(); sessions.delete(id);
   if (activeID === id) activeID = sessions.keys().next().value || null;
-  if (activeID) activate(activeID); else { renderTabs(); renderSessionInfo(); renderFiles(); }
+  if (activeID) activate(activeID, window.DengProcessView?.active() === activeID ? 'processes' : 'terminal'); else { renderTabs(); renderSessionInfo(); renderFiles(); }
 }
 async function closeSession(id) {
   const state = sessions.get(id); if (!state || state.detaching || state.handoffProvisional) return;
@@ -433,29 +434,31 @@ async function closeSession(id) {
 function renderTabs() {
   window.DengSessionWindows.cancelDrag();
   $('#session-tabs').setAttribute('role', 'tablist');
-  $('#session-tabs').replaceChildren(...[...sessions.values()].sort((a,b) => (a.tabOrder ?? 0) - (b.tabOrder ?? 0)).map(state => {
-    const profile = profileFor(state); const tab = node('div', `session-tab${state.id === activeID ? ' active' : ''}`);
+  $('#session-tabs').replaceChildren(...[...sessions.values()].sort((a,b) => (a.tabOrder ?? 0) - (b.tabOrder ?? 0)).flatMap(state => {
+    const selected = state.id === activeID && !window.DengProcessView?.active();
+    const profile = profileFor(state); const tab = node('div', `session-tab${selected ? ' active' : ''}`);
     tab.dataset.sessionId = state.id;
     tab.dataset.connecting = String(!!state.pendingConnection);
     tab.dataset.failed = String(!!state.connectionFailed);
     const label = node('span', 'session-tab-text');
     label.append(node('span', 'session-tab-label', profile?.name || '已删除配置'));
-    const button = node('button'); button.type = 'button'; button.append(node('span', `status-dot ${state.connected ? 'green' : 'blue'}`), label); button.onclick = () => activate(state.id); button.setAttribute('role', 'tab'); button.setAttribute('aria-selected', String(state.id === activeID)); button.setAttribute('aria-current', state.id === activeID ? 'page' : 'false'); button.title = profile ? `${profile.name} · ${profile.user}@${profile.host}:${profile.port}` : '已删除配置';
-    if (state.id === activeID && state.connected) { label.append(node('span', 'session-current-badge', '当前连接')); tab.classList.add('current-session'); }
+    const button = node('button'); button.type = 'button'; button.append(node('span', `status-dot ${state.connected ? 'green' : 'blue'}`), label); button.onclick = () => activate(state.id); button.setAttribute('role', 'tab'); button.setAttribute('aria-selected', String(selected)); button.setAttribute('aria-current', selected ? 'page' : 'false'); button.title = profile ? `${profile.name} · ${profile.user}@${profile.host}:${profile.port}` : '已删除配置';
+    if (selected && state.connected) { label.append(node('span', 'session-current-badge', '当前连接')); tab.classList.add('current-session'); }
     button.setAttribute('aria-busy', String(!!state.pendingConnection));
     if (state.localOnly) button.title += ` · ${state.connectionMessage}`;
-    const close = node('button', 'tab-close'); close.append(icon('close')); close.title = state.pendingConnection ? '取消连接' : '关闭连接'; close.setAttribute('aria-label', `${state.pendingConnection ? '取消' : '关闭'} ${profile?.name || '会话'}`); close.onclick = safe(() => closeSession(state.id)); close.disabled = !!(state.detaching || state.handoffProvisional); tab.dataset.detaching = String(!!state.detaching); tab.append(button, close); window.DengSessionWindows.bindTab(tab, state); return tab;
+    const close = node('button', 'tab-close'); close.append(icon('close')); close.title = state.pendingConnection ? '取消连接' : '关闭连接'; close.setAttribute('aria-label', `${state.pendingConnection ? '取消' : '关闭'} ${profile?.name || '会话'}`); close.onclick = safe(() => closeSession(state.id)); close.disabled = !!(state.detaching || state.handoffProvisional); tab.dataset.detaching = String(!!state.detaching); tab.append(button, close); window.DengSessionWindows.bindTab(tab, state); return [tab, ...(window.DengProcessView?.tabs(state) || [])];
   })); updateStatus(); window.DengTextEditors?.reflect(); window.DengCommandComposer?.reflect();
 }
-function activate(id) {
+function activate(id, view = 'terminal') {
   if (!sessions.has(id)) return;
   activeID = id; selectedName = ''; $('#file-filter').value = '';
+  window.DengProcessView?.activate(id, view);
   for (const state of sessions.values()) state.host.hidden = state.id !== id;
   renderTabs(); renderSessionInfo(); renderFiles();
   requestAnimationFrame(() => {
     if (activeID !== id) return;
     $('#session-tabs .session-tab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    fitActive(); current()?.term.focus();
+    if (!window.DengProcessView?.active()) { fitActive(); current()?.term.focus(); }
   });
 }
 function updateStatus() { $('#connection-button').setAttribute('aria-label', '管理服务器'); window.DengSessionWindows.reflect(); }
@@ -466,7 +469,7 @@ function renderSessionInfo() {
   $('#terminal-state').title = state?.disconnectDiagnostic?.message || '';
   $('#command-history').disabled = false; $('#command-input').disabled = !state?.connected; $('#command-input').value = ''; resizeCommandInput(); $('#reconnect').disabled = !state || !!(state.pendingConnection || state.disconnecting || state.detaching || state.handoffProvisional || state.ownershipUncertain); $('#disconnect').disabled = !state?.connected || !!(state.disconnecting || state.detaching || state.handoffProvisional || state.ownershipUncertain);
   $('#follow-terminal').checked = !!state?.follow; $('#follow-terminal').disabled = !state?.ready;
-  renderMonitor(state?.connected ? state.stats : null); renderLatency(); renderCommands(); window.DengCommonApps?.render(); updateStatus();
+  renderMonitor(state?.connected ? state.stats : null); renderLatency(); renderCommands(); window.DengCommonApps?.render(); window.DengProcessView?.reflect(); updateStatus();
 }
 $('#command-form').onsubmit = event => { event.preventDefault(); const state = current(); const input = $('#command-input'); if (!state?.ready || !input.value) return; pasteTerminalText(state, input.value, { execute: true }); input.value = ''; resizeCommandInput(); };
 $('#command-input').onkeydown = event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); $('#command-form').requestSubmit(); return; } const state = current(); if (!state || !['ArrowUp', 'ArrowDown'].includes(event.key)) return; event.preventDefault(); state.historyIndex = Math.max(0, Math.min(state.history.length, state.historyIndex + (event.key === 'ArrowUp' ? -1 : 1))); event.target.value = state.history[state.historyIndex] || ''; resizeCommandInput(); };
