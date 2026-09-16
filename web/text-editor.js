@@ -27,7 +27,7 @@ window.DengTextEditors = (() => {
   }
   function dragWindow(win, handle) {
     handle.addEventListener('pointerdown', event => {
-      if (event.button || event.target.closest('button,select,input')) return;
+      if (event.button || event.target.closest('button,select,input,summary')) return;
       const r = win.element.getBoundingClientRect(), scale = typeof effectiveScale === 'number' ? effectiveScale : 1;
       const x = event.clientX, y = event.clientY;
       handle.setPointerCapture(event.pointerId);
@@ -47,7 +47,6 @@ window.DengTextEditors = (() => {
       const active = win.active === doc;
       const select = button('', 'text-editor-tab-select', () => show(win, doc)); select.setAttribute('role', 'tab'); select.setAttribute('aria-selected', String(active)); select.setAttribute('aria-controls', doc.ui.panel.id);
       select.append(node('span', 'text-editor-tab-server', doc.owner), node('span', '', `${doc.path.split('/').pop() || '/'}${doc.dirty ? ' *' : ''}`));
-      if (active) select.append(node('span', 'text-editor-current', '当前查看'));
       select.title = `${doc.address}\n${doc.path}${connected(doc) ? '' : '\n原连接不可用，可复制或保留草稿'}`;
       const close = button('×', 'text-editor-tab-close', () => closeDoc(doc)); close.setAttribute('aria-label', `关闭 ${doc.owner} · ${doc.path}`);
       tab.append(select, close); doc.ui.panel.hidden = !active; return tab;
@@ -101,10 +100,18 @@ window.DengTextEditors = (() => {
     win.merge = button('合并到另一窗口', 'upload-button', () => { const target = windows.find(w => w !== win); if (target && win.active) moveDoc(win.active, target); });
     head.title = '拖动标题栏移动窗口；右下角可调整大小';
     layout.append(win.detach, win.merge);
-    win.body = node('div', 'text-editor-panels'); e.append(head, win.tabs, layout, win.body);
+    const windowMenu = node('details', 'text-editor-more text-editor-window-menu');
+    windowMenu.append(node('summary', '', '窗口'), layout); actions.prepend(windowMenu);
+    layout.addEventListener('click', event => { if (event.target.closest('button')) windowMenu.open = false; });
+    win.body = node('div', 'text-editor-panels'); e.append(head, win.tabs, win.body);
     e.addEventListener('pointerdown', () => raise(win), true);
     e.addEventListener('cancel', event => { event.preventDefault(); e.close(); });
     e.addEventListener('keydown', event => {
+      if (win.active?.ui.tools.keydown(event)) return;
+      if (event.key === 'Escape') {
+        const menu = e.querySelector('details[open]');
+        if (menu) { event.preventDefault(); event.stopPropagation(); menu.open = false; menu.querySelector('summary').focus(); return; }
+      }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         const handled = event.defaultPrevented; event.preventDefault();
         if (!handled && win.active) safe(() => save(win.active))();
@@ -116,7 +123,7 @@ window.DengTextEditors = (() => {
     });
     dragWindow(win, head); document.body.append(e); windows.push(win);
     const scale = typeof effectiveScale === 'number' ? effectiveScale : 1;
-    e.style.left = Math.max(4, (innerWidth / scale - 900) / 2 + (windows.length - 1) * 24) + 'px';
+    e.style.left = Math.max(4, (innerWidth / scale - 1040) / 2 + (windows.length - 1) * 24) + 'px';
     e.style.top = Math.max(4, 55 + (windows.length - 1) * 24) + 'px';
     return win;
   }
@@ -130,8 +137,11 @@ window.DengTextEditors = (() => {
     ui.save.disabled = doc.loading || doc.saving || !doc.dirty || !live;
     ui.reload.disabled = doc.loading || doc.saving || !live;
     ui.copy.disabled = !model;
+    ui.tools.refresh();
     const eol = [...new Set(model?.raw.match(/\r\n|\r|\n/g) || [])].map(s => s === '\r\n' ? 'CRLF' : s === '\r' ? 'CR' : 'LF').join(' + ') || '无换行';
     ui.status.textContent = [doc.loading ? '正在读取…' : doc.saving ? '正在保存…' : doc.dirty ? '未保存' : doc.baseline ? '已保存' : '', !live ? '原连接不可用，草稿保留，可复制' : '', doc.error || '', doc.baseline ? `${doc.baseline.encoding} · ${eol} · ${model.raw.length.toLocaleString()} 字符` : ''].filter(Boolean).join(' · ');
+    ui.status.title = ui.status.textContent;
+    ui.status.classList.toggle('text-editor-error', !!doc.error || !live);
     renderTabs(doc.win);
     if (dock) { dock.hidden = !documents.size; dock.textContent = `文本编辑器 (${documents.size})${isDirty() ? ' *' : ''}`; }
   }
@@ -161,7 +171,9 @@ window.DengTextEditors = (() => {
     ui.encoding.onchange = safe(() => reload(doc, ui.encoding.value)); label.append(ui.encoding);
     ui.reload = button('重新读取', 'upload-button', () => reload(doc, ui.encoding.value));
     ui.copy = button('复制全文', 'upload-button', async () => { if (doc.model) { await copyText(doc.model.raw); toast('已复制原样文本'); } });
-    toolbar.append(label, ui.reload, ui.copy);
+    const more = node('details', 'text-editor-more'), moreBody = node('div', 'text-editor-more-body');
+    more.append(node('summary', '', '更多'), moreBody); moreBody.append(label, ui.reload, ui.copy);
+    moreBody.addEventListener('click', event => { if (event.target.closest('button') && !event.target.closest('.themed-select')) more.open = false; });
     const area = ui.area = node('textarea', 'text-editor-area'); area.spellcheck = false; area.autocapitalize = 'off'; area.autocomplete = 'off'; area.wrap = 'off'; area.setAttribute('aria-label', `${doc.owner} · ${doc.path}`);
     const sync = caret => { area.value = doc.model.visible; if (caret != null) area.setSelectionRange(caret, caret); update(doc); };
     area.oninput = () => { if (doc.model && !doc.loading) { doc.model.edit(area.value); update(doc); } };
@@ -190,9 +202,13 @@ window.DengTextEditors = (() => {
       if (ctrl && ['z','y'].includes(event.key.toLowerCase())) { event.preventDefault(); if (event.shiftKey || event.key.toLowerCase() === 'y') doc.model.redo(); else doc.model.undo(); sync(); }
       if (event.key === 'Tab' && !ctrl) { event.preventDefault(); sync(doc.model.replace(area.selectionStart, area.selectionEnd, '\t')); }
     });
-    const foot = node('div', 'text-editor-footer'); ui.status = node('span'); ui.status.setAttribute('role', 'status'); ui.save = button('保存到此服务器', 'primary-button', () => save(doc));
-    foot.append(ui.status, ui.save);
-    ui.panel.append(owner, toolbar, area, foot, node('p', 'text-editor-note', '编码、BOM 与原有换行保持原样。Ctrl+S 保存此文件；Ctrl+Tab 切换文件；Ctrl+W 关闭当前文件。'));
+    const foot = node('div', 'text-editor-footer'); ui.status = node('span'); ui.status.setAttribute('role', 'status'); ui.save = button('保存', 'primary-button', () => save(doc));
+    ui.save.title = `保存到 ${doc.owner} · ${doc.path}（Ctrl+S）`;
+    ui.tools = DengEditorTools(doc, () => update(doc));
+    toolbar.append(...ui.tools.buttons, more, ui.save);
+    foot.append(owner, ui.status);
+    foot.title = '编码、BOM 与原有换行保持原样。Ctrl+S 保存；Ctrl+Tab 切换文件；Ctrl+W 关闭当前文件。';
+    ui.panel.append(toolbar, ui.tools.bar, ui.tools.goto, area, foot);
     doc.win.body.append(ui.panel);
   }
   async function openText(state, path) {

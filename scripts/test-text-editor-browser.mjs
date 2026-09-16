@@ -1,0 +1,100 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import puppeteer from '/home/bitsflow/.cache/dengshell-dev-tools/node_modules/puppeteer-core/lib/puppeteer/puppeteer-core.js';
+const stage=process.env.DENG_EDITOR_QA_DIR || '/home/bitsflow/.cache/dengshell-r40-editor-20260916/qa';
+const fixture=JSON.parse(fs.readFileSync(stage+'/browser-fixture.json'));
+const browser=await puppeteer.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+const errors=[],checks=[],saves=[];
+const original='foo FOO foo\r\n第二行 foo\r最后 foo\n'+Array.from({length:100},(_,i)=>`line ${i+4}: 内容`).join('\n');
+const contents=new Map([['editor-a',original],['editor-b','foo second file\r\nB 行']]);
+try {
+ const page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));
+ await page.setRequestInterception(true);
+ page.on('request',r=>{
+  const u=new URL(r.url()),m=u.pathname.match(/^\/api\/sessions\/(editor-[ab])\/file-content$/);
+  if(m){let text=contents.get(m[1]);if(r.method()==='POST'){const data=JSON.parse(r.postData());saves.push({id:m[1],...data});text=data.text;contents.set(m[1],text)}r.respond({status:200,contentType:'application/json',body:JSON.stringify({text,encoding:'utf-8',sha256:'a'.repeat(64)})});}
+  else if(/^https?:/.test(u.protocol)&&u.origin!==new URL(fixture.url).origin)r.abort();else r.continue();
+ });
+ await page.setViewport({width:1440,height:1000});await page.goto(fixture.url,{waitUntil:'networkidle0'});
+ await page.evaluate(async()=>{
+  document.querySelectorAll('dialog[open]').forEach(e=>e.close());
+  await chooseAppearance({startupAnimation:false,onboardingCompleted:true,uiScale:1});setDrawer(false);
+  profiles.push({id:'profile-a',name:'服务器 A',user:'root',host:'test-a',port:22},{id:'profile-b',name:'服务器 B',user:'root',host:'test-b',port:22});
+  for(const id of ['a','b']){const state={id:'editor-'+id,profileId:'profile-'+id,connected:true,closed:false};sessions.set(state.id,state);await DengTextEditors.openText(state,'/etc/config.txt');}
+ });
+ const panel='.text-editor-dialog[open] .text-editor-panel:not([hidden])';
+ const area=panel+' .text-editor-area';
+ const key=async k=>{await page.keyboard.down('Control');await page.keyboard.press(k);await page.keyboard.up('Control')};
+ const value=()=>page.$eval(area,e=>e.value);
+ const selectA=async()=>page.evaluate(()=>[...document.querySelectorAll('[role=tab]')].find(e=>e.textContent.includes('服务器 A')).click());
+ const selectB=async()=>page.evaluate(()=>[...document.querySelectorAll('[role=tab]')].find(e=>e.textContent.includes('服务器 B')).click());
+ const set=async(selector,text)=>page.$eval(selector,(e,text)=>{e.value=text;e.dispatchEvent(new Event('input',{bubbles:true}))},text);
+ const clickText=async(selector,text)=>page.$$eval(selector,(es,text)=>es.find(e=>e.textContent===text).click(),text);
+ const selection=()=>page.$eval(area,e=>[e.selectionStart,e.selectionEnd,e.value.slice(e.selectionStart,e.selectionEnd)]);
+ await selectA();await key('f');await set(panel+' .text-editor-find','foo');
+ assert.equal(await page.$eval(panel+' .text-editor-search-status',e=>e.textContent),'0 / 5');
+ await page.keyboard.press('Enter');assert.deepEqual(await selection(),[0,3,'foo']);
+ await page.keyboard.press('F3');assert.deepEqual(await selection(),[4,7,'FOO']);
+ await page.keyboard.down('Shift');await page.keyboard.press('F3');await page.keyboard.up('Shift');assert.equal((await selection())[0],0);
+ await page.click(panel+' .text-editor-match-case input');assert.equal(await page.$eval(panel+' .text-editor-search-status',e=>e.textContent),'1 / 4');
+ await page.click(panel+' .text-editor-match-case input');
+ await key('h');await set(panel+' .text-editor-replacement','$&');
+ await clickText(panel+' .text-editor-replace-row button','全部替换');
+ assert.equal((await value()).split('$&').length-1,5);
+ await page.focus(area);await key('z');assert.equal(await value(),original.replace(/\r\n|\r/g,'\n'));await key('y');
+ await key('s');await page.waitForFunction(()=>document.querySelector('.text-editor-panel:not([hidden]) .text-editor-toolbar .primary-button').disabled);
+ assert.equal(saves.length,1);assert.equal(saves[0].id,'editor-a');
+ assert.equal(saves[0].text,original.replace(/foo/gi,()=>'$&'));
+ await selectB();assert.equal(await value(),'foo second file\nB 行');await key('h');
+ assert.equal(await page.$eval(panel+' .text-editor-find',e=>e.value),'');
+ await set(panel+' .text-editor-find','second');await set(panel+' .text-editor-replacement','B-only');
+ await clickText(panel+' .text-editor-replace-row button','替换');assert.equal((await selection())[2],'second');
+ await clickText(panel+' .text-editor-replace-row button','替换');assert.equal(await value(),'foo B-only file\nB 行');
+ // Hidden controls must not mutate their old document, even if called directly.
+ const before=await page.$$eval('.text-editor-area',es=>es.map(e=>e.value));
+ await page.evaluate(()=>[...document.querySelector('.text-editor-panel[hidden]').querySelectorAll('button')].find(e=>e.textContent==='全部替换').click());
+ assert.deepEqual(await page.$$eval('.text-editor-area',es=>es.map(e=>e.value)),before);
+ await selectA();assert.equal(await page.$eval(panel+' .text-editor-find',e=>e.value),'foo');assert.equal(await page.$eval(panel+' .text-editor-replacement',e=>e.value),'$&');
+ checks.push('Literal/case search, next/previous, replace-all with one undo, raw CRLF/CR/LF save, two same-path server tabs isolated');
+ await page.focus(area);await key('g');await set(panel+' .text-editor-line','100');await page.keyboard.press('Enter');
+ assert.equal((await selection())[2],'line 100: 内容');assert(await page.$eval(area,e=>e.scrollTop)>0);
+ await page.focus(panel+' .text-editor-line');await set(panel+' .text-editor-line','999');await page.keyboard.press('Enter');assert.equal(await page.$eval(panel+' .text-editor-line',e=>e.getAttribute('aria-invalid')),'true');assert.equal((await selection())[2],'line 100: 内容');
+ await page.keyboard.press('Escape');assert(await page.$eval('.text-editor-dialog',e=>e.open));assert(await page.$eval(panel+' .text-editor-goto',e=>e.hidden));
+ await page.keyboard.press('Escape');assert.equal(await page.$eval('.text-editor-dialog',e=>e.open),false);
+ await page.evaluate(()=>document.querySelector('#show-text-editors').click());
+ await page.click('.text-editor-window-menu summary');await clickText('.text-editor-layout-tools button','移到新窗口');
+ assert.equal(await page.$$eval('.text-editor-dialog[open]',es=>es.length),2);
+ const windows=await page.$$eval('.text-editor-dialog[open]',es=>es.map(e=>e.id));
+ const aWindow=await page.evaluate(()=>[...document.querySelectorAll('.text-editor-dialog')].find(e=>e.textContent.includes('服务器 A')).id);
+ const aPanel='#'+aWindow+' .text-editor-panel:not([hidden])';
+ assert.equal(await page.$eval(aPanel+' .text-editor-find',e=>e.value),'foo');
+ await page.focus(aPanel+' .text-editor-area');await key('g');await set(aPanel+' .text-editor-line','2');await page.keyboard.press('Enter');
+ assert.equal(await page.$eval(aPanel+' .text-editor-area',e=>e.value.slice(e.selectionStart,e.selectionEnd)),'第二行 $&');
+ await page.keyboard.press('Escape');
+ const bWindow=windows.find(id=>id!==aWindow);
+ assert.equal(await page.$eval('#'+bWindow+' .text-editor-area',e=>e.value),'foo B-only file\nB 行');
+ await page.click('#'+aWindow+' .text-editor-window-menu summary');await clickText('#'+aWindow+' .text-editor-layout-tools button','合并到另一窗口');assert.equal(await page.$$eval('.text-editor-dialog[open]',es=>es.length),1);
+ checks.push('Go-to line validation and scroll, Esc closes tools first, detached/merged window query and content ownership');
+ const layouts=[];
+ for(const [width,height,scale]of [[1440,1000,1],[1024,768,1],[768,560,1],[480,640,1],[1280,900,1.5],[1440,1000,2]]){
+  await page.setViewport({width,height});await page.evaluate(scale=>{appearance.uiScale=scale;applyUIScale();window.dispatchEvent(new Event('resize'))},scale);
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  const sizes=await page.$eval('.text-editor-dialog[open]',e=>{const r=e.getBoundingClientRect(),a=e.querySelector('.text-editor-panel:not([hidden]) textarea').getBoundingClientRect();return {width:r.width,height:r.height,area:a.height,ratio:a.height/r.height,overflow:e.scrollWidth>e.clientWidth+1}});
+  assert(sizes.ratio>=0.6,JSON.stringify({width,height,scale,...sizes}));assert(!sizes.overflow);
+  layouts.push({width,height,scale,...sizes});
+ }
+ await page.setViewport({width:1440,height:1000});await page.evaluate(()=>{appearance.uiScale=1;applyUIScale();window.dispatchEvent(new Event('resize'));document.documentElement.dataset.theme='light'});
+ await page.focus(area);await key('g');await set(panel+' .text-editor-line','1');await page.keyboard.press('Enter');await page.keyboard.press('Escape');
+ await page.screenshot({path:stage+'/editor-compact-light.png'});
+ await page.evaluate(()=>document.documentElement.dataset.theme='dark');await key('h');
+ await set(panel+' .text-editor-find','line');await set(panel+' .text-editor-replacement','row');
+ await page.evaluate(()=>new Promise(resolve=>setTimeout(resolve,350)));
+ await page.screenshot({path:stage+'/editor-search-dark.png'});
+ await page.keyboard.press('Escape');await page.click(panel+' .text-editor-more summary');
+ await page.waitForSelector(panel+' .text-editor-more[open] .themed-select-trigger');
+ await page.click(panel+' .themed-select-trigger');await page.waitForSelector('.themed-select-popup:not([hidden])');
+ await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+ assert(await page.$eval('.text-editor-dialog',e=>e.open));
+ assert.deepEqual(errors,[]);
+ fs.writeFileSync(stage+'/editor-browser.json',JSON.stringify({passed:true,checks,layouts,errors},null,2));console.log('PASS '+checks.join('\nPASS '));
+} finally {await browser.close()}
