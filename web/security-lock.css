@@ -1,4 +1,4 @@
-#security-lock-button { margin-left:14px!important; flex:none; --wails-draggable:no-drag; }
+#security-lock-button { margin-left:0!important; flex:none; --wails-draggable:no-drag; }
 #security-lock-button:disabled { opacity:.38; cursor:default; }
 html[data-security-locked] body > :not(#security-lock-screen):not(script):not(style):not(link) { filter:blur(24px) brightness(.65)!important; pointer-events:none!important; user-select:none!important; }
 html[data-security-locked] #startup-splash { display:none!important; }

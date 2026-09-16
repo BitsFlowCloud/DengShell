@@ -21,7 +21,7 @@ try{
  await api('/api/appearance/patch',{startupAnimation:false,onboardingCompleted:true,uiScale:1});
  first=await load();await first.evaluate(()=>setDrawer(false));
  assert(await first.$eval('#security-lock-button',e=>e.disabled));
- const gap=await first.evaluate(()=>document.querySelector('#security-lock-button').getBoundingClientRect().left-document.querySelector('#theme-toggle').getBoundingClientRect().right);assert(gap>=14,{gap});
+ const gap=await first.evaluate(()=>document.querySelector('#security-lock-button').getBoundingClientRect().left-document.querySelector('#theme-toggle').getBoundingClientRect().right);assert(Math.abs(gap-14)<.5,JSON.stringify({gap}));
  await settings(first);await first.waitForFunction(()=>!document.querySelector('#security-enabled').disabled);
  await first.click('#security-enabled');await first.type('#security-new-password','123');await first.type('#security-repeat-password','123');await first.click('#security-save');await first.waitForFunction(()=>document.querySelector('#security-settings-error').textContent.includes('至少 4'));
  for(const id of ['security-new-password','security-repeat-password'])await first.$eval('#'+id,(e,pw)=>e.value=pw,password);
@@ -63,6 +63,15 @@ try{
  await api('/api/security-lock/lock',{});await first.reload({waitUntil:'networkidle0'});await first.waitForSelector('#security-lock-screen[open]');assert.equal((await api('/api/config')).status,423);
  await first.evaluate(()=>CloudShellTheme.set('dark'));await first.waitForFunction(()=>!document.documentElement.dataset.lightSwitch);await first.screenshot({path:stage+'/locked-dark.png'});
  await first.setViewport({width:480,height:640});await first.click('#security-unlock-open');assert(await first.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await first.waitForFunction(()=>{const r=document.querySelector('#security-unlock-form').getBoundingClientRect();return Math.abs((r.left+r.right)/2-innerWidth/2)<2&&Math.abs((r.top+r.bottom)/2-innerHeight/2)<2;});await first.screenshot({path:stage+'/locked-narrow.png'});
- assert.deepEqual(errors,[]);checks.push('Reload remains locked; deep blur in light/dark/narrow views');
+ const geometry=[];
+ for(const [width,height,scale]of [[480,640,1],[800,600,1],[1440,1000,1],[1440,1000,1.5],[1920,1200,2]]){
+  await first.setViewport({width,height});await first.evaluate(s=>{appearance.uiScale=s;applyUIScale()},scale);
+  await first.waitForFunction(()=>{const r=document.querySelector('#security-unlock-form').getBoundingClientRect();return Math.abs((r.left+r.right)/2-innerWidth/2)<2&&Math.abs((r.top+r.bottom)/2-innerHeight/2)<2});
+  const measured=await first.evaluate(()=>{const r=document.querySelector('#security-unlock-form').getBoundingClientRect(),theme=document.querySelector('#theme-toggle').getBoundingClientRect(),lock=document.querySelector('#security-lock-button').getBoundingClientRect();return {scale:effectiveScale,gap:(lock.left-theme.right)/effectiveScale,centerX:(r.left+r.right)/2,centerY:(r.top+r.bottom)/2,width:innerWidth,height:innerHeight}});
+  assert(Math.abs(measured.gap-14)<.5,JSON.stringify(measured));geometry.push(measured);
+ }
+ fs.writeFileSync(stage+'/lock-layout.json',JSON.stringify({passed:true,geometry},null,2));
+ await first.setViewport({width:480,height:640});await first.evaluate(()=>{appearance.uiScale=1;applyUIScale()});await new Promise(r=>setTimeout(r,100));await first.screenshot({path:stage+'/locked-narrow.png'});
+ assert.deepEqual(errors,[]);checks.push('Reload remains locked; deep blur and centered unlock at five viewport/scale combinations; 14px button gap');
  fs.writeFileSync(stage+'/security-lock-browser.json',JSON.stringify({passed:true,checks,qrIndependentlyDecoded:true,errors},null,2));console.log('PASS',checks);
 }finally{await browser.close()}
