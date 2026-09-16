@@ -1,0 +1,25 @@
+name: Update proxy validation
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  proxy:
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    env:
+      GOMAXPROCS: 4
+      GOFLAGS: -p=4
+      DENGSHELL_TEST_SYSTEM_PROXY: 1
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version-file: go.mod
+      - name: Real proxy routing and desktop settings
+        run: go test -race -v -timeout 3m ./internal/updateproxy
+      - name: Signed updater regression
+        run: go test -timeout 5m ./internal/app -run 'Test(Update|StartupUpdate)'

@@ -28,6 +28,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go test -tags desktop,production -timeout 5m .
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Native Windows system proxy and update routing
+        env:
+          DENGSHELL_TEST_SYSTEM_PROXY: 1
+          GOMAXPROCS: 4
+          GOFLAGS: -p=4
+        run: go test -race -v -timeout 3m ./internal/updateproxy
   windows:
     runs-on: windows-2022
     timeout-minutes: 15

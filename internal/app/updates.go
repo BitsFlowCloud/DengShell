@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cloudshell/internal/updateproxy"
 	"cloudshell/internal/updatetrust"
 	"context"
 	"crypto/ed25519"
@@ -25,7 +26,7 @@ const ApplicationVersion = "v0.01"
 
 // Increase this integer for every published build, including packaging-only
 // releases. Display versions alone do not distinguish the v0.01 revisions.
-const ApplicationBuild uint64 = 20260916046
+const ApplicationBuild uint64 = 20260916047
 
 // Public revision stays R40 when a replacement build is published.
 const ApplicationRelease = 40
@@ -96,8 +97,15 @@ func updateAddress(platform string) (string, string) {
 	}
 	return "", ""
 }
+
+var updateTransport = func() *http.Transport {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.Proxy = updateproxy.Proxy
+	return t
+}()
+
 func updateClient(timeout time.Duration) *http.Client {
-	return &http.Client{Timeout: timeout, CheckRedirect: func(req *http.Request, via []*http.Request) error {
+	return &http.Client{Transport: updateTransport, Timeout: timeout, CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		if len(via) > 2 || req.URL.Scheme != "https" || req.URL.Host != "ds.free-vps.org" || req.URL.User != nil {
 			return errors.New("更新地址跳转无效")
 		}
