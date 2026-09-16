@@ -79,9 +79,9 @@
 #profile-new-group { font-size:11px; white-space:nowrap; padding:7px 9px; }
 [data-theme="dark"] .server-manager-tabs,[data-theme="dark"] .server-group-toggle:hover,[data-theme="dark"] .server-group-more:hover,[data-theme="dark"] .server-profile-actions button:hover,[data-theme="dark"] .server-manager-create #new-connection,[data-theme="dark"] .group-emoji-option:hover,[data-theme="dark"] .group-emoji-option[aria-pressed="true"],[data-theme="dark"] #group-emoji-preview { background:var(--surface-inset,#263948); }
 @media (max-width:480px) { .connections-drawer { left:8px; width:calc(var(--view-width,100vw) - 16px); max-width:none; padding:15px 12px 12px; } }
-[data-compact="true"] .connections-drawer { top:45px; bottom:8px; padding-top:14px; }
+[data-compact="true"] .connections-drawer { top:45px; bottom:8px; }
 [data-compact="true"] .server-manager-tabs button { padding-top:7px; padding-bottom:7px; }
-[data-compact="true"] .connections-drawer .drawer-heading h2 { margin-bottom:9px; }
+
 
 /* R30: independent group tree and compact connection list. */
 .connections-drawer{width:min(700px,calc(var(--view-width,100vw) - 32px));padding:18px 14px 12px;--tree-guide:#a7bbc9;--group-root:#eaf1f7;--group-second:#f2f6f9;--group-path:#eef5fa;--group-picked:#dceaf5;--group-picked-border:#547e9b;--group-picked-text:#173d57}
@@ -107,19 +107,30 @@
 .group-color-field{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:12px 0}
 .group-color-field label{margin:0}.group-color-field input[type=color]{width:36px;height:30px;padding:2px;flex:none}.group-color-field span{padding:5px 9px;border-radius:5px;font-size:12px}.group-color-field button{margin-left:auto;font-size:12px;padding:6px}
 
-/* Keep both scrolling panes usable in short windows and at enlarged UI scales. */
-.connections-drawer.server-manager-compact{padding:12px 12px 10px}
-.server-manager-compact .drawer-heading .eyebrow{display:none}
-.server-manager-compact .drawer-heading h2{font-size:18px;margin:4px 0 10px}
-.server-manager-compact .server-manager-tabs button{padding:5px 4px}
-.connections-drawer.server-manager-compact .connection-search{padding:6px 10px;margin:6px 0}
-.server-manager-compact .connection-search input{padding:0;min-height:20px}
-.server-manager-compact .server-selection-bar{padding-bottom:6px}
-.server-manager-compact .server-selection-bar button{padding:5px 8px}
-.server-manager-compact #server-explorer-heading{padding:7px 9px 5px}
-.server-manager-compact #server-explorer-path{max-height:36px;line-height:1.5;margin:3px 0 0}
-.server-manager-compact #server-descendants-label{margin-top:3px}
+/* Two compact rows reserve the height for the folder and connection panes. */
+.connections-drawer,.connections-drawer.server-manager-compact{padding:10px 12px}
+.connections-drawer .drawer-heading{display:grid;grid-template-columns:auto minmax(0,1fr) 28px;grid-template-areas:"title tabs close";align-items:center;gap:12px;padding:0;margin:0 0 7px;flex:none;min-width:0}
+.connections-drawer .drawer-heading h2{grid-area:title;margin:0;font-size:15px;line-height:1.4;font-weight:600;white-space:nowrap}
+.connections-drawer .drawer-heading .icon-button{grid-area:close;align-self:center;width:28px;height:28px;padding:5px}
+.connections-drawer .server-manager-tabs{grid-area:tabs;padding:3px;gap:2px;border-radius:8px;min-width:0}
+.connections-drawer .server-manager-tabs button{padding:5px 7px;min-height:28px;font-size:11px;line-height:1.4;border-radius:6px}
+.connections-drawer .server-manager-tabs button span{margin-left:4px}
+.server-manager-tools{display:flex;align-items:center;gap:8px;flex:none;min-width:0;margin:0 0 8px}
+.connections-drawer .connection-search{flex:1;min-width:0;margin:0;padding:6px 9px;border-radius:7px;height:32px}
+.connections-drawer .connection-search input{min-width:0;min-height:18px;padding:0;font-size:12px;line-height:1.4}
+.connections-drawer .server-selection-bar{flex:none;flex-wrap:nowrap;gap:6px;margin:0;padding:0}
+.connections-drawer .server-selection-bar[hidden]{display:none}
+.connections-drawer .server-selection-bar button{min-height:30px;padding:5px 8px;font-size:11px;line-height:1.4;border-radius:6px}
+.connections-drawer .server-selection-hint{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.connections-drawer.server-manager-narrow .drawer-heading{grid-template-columns:minmax(0,1fr) 28px;grid-template-areas:"title close" "tabs tabs";gap:5px}
+.connections-drawer.server-manager-narrow .server-selection-bar{gap:4px}
+.connections-drawer.server-manager-narrow .server-selection-bar button{padding:5px 6px}
+.connections-drawer.server-manager-narrow .server-manager-tools{gap:5px}
+.connections-drawer.server-manager-narrow .connection-search{padding:6px}
+.connections-drawer #server-explorer-heading{padding:7px 9px 5px}
+.connections-drawer #server-explorer-path{max-height:36px;line-height:1.5;margin:3px 0 0}
+.connections-drawer #server-descendants-label{margin-top:3px}
 .server-manager-compact .server-explorer-details{display:none}
-.server-manager-compact .server-manager-create{padding-top:6px;margin-top:0}
-.server-manager-compact .server-manager-create #new-connection{padding:7px 9px}
-.server-manager-compact .server-manager-create #new-group{padding:7px 5px}
+.connections-drawer .server-manager-create{padding-top:7px;margin-top:0}
+.connections-drawer .server-manager-create #new-connection{padding:7px 9px}
+.connections-drawer .server-manager-create #new-group{padding:7px 5px}

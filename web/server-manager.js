@@ -345,7 +345,9 @@ function initializeServerManager() {
   const hint = node('span', 'server-selection-hint'); hint.id = 'server-selection-hint'; hint.setAttribute('aria-live','polite');
   const clear = serverManagerButton('取消选择', clearServerSelection, 'server-selection-clear'); clear.id = 'clear-selected-servers';
   const open = serverManagerButton('打开所选 (0)', openSelectedServers, 'server-selection-open'); open.id = 'open-selected-servers'; open.disabled = true;
-  bar.append(hint,clear,open); $('#server-manager-body').before(bar);
+  open.setAttribute('aria-describedby', hint.id);
+  bar.title = '单击选择 · 双击打开 · Ctrl / ⌘ 多选；Enter 打开所选，Esc 取消选择';
+  bar.append(hint,clear,open); $('#server-manager-tools').append(bar);
   $('#connections-drawer').addEventListener('keydown', event => {
     if (event.key === 'Escape' && serverManager.selectedProfiles.size) { event.preventDefault(); event.stopPropagation(); clearServerSelection(); }
     else if (event.key === 'Enter' && !event.repeat && serverManager.selectedProfiles.size && event.target.closest('.connection-card,#connection-search,#open-selected-servers')) { event.preventDefault(); event.stopPropagation(); safe(openSelectedServers)(); }

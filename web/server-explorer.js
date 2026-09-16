@@ -13,7 +13,9 @@ function chooseServerFolder(id) {
   serverManager.selectedGroup = id; serverManager.focusedProfile = ''; clearServerSelection();
   $('#connection-search').value = '';
   const byID = new Map(serverManager.nodes.map(group => [group.id, group])), seen = new Set();
-  for (let g = byID.get(id); g && !seen.has(g.id); g = byID.get(g.parentId)) { seen.add(g.id); if (g.parentId) serverManager.collapsed.delete(g.parentId); }
+  // Selecting a folder reveals its children and its ancestor path. Preserve
+  // every other folder's collapsed state; only the caret toggles it closed.
+  for (let g = byID.get(id); g && !seen.has(g.id); g = byID.get(g.parentId)) { seen.add(g.id); serverManager.collapsed.delete(g.id); }
   persistGroupCollapse(); saveServerExplorer(); renderConnections(); $('#connection-groups').scrollTop = 0;
 }
 function serverExplorerProfiles(tree, query) {
@@ -125,7 +127,10 @@ function openServerProfileMenu(profile, actions, anchor) {
 }
 function fitServerExplorer() {
   const drawer = $('#connections-drawer');
-  if (drawer?.clientHeight) drawer.classList.toggle('server-manager-compact', drawer.clientHeight < 620);
+  if (drawer?.clientHeight) {
+    drawer.classList.toggle('server-manager-compact', drawer.clientHeight < 620);
+    drawer.classList.toggle('server-manager-narrow', drawer.clientWidth < 540);
+  }
   const body = $('#server-manager-body'); if (!body?.clientWidth || serverManager.tab !== 'servers') return;
   const maximum = Math.max(145, Math.min(520, body.clientWidth - 195)), width = Math.max(145, Math.min(serverManager.treeWidth, maximum));
   body.style.setProperty('--server-tree-width', `${width}px`);
@@ -138,7 +143,7 @@ function initializeServerExplorer() {
   if (typeof saved?.selectedGroup === 'string' && serverManager.nodes.some(g => g.id === saved.selectedGroup)) serverManager.selectedGroup = saved.selectedGroup;
   const body = node('div', 'server-manager-body'); body.id = 'server-manager-body';
   const folders = node('aside', 'server-folder-pane'); folders.id = 'server-folder-pane'; folders.setAttribute('aria-label', '分组目录');
-  folders.innerHTML = '<div class="server-folder-heading"><strong>分组目录</strong><div><button type="button" id="server-expand-all" title="展开全部分组">展开</button><button type="button" id="server-collapse-all" title="折叠全部分组">折叠</button></div></div><div id="server-folder-list" class="server-folder-list"></div>';
+  folders.innerHTML = '<div class="server-folder-heading"><strong>分组目录</strong><div><button type="button" id="server-expand-all" aria-label="展开全部分组" title="展开全部分组">展开</button><button type="button" id="server-collapse-all" aria-label="折叠全部分组" title="折叠全部分组">折叠</button></div></div><div id="server-folder-list" class="server-folder-list"></div>';
   const divider = node('div', 'server-manager-divider'); divider.id = 'server-manager-divider'; divider.tabIndex = 0; divider.setAttribute('role', 'separator'); divider.setAttribute('aria-orientation', 'vertical'); divider.setAttribute('aria-label', '调整分组栏宽度'); divider.setAttribute('aria-valuemin', '145'); divider.setAttribute('aria-controls', 'server-folder-pane'); divider.title = '拖动调整宽度；方向键调整，双击恢复';
   const pane = node('div', 'server-explorer-content'); pane.innerHTML = '<div id="server-explorer-heading"><div class="server-explorer-heading-row"><strong id="server-explorer-title"></strong><span id="server-explorer-level" class="server-folder-level"></span><span id="server-explorer-count"></span></div><nav id="server-explorer-path" aria-label="当前分组路径"></nav><label id="server-descendants-label"><input type="checkbox" id="server-include-children">包含子分组</label></div>';
   const list = $('#connection-groups'); list.before(body); pane.append(list);

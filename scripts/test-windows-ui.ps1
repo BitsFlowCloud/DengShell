@@ -49,9 +49,11 @@ try{
  Invoke-Button '设置'
  Invoke-Button '恢复默认布局'
  Invoke-Button '管理服务器'
+ Invoke-Button '折叠全部分组'
  Invoke-Button '1级目录，QA 一级目录，2个连接'
  Find-Button '选择 主连接'|Out-Null
  Find-Button '选择 深层连接'|Out-Null
+ Invoke-Button '2级目录，二级目录，1个连接'
  Invoke-Button '3级目录，三级目录，1个连接'
  Invoke-Button '选择 深层连接'
  Find-Button '打开所选 (1)'|Out-Null
@@ -62,7 +64,7 @@ try{
  $bitmap=New-Object System.Drawing.Bitmap([int]$r.Width,[int]$r.Height)
  $g=[System.Drawing.Graphics]::FromImage($bitmap)
  try{$g.CopyFromScreen([int]$r.X,[int]$r.Y,0,0,$bitmap.Size);$bitmap.Save((Join-Path $Output 'windows-native-manager.png'),[System.Drawing.Imaging.ImageFormat]::Png)}finally{$g.Dispose();$bitmap.Dispose()}
- @{passed=$true;nativeWebView2=$true;method='Windows UI Automation on the exact packed release';directorySelection=$true;deepFolder=$true;singleClickSelection=$true;contextMenu=$true;leftSettingsMenu=$true;manualFromSettings=$true;restoreLayoutFromSettings=$true}|ConvertTo-Json|Set-Content -Encoding UTF8 (Join-Path $Output 'windows-ui-validation.json')
+ @{passed=$true;nativeWebView2=$true;method='Windows UI Automation on the exact packed release';directorySelection=$true;nameClickExpandsCollapsedGroup=$true;deepFolder=$true;singleClickSelection=$true;contextMenu=$true;leftSettingsMenu=$true;manualFromSettings=$true;restoreLayoutFromSettings=$true}|ConvertTo-Json|Set-Content -Encoding UTF8 (Join-Path $Output 'windows-ui-validation.json')
  Write-Host 'PASS: native Windows directory navigation, single-click selection and context menu.'
 } catch {
  (Buttons)|ForEach-Object {$_.Current.Name}|Set-Content -Encoding UTF8 (Join-Path $Output 'windows-ui-controls.txt')
