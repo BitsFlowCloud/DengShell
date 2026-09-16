@@ -20,6 +20,7 @@ import (
 )
 
 type desktopBackend interface {
+	RequireUnlocked() error
 	URL() string
 	Token() string
 	ConfigDirectory() string
@@ -100,6 +101,11 @@ func (r *remoteDesktopBackend) request(ctx context.Context, method, path string,
 		return err
 	}
 	return json.NewDecoder(io.LimitReader(response.Body, 40<<20)).Decode(output)
+}
+func (r *remoteDesktopBackend) RequireUnlocked() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	return r.request(ctx, "GET", "/api/security-lock/access", nil, nil)
 }
 func (r *remoteDesktopBackend) Appearance() app.Appearance {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

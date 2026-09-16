@@ -54,6 +54,10 @@ func runDetachedProcess(content fs.FS) error {
 	return runDesktopBackend(remote, content, launch.ConfigDir, launch.Nonce)
 }
 func (d *Desktop) DetachWindow(input app.WindowHandoffRequest) error {
+	if err := d.app.RequireUnlocked(); err != nil {
+		return err
+	}
+
 	if remote, ok := d.app.(*remoteDesktopBackend); ok {
 		return remote.request(d.ctx, "POST", "/api/windows/launch", input, nil)
 	}
@@ -82,6 +86,10 @@ func (d *Desktop) reserveDetachedStart(nonce string) error {
 	return nil
 }
 func (d *Desktop) launchDetached(ctx context.Context, input app.WindowHandoffRequest) error {
+	if err := d.app.RequireUnlocked(); err != nil {
+		return err
+	}
+
 	nonce, sessionID := input.Nonce, input.SessionID
 	application, ok := d.app.(*app.App)
 	if !ok {

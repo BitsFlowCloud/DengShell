@@ -377,6 +377,9 @@ func (r *terminalRelay) run() {
 		for {
 			select {
 			case data := <-r.inputs:
+				if r.app.RequireUnlocked() != nil {
+					continue
+				}
 				if _, err := io.WriteString(in, data); err != nil {
 					s.closeDiagnostic("DS-211", sshDiagnosticErrorKind(err))
 					return
@@ -550,6 +553,10 @@ func (r *terminalRelay) run() {
 					credits--
 				}
 			case "handoff-begin":
+				if r.app.RequireUnlocked() != nil {
+					_ = status(active, "handoff-error", "软件已被锁定", m.Nonce)
+					continue
+				}
 				if paused != nil || pending != nil || !validHandoffNonce(m.Nonce) {
 					_ = status(active, "handoff-error", "迁移正在进行或凭据无效", m.Nonce)
 					continue
@@ -581,6 +588,9 @@ func (r *terminalRelay) run() {
 					return
 				}
 			case "input":
+				if r.app.RequireUnlocked() != nil {
+					continue
+				}
 				if paused != nil || pending != nil {
 					continue
 				}
@@ -595,6 +605,9 @@ func (r *terminalRelay) run() {
 					return
 				}
 			case "resize":
+				if r.app.RequireUnlocked() != nil {
+					continue
+				}
 				if paused != nil || pending != nil {
 					continue
 				}

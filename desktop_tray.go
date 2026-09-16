@@ -114,6 +114,10 @@ func (d *Desktop) startDesktopLifecycle(ctx context.Context, iconPath string) {
 	}()
 }
 func (d *Desktop) InstallUpdate(id string) error {
+	if err := d.app.RequireUnlocked(); err != nil {
+		return err
+	}
+
 	d.mu.Lock()
 	if d.detachedNonce != "" || len(d.children) > 0 {
 		d.mu.Unlock()

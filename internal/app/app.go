@@ -16,6 +16,7 @@ import (
 )
 
 type App struct {
+	securityLock     securityLockState
 	sshDiagnostics   sshDiagnosticLog
 	uiFontMu         sync.Mutex
 	uiFontsAtStartup map[string]bool
@@ -48,6 +49,10 @@ func New(configDir string) (*App, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	a := &App{ctx: ctx, cancel: cancel, store: s, sessions: map[string]*Session{}, transfers: map[string]*Transfer{}, token: randomID()}
 	a.sshDiagnostics.path = filepath.Join(s.dir, "logs", "ssh-disconnect.jsonl")
+	if err := a.initializeSecurityLock(); err != nil {
+		cancel()
+		return nil, err
+	}
 	a.initializeUIFonts()
 	return a, nil
 }
@@ -116,11 +121,16 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 				uiPreferences[key] = value
 			}
 		}
-		data, _ := json.Marshal(map[string]any{"base": a.baseURL, "token": a.token, "startupAnimation": preferences.StartupAnimation, "theme": preferences.Theme, "uiScale": preferences.UIScale, "uiPreferences": uiPreferences, "uiFontRuntime": a.uiFontRuntime()})
+		lockState := a.SecurityLockStatus()
+		if lockState.Locked {
+			uiPreferences = map[string]json.RawMessage{}
+		}
+		data, _ := json.Marshal(map[string]any{"securityLock": lockState, "base": a.baseURL, "token": a.token, "startupAnimation": preferences.StartupAnimation, "theme": preferences.Theme, "uiScale": preferences.UIScale, "uiPreferences": uiPreferences, "uiFontRuntime": a.uiFontRuntime()})
 		fmt.Fprintf(w, "window.CLOUDSHELL = %s;", data)
 	})
 	mux.HandleFunc("GET /api/ui-fonts/runtime", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, a.uiFontRuntime()) })
 	mux.HandleFunc("GET /api/config", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, a.store.List()) })
+	a.registerSecurityLockHTTP(mux)
 	a.registerWindowHandoffHTTP(mux)
 	a.registerCommandHistoryHTTP(mux)
 	a.registerWindowViewsHTTP(mux)
@@ -241,6 +251,12 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 			}
 			if token != a.token {
 				writeError(w, 403, errors.New("本地会话已更新，请刷新或重启窗口"))
+				return
+			}
+		}
+		if strings.HasPrefix(r.URL.Path, "/api/") && !lockControlPath(r.URL.Path) {
+			if err := a.RequireUnlocked(); err != nil {
+				writeError(w, 423, err)
 				return
 			}
 		}

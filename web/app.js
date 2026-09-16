@@ -11,6 +11,7 @@ let toastLayerObserver;
 const toastModalOrder = [];
 function placeToast(force = false) {
   const notice = $('#toast'); if (!notice || notice.hidden) return;
+  if (window.DengSecurityLock?.isLocked()) { notice.hidePopover?.(); notice.hidden = true; return; }
   const isModal = dialog => { try { return dialog?.isConnected && dialog.matches('dialog:modal'); } catch { return dialog?.open && dialog.getAttribute('aria-modal') !== 'false'; } };
   const focused = document.activeElement?.closest('dialog');
   const modal = [...toastModalOrder].reverse().find(isModal) || (isModal(focused) ? focused : [...document.querySelectorAll('dialog[open]')].reverse().find(isModal));
@@ -27,6 +28,7 @@ function placeToast(force = false) {
   }
 }
 function toast(message) {
+  if (window.DengSecurityLock?.isLocked()) return;
   clearTimeout(toastTimer);
   if (!toastLayerObserver) {
     toastLayerObserver = new MutationObserver(records => {
@@ -74,9 +76,10 @@ function waitForDesktop() {
 function endpoint(path) { return boot.base + path; }
 async function api(path, options = {}) {
   if (desktopPage) await waitForDesktop();
-  if (native()) { try { return JSON.parse(await native().Request(options.method || 'GET', path, options.body || '')); } catch (error) { const message = error?.message || String(error); const marker = message.indexOf('DENGSHELL_ERROR:'); if (marker >= 0) { let data; try { data = JSON.parse(message.slice(marker + 16)); } catch {} if (data) throw Object.assign(new Error(data.error), { code: data.code, hostKey: data.hostKey }); } throw new Error(message); } } 
+  if (native()) { try { return JSON.parse(await native().Request(options.method || 'GET', path, options.body || '')); } catch (error) { const message = error?.message || String(error); const marker = message.indexOf('DENGSHELL_ERROR:'); if (marker >= 0) { let data; try { data = JSON.parse(message.slice(marker + 16)); } catch {} if(data?.code==='DENGSHELL_LOCKED')window.DengSecurityLock?.blocked(); if (data) throw Object.assign(new Error(data.error), { code: data.code, hostKey: data.hostKey }); } throw new Error(message); } }
   const response = await fetch(endpoint(path), { ...options, headers: { 'Content-Type': 'application/json', 'X-CloudShell-Token': boot.token, ...options.headers } });
   const data = await response.json();
+  if(data.code==='DENGSHELL_LOCKED')window.DengSecurityLock?.blocked();
   if (!response.ok) throw Object.assign(new Error(data.error || `请求失败 (${response.status})`), { code: data.code, hostKey: data.hostKey });
   return data;
 }
@@ -578,9 +581,10 @@ $('#download-file').onclick = safe(downloadSelected);
 let statsTimer = 0, networkTimer = 0, networkPolledSession = '';
 const statsRequests = new Set();
 const networkRequests = new Set();
-function monitorVisible() { return !document.hidden && !window.DengShellWindowHidden; }
+function monitorVisible() { return !document.hidden && !window.DengShellWindowHidden && !window.DengSecurityLock?.isLocked(); }
 function monitorPollDelay(value, interval) { return Number.isFinite(value) ? Math.max(0, Math.min(interval, value)) + 5 : interval; }
 async function pollNetwork() {
+  if(window.DengSecurityLock?.isLocked())return;
   const state = current(); if (!state?.connected || networkRequests.has(state) || !monitorVisible()) return;
   clearTimeout(networkTimer); networkTimer = 0; networkRequests.add(state); networkPolledSession = state.id;
   let delay = 1000;
@@ -862,7 +866,7 @@ function initializeWindowsDrop() {
   }
 }
 async function initializeConfig() {
-  try { if (desktopPage) await waitForDesktop(); await initializeWindowControls(); await initializeQuitConfirmation(); window.DengSessionWindows.prepareRestore(); await loadProfiles(); await window.DengSessionWindows.restore(); initializeWindowsDrop(); syncDesktopTheme(); $('#connection-button').classList.remove('failed'); $('#connection-button').title = '打开服务器管理'; window.runtime?.EventsEmit('cloudshell:ready'); }
+  try { if (desktopPage) await waitForDesktop(); await initializeWindowControls(); await initializeQuitConfirmation(); await window.DengSecurityLock?.ready; if(window.DengSecurityLock?.isLocked()) window.runtime?.EventsEmit('cloudshell:ready'); await window.DengSecurityLock?.whenUnlocked(); window.DengSessionWindows.prepareRestore(); await loadProfiles(); await window.DengSessionWindows.restore(); initializeWindowsDrop(); syncDesktopTheme(); $('#connection-button').classList.remove('failed'); $('#connection-button').title = '打开服务器管理'; window.runtime?.EventsEmit('cloudshell:ready'); }
   catch (error) { $('#connection-button').classList.add('failed'); $('#connection-button').title = error.message + ' · 点击重试'; toast(error.message); }
 }
 $('#connection-button').onclick = () => $('#connection-button').classList.contains('failed') ? initializeConfig() : setDrawer(true);

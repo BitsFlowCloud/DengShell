@@ -1,0 +1,30 @@
+#security-lock-button { margin-left:14px!important; flex:none; --wails-draggable:no-drag; }
+#security-lock-button:disabled { opacity:.38; cursor:default; }
+html[data-security-locked] body > :not(#security-lock-screen):not(script):not(style):not(link) { filter:blur(24px) brightness(.65)!important; pointer-events:none!important; user-select:none!important; }
+html[data-security-locked] #startup-splash { display:none!important; }
+#security-lock-screen { position:fixed; inset:0; width:100vw; height:100vh; max-width:none; max-height:none; margin:0; padding:24px; border:0; border-radius:0; background:transparent; color:var(--text,#d4dfe8); box-shadow:none; --wails-draggable:no-drag; }
+#security-lock-screen[open] { display:grid; place-items:center; }
+#security-lock-screen::backdrop { background:#1018209c; backdrop-filter:blur(24px); }
+#security-lock-message,#security-unlock-form { width:min(380px,100%); text-align:center; padding:30px; border:1px solid var(--border,#3a4b59); border-radius:18px; background:var(--surface,#1c2732); box-shadow:0 20px 80px #0005; }
+#security-lock-message h2 { font-size:23px; margin:8px 0 24px; }
+#security-lock-message > svg { width:36px; height:36px; color:var(--text-secondary,#91abba); }
+#security-lock-screen label { text-align:left; font-size:12px; margin:18px 0; }
+#security-lock-screen input,#security-lock-screen select,#security-lock-settings input,#security-lock-settings select { background:var(--surface-inset,#f4f7f9); color:var(--text,#263f51); border-color:var(--border,#dce6ee); }
+#security-lock-screen p { margin:10px 0; font-size:12px; line-height:1.7; overflow-wrap:anywhere; }
+.security-error { color:var(--danger,#d16873)!important; min-height:1em; font-size:12px!important; }
+#security-unlock-cancel { margin-top:12px; color:var(--text-secondary); }
+#security-lock-settings { width:530px; max-width:calc(100vw - 28px); max-height:calc(100vh - 28px); overflow:auto; background:var(--surface,#fff); color:var(--text); }
+#security-lock-settings fieldset { border:0; padding:0; margin:0; min-width:0; }
+#security-lock-settings .security-check { display:flex; flex-direction:row; align-items:center; gap:9px; margin:12px 0; font-size:13px; }
+#security-lock-settings .security-check input { width:16px; height:16px; flex:none; margin:0; }
+#security-lock-settings .security-section { border-top:1px solid var(--border); padding-top:12px; margin-top:12px; }
+#security-lock-settings .security-note { font-size:12px; line-height:1.7; margin:8px 0 12px; color:var(--text-secondary); }
+#security-lock-settings .dialog-heading { margin-bottom:10px; }
+#security-lock-settings .form-row { flex-wrap:wrap; }
+#security-lock-settings .form-row > label { min-width:160px; }
+#security-lock-settings select { width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; }
+#security-auth-button,#security-enroll-start { border:1px solid var(--border); padding:8px 12px; border-radius:8px; background:var(--surface-inset); }
+#security-enroll-qr { display:block; width:240px; height:240px; max-width:100%; object-fit:contain; margin:12px auto; background:white; padding:6px; }
+#security-enroll-secret { font-family:monospace; font-size:12px; user-select:text; }
+#security-save:disabled,#security-lock-settings fieldset:disabled { opacity:.6; }
+[data-narrow="true"] .titlebar .brand .brand-name { display:none; }

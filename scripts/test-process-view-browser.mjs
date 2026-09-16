@@ -75,6 +75,7 @@ try {
   await page.screenshot({path:stage+'/process-view-'+theme+'.png'});
  }
  await page.setViewport({width:800,height:600});
+ await page.waitForFunction(()=>document.documentElement.scrollWidth<=innerWidth+1);
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
  assert(await page.$eval('.process-view-table',e=>e.clientHeight>150));
  await page.screenshot({path:stage+'/process-view-narrow.png'});

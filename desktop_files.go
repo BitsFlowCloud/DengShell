@@ -13,11 +13,22 @@ import (
 )
 
 func (d *Desktop) ChooseExternalEditor() (string, error) {
+	if err := d.app.RequireUnlocked(); err != nil {
+		return "", err
+	}
+
 	return runtime.OpenFileDialog(d.ctx, runtime.OpenDialogOptions{Title: "选择本地文本编辑器可执行文件"})
 }
 func (d *Desktop) OpenRemoteFile(sessionID, remote string) (string, error) {
+	if err := d.app.RequireUnlocked(); err != nil {
+		return "", err
+	}
+
 	local, e := d.app.PrepareExternalFile(sessionID, remote)
 	if e != nil {
+		return "", e
+	}
+	if e = d.app.RequireUnlocked(); e != nil {
 		return "", e
 	}
 	editor := d.app.Appearance().ExternalEditor
@@ -40,12 +51,19 @@ func (d *Desktop) OpenRemoteFile(sessionID, remote string) (string, error) {
 	return local, e
 }
 func (d *Desktop) DownloadArchive(sessionID, remote string) (string, error) {
+	if err := d.app.RequireUnlocked(); err != nil {
+		return "", err
+	}
+
 	name := path.Base(remote)
 	if name == "/" {
 		name = "root"
 	}
 	destination, e := runtime.SaveFileDialog(d.ctx, runtime.SaveDialogOptions{Title: "打包并下载", DefaultFilename: name + ".tar.gz"})
 	if e != nil || destination == "" {
+		return "", e
+	}
+	if e = d.app.RequireUnlocked(); e != nil {
 		return "", e
 	}
 	if e = d.app.DownloadArchiveTo(sessionID, remote, destination); e != nil {

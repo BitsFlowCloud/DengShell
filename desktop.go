@@ -269,9 +269,19 @@ func (d *Desktop) Request(method, path, body string) (string, error) {
 	}
 	return string(data), nil
 }
-func desktopAvailable() bool                        { return true }
-func (d *Desktop) ReadClipboard() (string, error)   { return runtime.ClipboardGetText(d.ctx) }
-func (d *Desktop) WriteClipboard(text string) error { return runtime.ClipboardSetText(d.ctx, text) }
+func desktopAvailable() bool { return true }
+func (d *Desktop) ReadClipboard() (string, error) {
+	if err := d.app.RequireUnlocked(); err != nil {
+		return "", err
+	}
+	return runtime.ClipboardGetText(d.ctx)
+}
+func (d *Desktop) WriteClipboard(text string) error {
+	if err := d.app.RequireUnlocked(); err != nil {
+		return err
+	}
+	return runtime.ClipboardSetText(d.ctx, text)
+}
 
 // SystemTheme reads the operating-system preference independently of this
 // window's current GTK/WebView appearance. An empty result asks the renderer
@@ -304,15 +314,31 @@ func (d *Desktop) SetTheme(theme string) {
 	}
 }
 func (d *Desktop) ChooseUploads() ([]string, error) {
+	if err := d.app.RequireUnlocked(); err != nil {
+		return nil, err
+	}
+
 	return runtime.OpenMultipleFilesDialog(d.ctx, runtime.OpenDialogOptions{Title: "选择上传文件"})
 }
 func (d *Desktop) ChooseFolder() (string, error) {
+	if err := d.app.RequireUnlocked(); err != nil {
+		return "", err
+	}
+
 	return runtime.OpenDirectoryDialog(d.ctx, runtime.OpenDialogOptions{Title: "选择上传文件夹"})
 }
 func (d *Desktop) ChooseKey() (string, error) {
+	if err := d.app.RequireUnlocked(); err != nil {
+		return "", err
+	}
+
 	return runtime.OpenFileDialog(d.ctx, runtime.OpenDialogOptions{Title: "选择 SSH 私钥", ShowHiddenFiles: true})
 }
 func (d *Desktop) ChooseAsset(kind string) (*app.ManagedAsset, error) {
+	if err := d.app.RequireUnlocked(); err != nil {
+		return nil, err
+	}
+
 	var title, label, pattern string
 	switch kind {
 	case "font":
@@ -331,6 +357,9 @@ func (d *Desktop) ChooseAsset(kind string) (*app.ManagedAsset, error) {
 	if err != nil || filename == "" {
 		return nil, err
 	}
+	if err := d.app.RequireUnlocked(); err != nil {
+		return nil, err
+	}
 	asset, err := d.app.ImportLocalAsset(kind, filename, "")
 	if err != nil {
 		return nil, err
@@ -338,8 +367,15 @@ func (d *Desktop) ChooseAsset(kind string) (*app.ManagedAsset, error) {
 	return &asset, nil
 }
 func (d *Desktop) Download(sessionID, remote string) (string, error) {
+	if err := d.app.RequireUnlocked(); err != nil {
+		return "", err
+	}
+
 	destination, err := runtime.SaveFileDialog(d.ctx, runtime.SaveDialogOptions{Title: "下载文件", DefaultFilename: path.Base(remote)})
 	if err != nil || destination == "" {
+		return "", err
+	}
+	if err = d.app.RequireUnlocked(); err != nil {
 		return "", err
 	}
 	if err = d.app.DownloadTo(sessionID, remote, destination); err != nil {
@@ -417,6 +453,9 @@ func runDesktopBackend(application desktopBackend, assets fs.FS, configDir, deta
 				})
 			})
 			runtime.OnFileDrop(ctx, func(x, y int, paths []string) {
+				if application.RequireUnlocked() != nil {
+					return
+				}
 				payload, _ := json.Marshal(map[string]any{"x": x, "y": y, "paths": paths})
 				runtime.WindowExecJS(ctx, "window.cloudshellNativeDrop && window.cloudshellNativeDrop("+string(payload)+")")
 			})

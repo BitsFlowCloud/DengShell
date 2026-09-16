@@ -299,3 +299,28 @@ func TestTerminalRelayIncompleteBoundaryFailsAndRecovers(t *testing.T) {
 		})
 	}
 }
+
+func TestSecurityLockExistingTerminalInput(t *testing.T) {
+	a, s, address := newRelayFixture(t)
+	c := dialRelayTest(t, address)
+	c.command(t, "stty -echo; printf '\\nLOCK_TEST_READY\\n'", "\r\nLOCK_TEST_READY\r\n")
+	enableTestPassword(t, a, 0)
+	if _, err := a.LockNow(); err != nil {
+		t.Fatal(err)
+	}
+	c.send(t, relayMessage{Type: "input", Data: "export DENG_LOCK_BYPASS=bad\r"})
+	// This barrier is processed after the input message on the same relay queue.
+	c.send(t, relayMessage{Type: "handoff-begin", Nonce: "locked-terminal-test-0001"})
+	c.until(t, func(m relayMessage) bool { return m.Type == "handoff-error" })
+	if _, err := a.Unlock(LockProof{"password", "1234"}); err != nil {
+		t.Fatal(err)
+	}
+	c.data.Reset()
+	c.command(t, "printf '\\nLOCK_TEST_RESULT:%s\\n' \"${DENG_LOCK_BYPASS:-clean}\"", "\r\nLOCK_TEST_RESULT:")
+	if !strings.Contains(c.data.String(), "LOCK_TEST_RESULT:clean\r\n") {
+		t.Fatalf("locked input executed: %q", c.data.String())
+	}
+	if _, err := a.session(s.ID); err != nil {
+		t.Fatal("lock disconnected SSH", err)
+	}
+}
