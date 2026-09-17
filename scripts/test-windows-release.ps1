@@ -48,7 +48,7 @@ try{
   $caseConfig=Join-Path $case 'data';Seed-QA $caseConfig;$running=Start-Native $target $caseConfig;Visible-QA $running "$mode initial frontend visible"
   $handle=[DengQA]::Find($running.Id);[DengQA]::ShowWindow($handle,6)|Out-Null;Wait-QA {![DengQA]::IsWindowVisible($handle) -or [DengQA]::IsIconic($handle)} 'minimized or hidden before update';Start-Sleep -Seconds 2
   $wasTray=![DengQA]::IsWindowVisible($handle);$report["$mode-beforeUpdateHidden"]=$wasTray;Check-QA $wasTray "$mode minimized into system tray before update"
-  $job=Join-Path $case 'update-job';New-Item -ItemType Directory $job|Out-Null;$staged=Join-Path $job 'up.exe';Copy-Item $exe $staged;$helper=Join-Path $job 'helper.exe';Copy-Item $target $helper
+  $job=Join-Path $caseConfig '.update-1001';New-Item -ItemType Directory $job|Out-Null;$staged=Join-Path $job 'up.exe';Copy-Item $exe $staged;$helper=Join-Path $job 'dengshell-updater-1001.exe';Copy-Item $target $helper
   $plan=@{schema=2;build=$(if($mode -eq 'legacy'){$build}else{$build+1});version='v0.01';parentPID=$running.Id;target=$target;staged=$staged;configDir=$caseConfig;oldSHA256=(Get-FileHash $target).Hash.ToLowerInvariant();packageSHA256=$expected;executableSHA256=$expected;platform='windows-amd64'}
   $planFile=Join-Path $job 'plan.json';[IO.File]::WriteAllText($planFile,($plan|ConvertTo-Json),[Text.UTF8Encoding]::new($false))
   $worker=Start-Process $helper -ArgumentList @('--dengshell-update-helper',('"'+$planFile+'"')) -WindowStyle Hidden -PassThru
@@ -61,7 +61,12 @@ try{
   Check-QA ((Get-Content (Join-Path $caseConfig 'update-result.json') -Raw | ConvertFrom-Json).status -eq 'installed') "$mode update reports successful installation"
   Wait-QA {Test-Path (Join-Path $caseConfig 'runtime-success-v1-windows-amd64')} "$mode updated native frontend ready"
   $running=Get-Process DengShell -ErrorAction SilentlyContinue|Where-Object {$_.Path -eq $target}|Select-Object -First 1;Check-QA ($null -ne $running) "$mode automatically restarts program";Visible-QA $running "$mode restarted main window visible and not minimized"
-  Check-QA ((Get-FileHash $target).Hash.ToLowerInvariant() -eq $expected) "$mode update target hash matches release";Check-QA ((Get-Content (Join-Path $caseConfig 'keep-user-data.txt')).Trim() -eq 'preserve-local-fixture') "$mode update preserves config directory";Stop-QA $running
+  Check-QA ((Get-FileHash $target).Hash.ToLowerInvariant() -eq $expected) "$mode update target hash matches release";Check-QA ((Get-Content (Join-Path $caseConfig 'keep-user-data.txt')).Trim() -eq 'preserve-local-fixture') "$mode update preserves config directory"
+  Wait-QA {!(Test-Path $job)} "$mode update cache reclaimed after helper exits" 50
+  $backup=Join-Path $caseConfig 'update-backup/previous-program.exe'
+  Check-QA ((Test-Path $backup) -and (Get-FileHash $backup).Hash.ToLowerInvariant() -eq $plan.oldSHA256) "$mode retains one verified rollback backup"
+  Check-QA (@(Get-ChildItem $caseConfig -Directory -Filter '.update-*').Count -eq 0) "$mode leaves no update staging directories"
+  Stop-QA $running
  }
  $report.passed=$true
 }finally{

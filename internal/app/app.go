@@ -36,6 +36,7 @@ type App struct {
 	baseURL          string
 	server           *http.Server
 	updateCheck      startupUpdate
+	updateCleanup    sync.WaitGroup
 	windowHandoffs   map[string]WindowHandoff
 	windowViews      map[string]WindowViewInfo
 	windowLauncher   func(context.Context, WindowHandoffRequest) error
@@ -54,6 +55,8 @@ func New(configDir string) (*App, error) {
 		return nil, err
 	}
 	a.initializeUIFonts()
+	a.updateCleanup.Add(1)
+	go func() { defer a.updateCleanup.Done(); a.runUpdateCleanup() }()
 	return a, nil
 }
 func (a *App) URL() string   { return a.baseURL }
@@ -88,6 +91,12 @@ func (a *App) Close() {
 	}
 	a.mu.Unlock()
 	a.cancel()
+	a.updateCleanup.Wait()
+	a.updateCheck.mu.Lock()
+	if job := a.updateCheck.job; job != nil && job.Status != "downloading" && job.releaseLease != nil {
+		job.releaseLease()
+	}
+	a.updateCheck.mu.Unlock()
 	a.closeDiagnostics()
 	a.mu.Lock()
 	sessions := []*Session{}

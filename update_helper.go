@@ -73,7 +73,6 @@ func handleUpdateHelper() bool {
 	planFile := os.Args[2]
 	err := runUpdateHelper(planFile)
 	if err != nil {
-		_ = os.WriteFile(filepath.Join(filepath.Dir(planFile), "error.txt"), []byte(err.Error()), 0600)
 		fmt.Fprintln(os.Stderr, "DengShell update:", err)
 		os.Exit(1)
 	}
@@ -102,7 +101,17 @@ func readUpdatePlan(file string) (updatePlan, error) {
 	}
 	return p, nil
 }
-func runUpdateHelper(file string) error {
+func runUpdateHelper(file string) (result error) {
+	release, err := app.HoldUpdateDirectory(filepath.Dir(file))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if result != nil {
+			_ = os.WriteFile(filepath.Join(filepath.Dir(file), "error.txt"), []byte(result.Error()), 0600)
+		}
+		release()
+	}()
 	plan, e := readUpdatePlan(file)
 	if e != nil {
 		return e

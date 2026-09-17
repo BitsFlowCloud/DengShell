@@ -26,7 +26,7 @@ const ApplicationVersion = "v0.01"
 
 // Increase this integer for every published build, including packaging-only
 // releases. Display versions alone do not distinguish the v0.01 revisions.
-const ApplicationBuild uint64 = 20260917050
+const ApplicationBuild uint64 = 20260917051
 
 // Public revision stays R40 when a replacement build is published.
 const ApplicationRelease = 40
@@ -68,14 +68,15 @@ type UpdateReceipt struct {
 	InstalledAt      string `json:"installedAt"`
 }
 type UpdateDownload struct {
-	ID       string        `json:"id"`
-	Status   string        `json:"status"`
-	Received int64         `json:"received"`
-	Total    int64         `json:"total"`
-	Error    string        `json:"error,omitempty"`
-	File     string        `json:"-"`
-	Package  UpdatePackage `json:"-"`
-	cancel   context.CancelFunc
+	ID           string        `json:"id"`
+	Status       string        `json:"status"`
+	Received     int64         `json:"received"`
+	Total        int64         `json:"total"`
+	Error        string        `json:"error,omitempty"`
+	File         string        `json:"-"`
+	Package      UpdatePackage `json:"-"`
+	cancel       context.CancelFunc
+	releaseLease func()
 }
 type startupUpdate struct {
 	once   sync.Once
@@ -435,8 +436,14 @@ func (a *App) StartUpdateDownload(hash string) (UpdateDownload, error) {
 	if e != nil {
 		return UpdateDownload{}, e
 	}
+	release, e := holdUpdateDirectory(dir, true)
+	if e != nil {
+		_ = os.RemoveAll(dir)
+		return UpdateDownload{}, e
+	}
 	ctx, cancel := context.WithTimeout(a.ctx, 15*time.Minute)
 	job := &UpdateDownload{ID: randomID(), Status: "downloading", Total: offer.Package.Size, File: filepath.Join(dir, filepath.Base(offer.Package.URL)), Package: *offer.Package, cancel: cancel}
+	job.releaseLease = release
 	a.updateCheck.job = job
 	go a.downloadUpdate(ctx, job)
 	return *job, nil
@@ -537,6 +544,9 @@ func (a *App) finishUpdateDownload(ctx context.Context, job *UpdateDownload, err
 		if errors.Is(ctx.Err(), context.Canceled) {
 			job.Status = "cancelled"
 			job.Error = "下载已取消"
+		}
+		if job.releaseLease != nil {
+			job.releaseLease()
 		}
 		_ = os.RemoveAll(filepath.Dir(job.File))
 		return

@@ -248,6 +248,9 @@ func TestDownloadMustMatchOfferAndBytes(t *testing.T) {
 				if _, e = os.Stat(job.File); !os.IsNotExist(e) {
 					t.Fatal("corrupt file retained")
 				}
+				if _, e = os.Stat(filepath.Dir(job.File)); !os.IsNotExist(e) {
+					t.Fatal("failed download retained its staging directory")
+				}
 			} else {
 				if job.Status != "ready" || job.Received != int64(len(payload)) {
 					t.Fatalf("not ready %+v", job)
@@ -255,9 +258,18 @@ func TestDownloadMustMatchOfferAndBytes(t *testing.T) {
 				if _, e = a.PreparedUpdate(job.ID); e != nil {
 					t.Fatal(e)
 				}
+				cleanupUpdateDirectories(a.store.dir)
+				if _, e = os.Stat(job.File); e != nil {
+					t.Fatal("ready download was deleted while application still owns it", e)
+				}
 				os.WriteFile(job.File, []byte("modified"), 0600)
 				if _, e = a.PreparedUpdate(job.ID); e == nil {
 					t.Fatal("modified staging accepted")
+				}
+				a.Close()
+				cleanupUpdateDirectories(a.store.dir)
+				if _, e = os.Stat(filepath.Dir(job.File)); !os.IsNotExist(e) {
+					t.Fatal("abandoned ready download retained its staging directory", e)
 				}
 			}
 		})
