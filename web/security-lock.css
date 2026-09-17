@@ -1,30 +1,95 @@
+/* Security dialogs share the workspace palette and one 40px control size. */
 #security-lock-button { margin-left:0!important; flex:none; --wails-draggable:no-drag; }
 #security-lock-button:disabled { opacity:.38; cursor:default; }
 html[data-security-locked] body > :not(#security-lock-screen):not(script):not(style):not(link) { filter:blur(24px) brightness(.65)!important; pointer-events:none!important; user-select:none!important; }
 html[data-security-locked] #startup-splash { display:none!important; }
-#security-lock-screen { position:fixed; inset:0; width:100vw; height:100vh; max-width:none; max-height:none; margin:0; padding:24px; border:0; border-radius:0; background:transparent; color:var(--text,#d4dfe8); box-shadow:none; --wails-draggable:no-drag; }
+:is(#security-lock-screen,#security-lock-settings) { --security-control-height:40px; --security-inset:var(--surface-inset,#f6f8fa); --wails-draggable:no-drag; color:var(--text); }
+:is(#security-lock-screen,#security-lock-settings) label { margin:0; gap:8px; font-size:12px; line-height:1.5; color:var(--text-secondary); }
+:is(#security-lock-screen,#security-lock-settings) :is(input:not([type=checkbox]),select:not(.themed-select-native),.themed-select-trigger) { box-sizing:border-box; width:100%; height:var(--security-control-height); min-height:var(--security-control-height); margin:0; padding:0 12px; border:1px solid var(--border); border-radius:10px; background:var(--security-inset); color:var(--text); font:inherit; font-size:13px; line-height:1.4; transition:border-color .15s,background .15s,box-shadow .15s; }
+:is(#security-lock-screen,#security-lock-settings) :is(input:not([type=checkbox]),select:not(.themed-select-native),.themed-select-trigger):is(:focus-visible,:focus) { border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent); background:var(--surface); }
+:is(#security-lock-screen,#security-lock-settings) .themed-select { width:100%; min-width:0; }
+:is(#security-lock-screen,#security-lock-settings) .themed-select-trigger:hover { border-color:var(--accent); }
+:is(#security-lock-screen,#security-lock-settings) input::placeholder { color:var(--text-faint); opacity:.8; }
+:is(#security-lock-screen,#security-lock-settings) :is(input,select,button):disabled { cursor:default; }
+:is(#security-lock-screen,#security-lock-settings) input:disabled { opacity:.5; }
+:is(#security-lock-screen,#security-lock-settings) .primary-button { min-height:40px; padding:10px 20px; font-size:13px; font-weight:550; border-radius:10px; }
+:is(#security-lock-screen,#security-lock-settings) .security-error { margin:12px 0 0; color:var(--danger,#e19aa3); font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
+:is(#security-lock-screen,#security-lock-settings) :is(.security-error,.security-note):empty { display:none; }
+.security-emblem { display:inline-flex; align-items:center; justify-content:center; flex:none; width:44px; height:44px; border:1px solid var(--border); border-radius:14px; color:var(--accent); background:var(--security-inset); }
+.security-emblem svg { width:22px; height:22px; }
+#security-lock-screen { position:fixed; inset:0; width:100vw; height:100vh; max-width:none; max-height:none; margin:0; padding:24px; border:0; border-radius:0; background:transparent; box-shadow:none; }
 #security-lock-screen[open] { display:grid; place-items:center; }
 #security-lock-screen::backdrop { background:#1018209c; backdrop-filter:blur(24px); }
-#security-lock-message,#security-unlock-form { width:min(380px,100%); text-align:center; padding:30px; border:1px solid var(--border,#3a4b59); border-radius:18px; background:var(--surface,#1c2732); box-shadow:0 20px 80px #0005; }
-#security-lock-message h2 { font-size:23px; margin:8px 0 24px; }
-#security-lock-message > svg { width:36px; height:36px; color:var(--text-secondary,#91abba); }
-#security-lock-screen label { text-align:left; font-size:12px; margin:18px 0; }
-#security-lock-screen input,#security-lock-screen select,#security-lock-settings input,#security-lock-settings select { background:var(--surface-inset,#f4f7f9); color:var(--text,#263f51); border-color:var(--border,#dce6ee); }
-#security-lock-screen p { margin:10px 0; font-size:12px; line-height:1.7; overflow-wrap:anywhere; }
-.security-error { color:var(--danger,#d16873)!important; min-height:1em; font-size:12px!important; }
-#security-unlock-cancel { margin-top:12px; color:var(--text-secondary); }
-#security-lock-settings { width:530px; max-width:calc(100vw - 28px); max-height:calc(100vh - 28px); overflow:auto; background:var(--surface,#fff); color:var(--text); }
-#security-lock-settings fieldset { border:0; padding:0; margin:0; min-width:0; }
-#security-lock-settings .security-check { display:flex; flex-direction:row; align-items:center; gap:9px; margin:12px 0; font-size:13px; }
-#security-lock-settings .security-check input { width:16px; height:16px; flex:none; margin:0; }
-#security-lock-settings .security-section { border-top:1px solid var(--border); padding-top:12px; margin-top:12px; }
-#security-lock-settings .security-note { font-size:12px; line-height:1.7; margin:8px 0 12px; color:var(--text-secondary); }
-#security-lock-settings .dialog-heading { margin-bottom:10px; }
-#security-lock-settings .form-row { flex-wrap:wrap; }
-#security-lock-settings .form-row > label { min-width:160px; }
-#security-lock-settings select { width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; }
-#security-auth-button,#security-enroll-start { border:1px solid var(--border); padding:8px 12px; border-radius:8px; background:var(--surface-inset); }
-#security-enroll-qr { display:block; width:240px; height:240px; max-width:100%; object-fit:contain; margin:12px auto; background:white; padding:6px; }
-#security-enroll-secret { font-family:monospace; font-size:12px; user-select:text; }
-#security-save:disabled,#security-lock-settings fieldset:disabled { opacity:.6; }
+#security-lock-screen .security-lock-card { width:min(400px,100%); max-height:100%; overflow:auto; text-align:center; padding:28px; border:1px solid var(--border); border-radius:20px; background:var(--surface); box-shadow:0 24px 80px #0004; }
+#security-lock-screen .security-emblem { width:52px; height:52px; margin-bottom:16px; border-radius:17px; }
+#security-lock-screen .security-emblem svg { width:26px; height:26px; }
+#security-lock-screen h2 { margin:0; font-size:21px; font-weight:550; letter-spacing:.2px; }
+#security-lock-screen .security-card-note { margin:10px 0 24px; color:var(--muted); font-size:12px; line-height:1.7; }
+#security-lock-screen label { margin:0 0 16px; text-align:left; }
+#security-lock-screen .security-note { margin:0 0 18px; text-align:left; color:var(--muted); font-size:12px; line-height:1.7; overflow-wrap:anywhere; }
+#security-lock-screen .security-error { margin:0 0 16px; text-align:left; }
+#security-lock-screen #security-lock-error { margin:16px 0 0; text-align:center; }
+#security-unlock-value[data-method=totp],#security-enroll-code { font-variant-numeric:tabular-nums; letter-spacing:.28em; }
+#security-unlock-cancel { display:block; width:100%; margin-top:10px; min-height:36px; border-radius:9px; color:var(--muted); font-size:12px; }
+#security-unlock-cancel:is(:hover,:focus-visible) { background:var(--security-inset); color:var(--text); }
+#security-lock-settings { width:600px; max-width:calc(var(--view-width,100vw) - 32px); max-height:calc(var(--view-height,100vh) - 32px); padding:0; border:1px solid var(--border); border-radius:20px; overflow:hidden; background:var(--surface); }
+#security-lock-settings[open],#security-settings-form { display:flex; flex-direction:column; min-height:0; }
+#security-settings-form { width:100%; max-height:inherit; }
+#security-lock-settings .security-settings-heading { display:flex; align-items:center; gap:12px; padding:22px; flex:none; }
+#security-lock-settings .security-settings-heading h2 { margin:0; font-size:19px; font-weight:550; }
+#security-lock-settings .security-settings-heading p { margin:5px 0 0; font-size:12px; color:var(--muted); line-height:1.5; }
+#security-settings-close { margin-left:auto; align-self:flex-start; color:var(--muted); }
+#security-settings-close:is(:hover,:focus-visible) { background:var(--security-inset); color:var(--text); }
+#security-lock-settings .security-settings-body { min-height:0; overflow:auto; padding:0 22px 18px; scrollbar-width:thin; scrollbar-color:var(--border) transparent; }
+#security-lock-settings fieldset { border:0; padding:0; margin:0; min-width:0; display:grid; gap:12px; }
+#security-lock-settings .security-enable { display:flex; flex-direction:row; align-items:center; justify-content:space-between; gap:16px; margin:0 0 16px; padding:14px 16px; border:1px solid var(--border); border-radius:12px; background:var(--security-inset); cursor:pointer; }
+#security-lock-settings :is(.security-enable,.security-method-heading) strong { display:block; font-size:13px; line-height:1.5; font-weight:550; color:var(--text); }
+#security-lock-settings :is(.security-enable,.security-method-heading) small { display:block; margin-top:3px; color:var(--muted); font-size:11px; line-height:1.6; }
+#security-lock-settings .security-switch { appearance:none; -webkit-appearance:none; position:relative; flex:none; width:38px; height:22px; padding:0; margin:0; border:1px solid var(--border); border-radius:20px; background:var(--border); cursor:pointer; transition:background .15s; }
+#security-lock-settings .security-switch::before { content:''; position:absolute; left:2px; top:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 1px 3px #0003; transition:transform .15s; }
+#security-lock-settings .security-switch:checked { background:#56829e; border-color:#56829e; }
+#security-lock-settings .security-switch:checked::before { transform:translateX(16px); }
+#security-lock-settings input[type=checkbox]:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+#security-lock-settings .security-section { padding:16px; border:1px solid var(--border); border-radius:12px; min-width:0; }
+#security-lock-settings .security-method-heading { display:flex; flex-direction:row; align-items:center; gap:11px; cursor:pointer; }
+.security-method-icon { display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:10px; flex:none; background:var(--security-inset); color:var(--accent); }
+.security-method-icon svg { width:18px; height:18px; }
+#security-lock-settings .security-method-heading input { width:17px; height:17px; margin:0 0 0 auto; padding:0; flex:none; accent-color:#56829e; }
+#security-lock-settings .security-method-fields { display:grid; gap:14px; margin-top:16px; }
+#security-lock-settings .security-field-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; gap:14px; }
+#security-lock-settings label { min-width:0; }
+#security-lock-settings label:has(.security-optional) { display:grid; grid-template-columns:auto 1fr; column-gap:7px; }
+#security-lock-settings label:has(.security-optional) input { grid-column:1/-1; }
+.security-optional { font-size:11px; color:var(--muted); }
+#security-lock-settings h3 { margin:0 0 14px; font-size:13px; line-height:1.5; font-weight:550; color:var(--text); }
+#security-lock-settings .security-note { margin:12px 0 0; font-size:11px; line-height:1.7; color:var(--muted); }
+#security-lock-settings .security-auth-card { margin:0 0 16px; background:var(--security-inset); }
+#security-lock-settings .security-auth-card .security-note { margin:0 0 14px; }
+#security-lock-settings .security-auth-card .security-secondary { margin-top:12px; }
+#security-lock-settings .security-secondary { min-height:36px; padding:7px 13px; border:1px solid var(--border); border-radius:9px; background:var(--surface); color:var(--text-secondary); font-size:12px; line-height:1.5; }
+#security-lock-settings .security-secondary:is(:hover,:focus-visible) { border-color:var(--accent); background:var(--security-inset); color:var(--text); }
+.security-binding-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.security-status { color:var(--muted); font-size:12px; line-height:1.5; }
+#security-enrollment { display:grid; grid-template-columns:190px minmax(0,1fr); align-items:center; gap:18px; padding-top:16px; border-top:1px solid var(--border); }
+.security-qr-frame { padding:8px; background:#fff; border:1px solid var(--border); border-radius:12px; }
+#security-enroll-qr { display:block; width:100%; height:auto; aspect-ratio:1; object-fit:contain; }
+#security-lock-settings .security-enroll-steps h3 { margin:0 0 8px; }
+#security-lock-settings .security-enroll-steps .security-note { margin:0 0 12px; }
+#security-lock-settings .security-enroll-steps label + .security-note { margin:10px 0 0; }
+#security-lock-settings .security-manual-key { grid-column:1/-1; }
+#security-enroll-secret { font-family:ui-monospace,monospace!important; font-size:11px!important; letter-spacing:.02em; }
+#security-lock-settings .security-manual-key small { font-size:11px; line-height:1.5; color:var(--muted); }
+.security-number-field { position:relative; display:block; }
+#security-lock-settings .security-number-field input { padding-right:40px; appearance:textfield; -moz-appearance:textfield; font-variant-numeric:tabular-nums; }
+.security-number-field input::-webkit-inner-spin-button,.security-number-field input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+.security-number-field > span { position:absolute; right:13px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none; font-size:12px; }
+#security-lock-settings .security-footnote { margin:14px 2px 0; color:var(--muted); font-size:11px; line-height:1.7; }
+#security-lock-settings .security-settings-footer { display:flex; align-items:center; justify-content:flex-end; gap:16px; padding:14px 22px; flex:none; border-top:1px solid var(--border); background:var(--surface); }
+#security-lock-settings .security-settings-footer .security-error { margin:0; flex:1; }
+#security-save { width:auto; min-width:108px; flex:none; }
+#security-lock-settings fieldset:disabled { opacity:.55; }
 [data-narrow="true"] .titlebar .brand .brand-name { display:none; }
+@media(prefers-reduced-motion:reduce) { #security-lock-settings *,#security-lock-screen * { transition:none!important; } }
+
+#security-lock-settings[data-verifying="true"] :is(.security-enable,#security-options,.security-footnote,.security-settings-footer) { display:none; }
+#security-lock-settings[data-verifying="true"] .security-auth-card { margin-bottom:4px; }

@@ -68,7 +68,7 @@
  }
  function reflectUnlock(){
   if(!screen)return;const method=el('security-unlock-method').value,field=el('security-unlock-value');
-  field.type=method==='password'?'password':'text';field.inputMode=method==='totp'?'numeric':'text';field.autocomplete=method==='totp'?'one-time-code':'current-password';field.maxLength=method==='totp'?6:72;
+  field.type=method==='password'?'password':'text';field.inputMode=method==='totp'?'numeric':'text';field.autocomplete=method==='totp'?'one-time-code':'current-password';field.maxLength=method==='totp'?6:72;field.placeholder=method==='totp'?'000000':'请输入解锁密码';field.dataset.method=method;
   el('security-unlock-value-label').textContent=method==='totp'?'验证器中的 6 位验证码':'解锁密码';
   el('security-unlock-hint').textContent=method==='password'&&state.passwordHint?'密码提醒：'+state.passwordHint:method==='totp'?'验证码每 30 秒变化，已使用的验证码不能重复使用。':'';
   const retry=state.retryAfterSeconds||0;el('security-unlock-submit').disabled=retry>0;el('security-unlock-retry').textContent=retry?`尝试次数过多，${retry} 秒后可重试`:'';
@@ -77,10 +77,12 @@
  function clearSettingsSecrets(){grant='';enrolling=false;if(!settings)return;for(const id of ['security-new-password','security-repeat-password','security-auth-value','security-enroll-code','security-enroll-secret'])el(id).value='';el('security-enroll-qr').removeAttribute('src');el('security-enrollment').hidden=true;}
  function reflectSettings(){
   const enabled=el('security-enabled').checked,editable=!!grant;
+  settings.dataset.verifying=String(state.enabled&&!editable);
   el('security-options').disabled=!enabled||!editable;
   el('security-password-fields').hidden=!el('security-use-password').checked;
   el('security-totp-fields').hidden=!el('security-use-totp').checked;
-  el('security-idle-seconds').disabled=el('security-lock-mode').value==='manual';
+  const manual=el('security-lock-mode').value==='manual';el('security-idle-seconds').disabled=manual;
+  el('security-timing-hint').textContent=manual?'点击明暗按钮右侧的锁，即可立即锁定。':'无鼠标或键盘操作达到设定时长后锁定，也可随时手动上锁。';
   el('security-enabled').disabled=!editable;el('security-save').disabled=!editable;
  }
  async function openSettings(){
@@ -132,6 +134,7 @@
    catch(error){el('security-unlock-error').textContent=error.message;el('security-unlock-value').value='';await refresh();}finally{button.disabled=!!state.retryAfterSeconds;}
   };
   el('security-settings-close').onclick=()=>settings.close();settings.addEventListener('close',clearSettingsSecrets);
+  el('security-auth-value').onkeydown=event=>{if(event.key==='Enter'&&!event.isComposing){event.preventDefault();el('security-auth-button').click();}};
   el('security-auth-method').onchange=()=>{el('security-auth-value').value='';el('security-auth-value').type=el('security-auth-method').value==='totp'?'text':'password';};
   el('security-auth-button').onclick=async()=>{
    const button=el('security-auth-button');button.disabled=true;el('security-auth-error').textContent='';
