@@ -118,7 +118,7 @@ func (a *App) startDiagnostic(requestCtx context.Context, sessionID, direction, 
 		return nil, errors.New("请选择本机或服务器诊断")
 	}
 	if direction == "local" {
-		profile, err := a.store.Get(s.ProfileID)
+		profile, err := a.connectionProfile(s.ProfileID)
 		if err != nil {
 			return nil, err
 		}

@@ -93,3 +93,6 @@ html[data-security-locked] #startup-splash { display:none!important; }
 
 #security-lock-settings[data-verifying="true"] :is(.security-enable,#security-options,.security-footnote,.security-settings-footer) { display:none; }
 #security-lock-settings[data-verifying="true"] .security-auth-card { margin-bottom:4px; }
+
+#security-window-close { position:absolute; top:14px; right:14px; width:32px; height:32px; z-index:1; color:var(--muted); }
+#security-exit-form > button:last-child { padding:10px; color:var(--muted); }

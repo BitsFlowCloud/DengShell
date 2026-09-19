@@ -24,9 +24,10 @@ func (c *Config) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &fields); err != nil {
 		return err
 	}
-	for _, key := range []string{"schemaVersion", "servers", "groups", "groupNodes", "trash", "connectionHistory", "commandHistory", "hostKeys", "commands", "commandGroups", "keys", "proxies", "assets", "appearance"} {
+	for _, key := range []string{"temporaryServers", "schemaVersion", "servers", "groups", "groupNodes", "trash", "connectionHistory", "commandHistory", "hostKeys", "commands", "commandGroups", "keys", "proxies", "assets", "appearance"} {
 		delete(fields, key)
 	}
+	next.TemporaryServers = nil // runtime-only quick connections never enter imported/persisted configuration
 	next.Extra = fields
 	*c = Config(next)
 	return nil

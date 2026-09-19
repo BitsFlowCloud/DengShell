@@ -111,7 +111,7 @@ func (a *App) registerUtilitiesHTTP(mux *http.ServeMux) {
 		}
 		plan := buildUtilityPlan(input, inspection, linuxUtilityPaths)
 		plan.SessionID = s.ID
-		if profile, err := a.store.Get(s.ProfileID); err == nil {
+		if profile, err := a.connectionProfile(s.ProfileID); err == nil {
 			plan.ServerName, plan.Host = profile.Name, profile.Host
 		}
 		writeJSON(w, plan)

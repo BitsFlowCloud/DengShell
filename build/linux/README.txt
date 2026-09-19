@@ -1,4 +1,4 @@
-DengShell v0.01 R40 · 原生 Linux x64 发行说明
+DengShell v0.01 R50 · 原生 Linux x64 发行说明
 
 本发行包使用 Ubuntu 22.04 容器构建（glibc 2.35 基线），原生 GTK3 + WebKitGTK 4.1 桌面窗口，不需要 Go、Node、Chrome 或浏览器服务。
 
@@ -76,6 +76,6 @@ Arch Linux / 兼容 pacman 的 x86-64 桌面：
 卸载：sudo pacman -R dengshell（用户配置目录保留）。
 Arch 依赖 gtk3、webkit2gtk-4.1、bash、iputils、glibc、pacman、libarchive、polkit；托盘可选 libayatana-appindicator。
 Windows、Debian/Ubuntu 和 Arch pacman 支持内置更新，确认后安装并重启。
-R28 起的 Arch 版可直接更新；更早版本先手动安装一次本次 R40，此后通过软件启动检查更新。
+R28 起的 Arch 版可直接更新；更早版本先手动安装一次本次 R50，此后通过软件启动检查更新。
 Arch 使用 pkexec 请求系统授权，再执行 pacman -U 安装已验证签名的包；不添加 pacman 仓库。
-R30～R40 累计变化见 CHANGELOG.md；本轮验证边界见 FUNCTIONAL-AUDIT-r40.md。
+R30～R40 累计变化见 CHANGELOG.md；本轮验证边界见 FUNCTIONAL-AUDIT-r50.md。

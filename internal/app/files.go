@@ -502,6 +502,22 @@ func (a *App) listTransfers(w http.ResponseWriter, r *http.Request) {
 	sort.Slice(items, func(i, j int) bool { return items[i].StartedAt.Before(items[j].StartedAt) })
 	writeJSON(w, items)
 }
+
+// Remove only successful, finished records under the same lock used by upload
+// completion. Never cancel work or discard failures that can still be retried.
+func (a *App) clearCompletedTransfers(w http.ResponseWriter, r *http.Request) {
+	a.mu.Lock()
+	ids := []string{}
+	for id, task := range a.transfers {
+		if task.Status == "done" && !task.FinishedAt.IsZero() {
+			delete(a.transfers, id)
+			ids = append(ids, id)
+		}
+	}
+	a.mu.Unlock()
+	writeJSON(w, map[string]any{"ids": ids})
+}
+
 func (a *App) cancelTransfer(w http.ResponseWriter, r *http.Request) {
 	a.mu.Lock()
 	t := a.transfers[r.PathValue("id")]

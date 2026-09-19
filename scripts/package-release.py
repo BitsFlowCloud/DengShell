@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILD = int(re.search(r'const ApplicationBuild uint64 = (\d+)', (ROOT/'internal/app/updates.go').read_text()).group(1))
 RELEASE = int(re.search(r'const ApplicationRelease = (\d+)', (ROOT/'internal/app/updates.go').read_text()).group(1))
 # Old pacman updaters bind pkgrel to the last three build digits.
-# Public R40 naming is independent of this internal package revision.
+# Public release naming is independent of this internal package revision.
 LABEL = f'{str(BUILD)[:8]}-r{RELEASE}'
 
 def digest(p):
@@ -96,8 +96,14 @@ def package(args):
     zip_tree(source,out/'DengShell-source.zip',Path('DengShell'))
     notes=f'R30 至 R{RELEASE} 累计更新：精简内置字体并加入在线字体库，分组颜色、递归删除与跨服务器编辑；修复 SSH 误断线和重连记录丢失，常驻资源前五进程，网速图延长至 60 秒，精读显示进程的 RSS，精简字体面板，修复模态提示遮挡与延迟网速采样断点。'
     for binary,artifact,platform,name in [(winbinary,winbinary,'windows-amd64','up.exe'),(linuxbinary,out/'up.deb','linux-amd64','up.deb'),(linuxbinary,out/'DengShell-linux-x64.pkg.tar.zst','linux-amd64-pacman','up.pkg.tar.zst')]:
+        descriptor = site/(name+'.json')
+        release_notes = notes
+        if args.preserve_update_notes:
+            if not descriptor.is_file():
+                raise SystemExit(f'Cannot preserve missing update notes: {descriptor}')
+            release_notes = json.loads(descriptor.read_text())['notes']
         copy(artifact,site/name)
-        info={'schemaVersion':2,'build':BUILD,'product':'DengShell','platform':platform,'version':'v0.01','notes':notes,'sha256':digest(artifact),'size':artifact.stat().st_size,'executableSHA256':digest(binary)}
+        info={'schemaVersion':2,'build':BUILD,'product':'DengShell','platform':platform,'version':'v0.01','notes':release_notes,'sha256':digest(artifact),'size':artifact.stat().st_size,'executableSHA256':digest(binary)}
         (site/(name+'.json')).write_text(json.dumps(info,ensure_ascii=False,indent=2)+'\n')
         subprocess.run([str(args.signer.resolve()), '-key', str(args.signing_key.resolve()),
                         '-in', str(site/(name+'.json')), '-out', str(site/(name+'.json'))], check=True)
@@ -112,6 +118,7 @@ def package(args):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--preserve-update-notes',action='store_true',help='Keep existing signed descriptor notes while updating the build and hashes')
     parser.add_argument('--windows-binary',type=Path,required=True)
     parser.add_argument('--windows-reference',type=Path)
     parser.add_argument('--linux-binary',type=Path,default=ROOT/'build/linux/native/dengshell')

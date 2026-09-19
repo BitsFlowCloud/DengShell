@@ -51,7 +51,7 @@ try {
    window.qaSetTabs=count=>{
      sessions.clear();profiles=[];activeID=null;
      for(let i=0;i<count;i++){
-       const id='header-qa-'+i;profiles.push({id,name:`服务器 ${i+1} · HK JP US`,host:'example.invalid',port:22,user:'qa'});
+       const id='header-qa-'+i;profiles.push({id,name:`S${i+1}`,host:'example.invalid',port:22,user:'qa'});
        sessions.set(id,{...makeSessionState({id,profileId:id,home:'/'}),profileSnapshot:profiles.at(-1),connected:false,ready:false,localOnly:true,term:{options:{},focus(){},refresh(){},dispose(){}},host:Object.assign(document.createElement('div'),{hidden:true})});
      }
      activeID=count?'header-qa-0':null;renderTabs();

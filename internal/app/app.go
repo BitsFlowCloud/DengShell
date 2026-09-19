@@ -26,6 +26,8 @@ type App struct {
 	cancel           context.CancelFunc
 	store            *Store
 	mu               sync.Mutex
+	quickProfiles    map[string]quickProfile
+	quickMu          sync.Mutex
 	sessions         map[string]*Session
 	transfers        map[string]*Transfer
 	diagnostics      map[string]*Diagnostic
@@ -138,7 +140,7 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 		fmt.Fprintf(w, "window.CLOUDSHELL = %s;", data)
 	})
 	mux.HandleFunc("GET /api/ui-fonts/runtime", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, a.uiFontRuntime()) })
-	mux.HandleFunc("GET /api/config", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, a.store.List()) })
+	mux.HandleFunc("GET /api/config", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, a.configWithQuickProfiles()) })
 	a.registerSecurityLockHTTP(mux)
 	a.registerWindowHandoffHTTP(mux)
 	a.registerCommandHistoryHTTP(mux)
@@ -193,6 +195,7 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 		}
 		respond(w, map[string]bool{"ok": true}, err)
 	})
+	a.registerQuickConnectHTTP(mux)
 	mux.HandleFunc("POST /api/sessions", func(w http.ResponseWriter, r *http.Request) {
 		var input struct {
 			ProfileID       string           `json:"profileId"`
@@ -225,6 +228,7 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 	mux.HandleFunc("GET /api/sessions/{id}/latency", a.latencyHTTP)
 	mux.HandleFunc("POST /api/transfers/{id}/retry", a.retryTransfer)
 	mux.HandleFunc("GET /api/transfers", a.listTransfers)
+	mux.HandleFunc("POST /api/transfers/clear-completed", a.clearCompletedTransfers)
 	mux.HandleFunc("DELETE /api/transfers/{id}", a.cancelTransfer)
 	mux.Handle("/", http.FileServer(http.FS(assets)))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

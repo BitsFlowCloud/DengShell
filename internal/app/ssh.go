@@ -138,9 +138,12 @@ func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret 
 	if err := dialCtx.Err(); err != nil {
 		return nil, err
 	}
-	p, err := a.store.Get(profileID)
+	p, err := a.connectionProfile(profileID)
 	if err != nil {
 		return nil, err
+	}
+	if p.NeedsProxy {
+		return nil, &AuthenticationError{code: "ssh_proxy_missing", message: "此导入连接尚未配置代理，请编辑连接后再连接。"}
 	}
 	if p.ProxyID != "" {
 		p.Proxy, err = a.store.ResolveProxy(p.ProxyID)
@@ -293,9 +296,11 @@ func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret 
 	}
 	conn.SetDeadline(time.Time{})
 	a.mu.Lock()
-	if err := a.store.MarkConnected(p.ID, time.Now()); err != nil {
-		a.mu.Unlock()
-		return nil, fmt.Errorf("无法保存成功连接记录：%w", err)
+	if _, exists := a.store.Get(p.ID); exists == nil {
+		if err := a.store.MarkConnected(p.ID, time.Now()); err != nil {
+			a.mu.Unlock()
+			return nil, fmt.Errorf("无法保存成功连接记录：%w", err)
+		}
 	}
 	connected = true
 	s.diagnosticLog = &a.sshDiagnostics

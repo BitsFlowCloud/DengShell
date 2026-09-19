@@ -37,7 +37,7 @@ window.DengCommandComposer = (() => {
     }
     return row;
   }
-  let panel, template, fields, preview, target, cr, sendButton, note, title, activeDraft;
+  let panel, template, fields, preview, target, cr, sendButton, note, title, activeDraft, compact = false;
   let previousHeight = null, expandedHeight = null;
   const drafts = new Map();
   function collapse() {
@@ -56,7 +56,7 @@ window.DengCommandComposer = (() => {
     const missing = params.some(p => !Object.hasOwn(d.values, p.id) || !d.values[p.id].trim());
     sendButton.textContent = cr.checked ? '发送并执行' : '仅填入终端';
     sendButton.disabled = missing || !d.body.trim() || !usable(sessions.get(d.targetID));
-    note.textContent = missing ? '请填写全部参数；参数按原样替换，请在预览中确认空格、引号与命令内容。' : cr.checked ? '末尾追加回车，发送后执行。编辑内容会保留，便于修改参数后再次使用。' : '不追加回车，末尾换行会移除；填入终端后可以继续补充参数，再手动回车。';
+    note.textContent = missing ? '请填写全部参数；参数按原样替换，请确认空格和引号。' : cr.checked ? '末尾追加回车，发送后执行。编辑内容会保留，便于修改参数后再次使用。' : '不追加回车，末尾换行会移除；填入终端后可以继续补充参数，再手动回车。';
   }
   function renderParameters() {
     fields.replaceChildren(...parameters(activeDraft.body).map(p => {
@@ -76,12 +76,13 @@ window.DengCommandComposer = (() => {
     }));
     target.value = options.some(s => s.id === id) ? id : ''; window.DengSelect?.refresh(target); render();
   }
-  function open(command = null, body = null) {
+  function open(command = null, body = null, execute = false) {
+    compact = execute; panel.classList.toggle('command-composer-compact', compact);
     const key = command?.id || 'scratch';
     const source = command ? JSON.stringify([command.body, command.appendCR]) : '';
     if (!drafts.has(key) || body !== null || command && drafts.get(key).source !== source) drafts.set(key, { source, body: body ?? command?.body ?? '', values: {}, appendCR: command?.appendCR === true, targetID: current()?.id || '' });
     activeDraft = drafts.get(key);
-    title.textContent = command ? `命令编辑区 · ${command.name}` : '命令编辑区';
+    title.textContent = command ? `${compact ? '执行' : '命令编辑区'} · ${command.name}` : '命令编辑区';
     template.value = activeDraft.body; cr.checked = activeDraft.appendCR;
     panel.hidden = false; $('#toggle-command-composer').setAttribute('aria-expanded', 'true');
     // The target is pinned in the draft. Switching a server tab cannot redirect it.
@@ -91,17 +92,18 @@ window.DengCommandComposer = (() => {
     // splitter dimensions and let subsequent drags continue to control it.
     const workspace = $('#files-panel').parentElement;
     const currentHeight = $('#files-panel').getBoundingClientRect().height / effectiveScale;
-    const desired = Math.min(600, workspace.getBoundingClientRect().height / effectiveScale - 190);
+    const desired = Math.min(compact ? 330 : 600, workspace.getBoundingClientRect().height / effectiveScale - 190);
     if (desired > currentHeight) {
       if (expandedHeight === null) previousHeight = document.documentElement.style.getPropertyValue('--files-height');
       expandedHeight = `${desired}px`; document.documentElement.style.setProperty('--files-height', expandedHeight);
     }
-    (fields.querySelector('input') || template).focus();
+    $('#commands-view .commands-content').scrollTop = 0;
+    (fields.querySelector('input') || (compact ? target : template)).focus();
   }
   function run(command) {
-    if (parameters(command.body).length || /\[p#/.test(command.body) || !usable(current())) { open(command); return; }
+    if (parameters(command.body).length || /\[p#/.test(command.body) || !usable(current())) { open(command, null, true); return; }
     try { send(current(), command.body, command.appendCR === true); }
-    catch (error) { open(command); toast(error.message); }
+    catch (error) { open(command, null, true); toast(error.message); }
   }
   function init() {
     const toggle = node('button', 'upload-button', '命令编辑区'); toggle.id = 'toggle-command-composer'; toggle.type = 'button'; toggle.setAttribute('aria-expanded', 'false');
@@ -110,18 +112,18 @@ window.DengCommandComposer = (() => {
     const head = node('div', 'command-composer-heading'); title = node('strong', '', '命令编辑区');
     const close = node('button', 'text-button', '收起'); close.onclick = collapse;
     head.append(title, close);
-    const targetLabel = node('label', '', '发送目标'); target = node('select'); target.id = 'composer-target'; target.onchange = () => { activeDraft.targetID = target.value; render(); }; targetLabel.append(target);
-    const label = node('label', '', '命令 / 参数模板'); template = node('textarea'); template.id = 'composer-body'; template.rows = 3; template.maxLength = 65536; template.spellcheck = false;
+    const targetLabel = node('label', 'composer-target-label', '发送目标'); target = node('select'); target.id = 'composer-target'; target.onchange = () => { activeDraft.targetID = target.value; render(); }; targetLabel.append(target);
+    const label = node('label', 'composer-template-label', '命令 / 参数模板'); template = node('textarea'); template.id = 'composer-body'; template.rows = 3; template.maxLength = 65536; template.spellcheck = false;
     template.oninput = () => { activeDraft.body = template.value; renderParameters(); }; label.append(template);
     fields = node('div', 'command-parameter-fields'); preview = node('textarea'); preview.id = 'composer-preview'; preview.readOnly = true; preview.rows = 2; preview.setAttribute('aria-label', '实际发送命令预览');
     const foot = node('div', 'command-composer-footer'), crLabel = node('label', 'checkbox-label'); cr = node('input'); cr.type = 'checkbox'; cr.id = 'composer-append-cr';
     cr.onchange = () => { activeDraft.appendCR = cr.checked; render(); }; crLabel.append(cr, document.createTextNode('末尾添加回车 CR'));
     sendButton = node('button', 'primary-button', '仅填入终端'); sendButton.id = 'composer-send';
     sendButton.onclick = safe(() => { render(); if (sendButton.disabled) return; send(sessions.get(activeDraft.targetID), resolve(activeDraft.body, activeDraft.values), cr.checked); });
-    const saveAs = node('button', 'upload-button', '存为快捷命令'); saveAs.onclick = () => editCommand({ name: '', body: activeDraft.body, appendCR: cr.checked, group: commandGroup });
+    const saveAs = node('button', 'upload-button composer-save-as', '存为快捷命令'); saveAs.onclick = () => editCommand({ name: '', body: activeDraft.body, appendCR: cr.checked, group: commandGroup });
     foot.append(crLabel, saveAs, sendButton); note = node('p', 'command-composer-note'); note.setAttribute('role', 'status');
     panel.append(head, targetLabel, label, parameterButtons(template), fields, preview, foot, note);
-    $('#commands-view .commands-content').append(panel);
+    $('#commands-view .commands-content').prepend(panel);
     panel.addEventListener('contextmenu', e => e.stopPropagation());
     panel.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !e.isComposing) { e.preventDefault(); sendButton.click(); } });
     const bodyArea = $('#quick-command-form').elements.body;

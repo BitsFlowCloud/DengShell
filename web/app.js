@@ -112,11 +112,13 @@ function ask({ title, description = '', input = false, value = '', secret = fals
 
 let profiles = [], groups = [], activeID = null, ascending = true, fileSortKey = 'name', selectedName = '';
 const sessions = new Map(), connecting = new Set(), credentials = new Map(), localTasks = new Map();
+const temporaryProfiles = new Map();
 const connectionRequests = new Map();
 const connectionAttempts = new Map();
 let nextSessionOrder = 0;
 const current = () => sessions.get(activeID);
-const profileFor = session => profiles.find(p => p.id === session?.profileId);
+const connectionProfile = id => profiles.find(p => p.id === id) || temporaryProfiles.get(id);
+const profileFor = session => connectionProfile(session?.profileId);
 async function loadProfiles() {
   if (window.DengPortablePreferences.ready) await window.DengPortablePreferences.flush();
   const config = await api('/api/config');
@@ -124,12 +126,14 @@ async function loadProfiles() {
   window.DengCommandHistory.acceptConfig(config);
   layout = readSaved('cloudshell.layout', { version: 2 });
   serverManager.collapsed = null;
+  temporaryProfiles.clear(); for (const p of config.temporaryServers || []) temporaryProfiles.set(p.id, p);
   profiles = config.servers; groups = config.groups; commands = config.commands || []; commandGroups = config.commandGroups || []; managedKeys = config.keys || [];
   acceptServerManagerConfig(config); renderConnections(); renderTabs(); renderCommands(); renderKeyChoices(); renderKeys();
   await acceptAppearanceConfig(config);
   clampLayouts();
   const savedPane = readSaved('dengshell.workspace', {}).pane;
   if (['files', 'commands', 'common-apps', 'transfers'].includes(savedPane)) showPane(savedPane);
+  setWorkspaceVisible(!layout.filesHidden, false);
   window.DengShellHelp?.acceptConfig(config);
 }
 
@@ -142,7 +146,7 @@ async function connect(profileID, force = false, options = {}) {
 }
 async function connectProfile(profileID, force, { background = false, refreshHistory = true } = {}) {
   if (connecting.has(profileID)) return null;
-  const profile = profiles.find(p => p.id === profileID); if (!profile) return;
+  const profile = connectionProfile(profileID); if (!profile) return;
   if (profile.auth === 'key' && !profile.keyId && !profile.keyPath) {
     toast(`「${profile.name}」未找到私钥，请重新配置密钥。`);
     if (!background) showConnectionForm(profile);
@@ -234,7 +238,7 @@ async function connectProfile(profileID, force, { background = false, refreshHis
   } catch (error) {
     if (alive()) {
       showConnectionProgress(state, error.message || String(error), true); toast(`${profile.name}：${error.message || error}`);
-      if (!background && ['ssh_key_missing', 'ssh_key_unavailable', 'ssh_private_key_invalid'].includes(error.code)) showConnectionForm(profile);
+      if (!background && ['ssh_key_missing', 'ssh_key_unavailable', 'ssh_private_key_invalid', 'ssh_proxy_missing'].includes(error.code)) showConnectionForm(profile);
     }
     return null;
   } finally {
@@ -470,11 +474,11 @@ function renderSessionInfo() {
   $('#welcome-state').hidden = !!state;
   $('#terminal-meta-host').textContent = profile ? `${profile.user}@${profile.name}` : 'SSH 终端'; $('#terminal-state').textContent = state?.handoffProvisional ? '正在接收标签…' : state?.pendingConnection ? '正在连接…' : state?.connectionFailed ? '连接未完成' : state?.connected ? '已连接' : state?.disconnectDiagnostic ? `已断开 · ${state.disconnectDiagnostic.code}` : '待连接';
   $('#terminal-state').title = state?.disconnectDiagnostic?.message || '';
-  $('#command-history').disabled = false; $('#command-input').disabled = !state?.connected; $('#command-input').value = ''; resizeCommandInput(); $('#reconnect').disabled = !state || !!(state.pendingConnection || state.disconnecting || state.detaching || state.handoffProvisional || state.ownershipUncertain); $('#disconnect').disabled = !state?.connected || !!(state.disconnecting || state.detaching || state.handoffProvisional || state.ownershipUncertain);
+  $('#command-history').disabled = false; $('#command-input').disabled = !!state && !state.connected; $('#command-input').placeholder = state ? '输入命令并回车发送 · ↑↓ 历史' : '本机：输入 ssh 用户@主机 或 ping 主机'; window.DengQuickConnect?.reflect(); $('#command-input').value = ''; resizeCommandInput(); $('#reconnect').disabled = !state || !!(state.pendingConnection || state.disconnecting || state.detaching || state.handoffProvisional || state.ownershipUncertain); $('#disconnect').disabled = !state?.connected || !!(state.disconnecting || state.detaching || state.handoffProvisional || state.ownershipUncertain);
   $('#follow-terminal').checked = !!state?.follow; $('#follow-terminal').disabled = !state?.ready;
   renderMonitor(state?.connected ? state.stats : null); renderLatency(); renderCommands(); window.DengCommonApps?.render(); window.DengProcessView?.reflect(); updateStatus();
 }
-$('#command-form').onsubmit = event => { event.preventDefault(); const state = current(); const input = $('#command-input'); if (!state?.ready || !input.value) return; pasteTerminalText(state, input.value, { execute: true }); input.value = ''; resizeCommandInput(); };
+$('#command-form').onsubmit = event => { event.preventDefault(); const state = current(); const input = $('#command-input'); if (!state && input.value.trim()) { const command = input.value; input.value = ''; safe(() => window.DengQuickConnect.run(command))(); return; } if (!state?.ready || !input.value) return; pasteTerminalText(state, input.value, { execute: true }); input.value = ''; resizeCommandInput(); };
 $('#command-input').onkeydown = event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); $('#command-form').requestSubmit(); return; } const state = current(); if (!state || !['ArrowUp', 'ArrowDown'].includes(event.key)) return; event.preventDefault(); state.historyIndex = Math.max(0, Math.min(state.history.length, state.historyIndex + (event.key === 'ArrowUp' ? -1 : 1))); event.target.value = state.history[state.historyIndex] || ''; resizeCommandInput(); };
 $('#reconnect').onclick = safe(() => current() && connect(current().profileId, true));
 $('#disconnect').onclick = safe(() => disconnectSession());
@@ -666,16 +670,17 @@ $('#close-connections').onclick = () => setDrawer(false); $('#drawer-backdrop').
 $('#connection-search').oninput = renderConnections;
 function renderConnections() { renderServerManager(); }
 function showConnectionForm(profile = null, groupID = '') {
+  if (profile?.temporary) { window.DengQuickConnect.open(`ssh -p ${profile.port} ${profile.user}@${profile.host}`); return; }
   const form = $('#connection-form'); form.reset(); form.elements.id.value = profile?.id || '';
   renderKeyChoices(); renderProxyChoices(); form.elements.proxyId.value = profile?.proxyId || '';
   for (const key of ['name', 'host', 'user', 'port', 'auth', 'keyPath', 'keyId']) if (profile?.[key] != null) form.elements[key].value = profile[key];
   form.elements.proxyType.value = profile?.proxy?.type || 'direct';
   for (const [field, key] of [['proxyHost', 'host'], ['proxyPort', 'port'], ['proxyUser', 'user']]) form.elements[field].value = profile?.proxy?.[key] || '';
   form.elements.proxyPassword.placeholder = profile?.proxy?.hasPassword ? '已保存，留空保留' : '代理密码（可选）';
-  $('#proxy-settings').open = !!profile?.proxyId || form.elements.proxyType.value !== 'direct'; updateProxyFields();
+  $('#proxy-settings').open = !!profile?.needsProxy || !!profile?.proxyId || form.elements.proxyType.value !== 'direct'; updateProxyFields();
   chooseConnectionGroup(profile, groupID);
   form.elements.remember.checked = !!profile?.hasSecret; $('#saved-secret-note').hidden = !profile?.hasSecret; $('#reset-host-key').hidden = !profile;
-  $('#connection-form-title').textContent = profile ? '编辑连接' : '新建连接'; $('#save-connection').textContent = profile ? '保存更改' : '保存并连接'; updateAuthFields(); $('#connection-dialog').showModal();
+  $('#connection-form-title').textContent = profile?.needsProxy ? '编辑连接 · 请补充代理或确认直连' : profile ? '编辑连接' : '新建连接'; $('#save-connection').textContent = profile ? '保存更改' : '保存并连接'; updateAuthFields(); $('#connection-dialog').showModal();
 }
 function updateAuthFields() {
   const form = $('#connection-form'), auth = form.elements.auth.value, key = managedKeys.find(key => key.id === form.elements.keyId.value);
@@ -706,7 +711,17 @@ $('#new-group').onclick = () => openServerGroupEditor();
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && !document.querySelector('dialog[open]')) setDrawer(false); if (event.key === 'Tab' && !$('#connections-drawer').hidden && !document.querySelector('dialog[open]')) { const controls = [...$('#connections-drawer').querySelectorAll('button,input')].filter(el => !el.disabled && el.getClientRects().length); if (event.shiftKey && document.activeElement === controls[0]) { event.preventDefault(); controls.at(-1).focus(); } else if (!event.shiftKey && document.activeElement === controls.at(-1)) { event.preventDefault(); controls[0].focus(); } } });
 
 // Stream files through SFTP. Completion reflects remote writes, not just browser upload progress.
-function showPane(pane) { $$('.file-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.pane === pane)); $('#files-view').hidden = pane !== 'files'; $('#transfers-view').hidden = pane !== 'transfers'; $('#commands-view').hidden = pane !== 'commands'; $('#common-apps-view').hidden = pane !== 'common-apps'; window.DengCommonApps?.render(); $('.follow-label').hidden = pane !== 'files'; $('.files-tip').hidden = pane !== 'files'; }
+function setWorkspaceVisible(visible, persist = true) {
+  $('#files-panel').hidden = !visible; $('#files-splitter').hidden = !visible;
+  $('#toggle-sftp').setAttribute('aria-expanded', String(visible));
+  if (persist) { layout.filesHidden = !visible; save('cloudshell.layout', layout); }
+  requestAnimationFrame(fitActive);
+}
+$('#toggle-sftp').onclick = () => {
+  if ($('#files-panel').hidden) { showPane('files'); setWorkspaceVisible(true); }
+  else setWorkspaceVisible(false);
+};
+function showPane(pane) { setWorkspaceVisible(true, false); $$('.file-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.pane === pane)); $('#files-view').hidden = pane !== 'files'; $('#transfers-view').hidden = pane !== 'transfers'; $('#commands-view').hidden = pane !== 'commands'; $('#common-apps-view').hidden = pane !== 'common-apps'; window.DengCommonApps?.render(); $('.follow-label').hidden = pane !== 'files'; $('.files-tip').hidden = pane !== 'files'; }
 $$('.file-tab').forEach(tab => { tab.onclick = () => { showPane(tab.dataset.pane); save('dengshell.workspace', { ...readSaved('dengshell.workspace', {}), pane: tab.dataset.pane }); }; });
 $('#choose-files').onclick = event => { const menu = $('#upload-menu'), rect = event.currentTarget.getBoundingClientRect(); menu.hidden = !menu.hidden; menu.style.left = `${Math.min(rect.left / effectiveScale, logicalWidth() - 155)}px`; menu.style.top = `${Math.min(rect.bottom / effectiveScale + 5, logicalHeight() - 90)}px`; };
 document.addEventListener('click', event => { if (!event.target.closest('#upload-menu, #choose-files')) $('#upload-menu').hidden = true; });
@@ -743,13 +758,25 @@ window.cloudshellNativeDrop = safe(async ({ x, y, paths }) => {
   if (paths?.length) await uploadNative(paths);
 });
 function refreshUploaded(task) { const state = sessions.get(task.sessionId); if (!state?.connected || task.refreshed) return; task.refreshed = true; if (task.target.startsWith(state.cwd === '/' ? '/' : state.cwd + '/')) navigate(state.cwd, state).catch(() => {}); }
-let transfersBusy = false;
+let transfersBusy = false, transferEpoch = 0, clearingTransfers = false;
 async function pollTransfers() {
-  if (transfersBusy) return; transfersBusy = true;
-  try { const tasks = await api('/api/transfers'); for (const incoming of tasks) { let task = localTasks.get(incoming.id); if (task) { if (!['done', 'failed', 'cancelled'].includes(task.status) || incoming.status !== 'uploading') Object.assign(task, incoming); } else { task = incoming; localTasks.set(task.id, task); } if (task.status === 'done') refreshUploaded(task); } renderTransfers(); }
+  if (transfersBusy) return; transfersBusy = true; const epoch = transferEpoch;
+  try { const tasks = await api('/api/transfers'); if (epoch !== transferEpoch) return; const present = new Set(tasks.map(t => t.id)); for (const [id, task] of localTasks) if (task.backendSeen && task.status === 'done' && !present.has(id)) localTasks.delete(id); for (const incoming of tasks) { let task = localTasks.get(incoming.id); if (task) { if (!['done', 'failed', 'cancelled'].includes(task.status) || incoming.status !== 'uploading') Object.assign(task, incoming); } else { task = incoming; localTasks.set(task.id, task); } task.backendSeen = true; if (task.status === 'done') refreshUploaded(task); } renderTransfers(); }
   catch {} finally { transfersBusy = false; }
 }
 setInterval(pollTransfers, 1000);
+async function clearCompletedTransfers() {
+  if (clearingTransfers) return;
+  clearingTransfers = true; transferEpoch++; renderTransfers();
+  const localDone = [...localTasks.values()].filter(t => t.status === 'done').map(t => t.id);
+  try {
+    const result = await post('/api/transfers/clear-completed', {});
+    for (const id of new Set([...result.ids, ...localDone])) {
+      if (localTasks.get(id)?.status === 'done') localTasks.delete(id);
+    }
+  } finally { transferEpoch++; clearingTransfers = false; renderTransfers(); }
+}
+$('#clear-completed-transfers').onclick = safe(clearCompletedTransfers);
 async function cancelTask(task) {
   if (task.status === 'queued') { if (task.xhr || !task.file) { task.xhr?.abort(); await remove(`/api/transfers/${task.id}`); } task.status = 'cancelled'; }
   else if (task.status === 'uploading') { task.xhr?.abort(); await remove(`/api/transfers/${task.id}`); }
@@ -762,6 +789,7 @@ async function retryTask(task) {
   await remove(`/api/transfers/${task.id}`); localTasks.delete(task.id); const next = { ...task, id: crypto.randomUUID(), done: 0, error: '', status: 'queued', overwrite, refreshed: false }; localTasks.set(next.id, next); pumpUploads(); renderTransfers();
 }
 function renderTransfers() {
+  $('#clear-completed-transfers').disabled = clearingTransfers || ![...localTasks.values()].some(t => t.status === 'done');
   $('#transfer-count').textContent = localTasks.size; $('#transfer-empty').hidden = localTasks.size > 0;
   const label = { queued: '等待上传', uploading: '上传中', done: '已完成', failed: '失败', cancelled: '已取消' };
   $('#transfer-list').replaceChildren(...[...localTasks.values()].map(task => {

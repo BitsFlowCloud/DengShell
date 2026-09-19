@@ -434,7 +434,17 @@ function requestQuit() {
   const unsaved = window.DengTextEditors?.unsavedCount() || 0;
   const count = [...sessions.values()].filter(state => state.connected).length;
   const transfers = [...localTasks.values()].filter(task => ['queued','uploading'].includes(task.status)).length;
-  $('#exit-description').textContent = [count ? `将关闭当前窗口，断开其中 ${count} 个 SSH 会话。其他独立窗口会保持运行。` : '确认关闭当前窗口。其他独立窗口会保持运行。', transfers ? `${transfers} 个传输任务尚未完成。` : '', unsaved ? `${unsaved} 个远程文件有未保存的修改，退出会丢弃这些修改。` : ''].filter(Boolean).join(' ');
+  const description = [count ? `将关闭当前窗口，断开其中 ${count} 个 SSH 会话。其他独立窗口会保持运行。` : '确认关闭当前窗口。其他独立窗口会保持运行。', transfers ? `${transfers} 个传输任务尚未完成。` : '', unsaved ? `${unsaved} 个远程文件有未保存的修改，退出会丢弃这些修改。` : ''].filter(Boolean).join(' ');
+  if (window.DengSecurityLock?.confirmExit(description, async () => {
+    if ([...sessions.values()].some(s=>s.detaching||s.handoffProvisional||s.ownershipUncertain)) throw new Error('终端正在交接，请稍后重试');
+    if (window.DengTextEditors?.savingCount()) throw new Error('远程文件正在保存，请等待完成');
+    // Closing the owning socket ends its SSH relay even while locked. The relay
+    // ignores departed owners, preserving sessions transferred to other windows.
+    // Do not wait on normal API calls or preference flushes: they await unlock.
+    for (const id of [...sessions.keys()]) dropSessionView(id);
+    await native()?.ConfirmQuit?.();
+  }, async () => { await native()?.CancelQuit?.(); })) return;
+  $('#exit-description').textContent = description;
   $('#exit-dialog').showModal(); $('#cancel-exit').focus();
 }
 async function initializeQuitConfirmation() {

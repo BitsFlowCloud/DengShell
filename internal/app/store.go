@@ -15,6 +15,8 @@ import (
 )
 
 type Profile struct {
+	Temporary    bool        `json:"temporary,omitempty"`
+	NeedsProxy   bool        `json:"needsProxy,omitempty"`
 	FinalShellID string      `json:"finalShellId,omitempty"`
 	ID           string      `json:"id"`
 	Name         string      `json:"name"`
@@ -34,6 +36,7 @@ type Profile struct {
 }
 
 type Config struct {
+	TemporaryServers  []Profile                  `json:"temporaryServers,omitempty"`
 	SchemaVersion     int                        `json:"schemaVersion"`
 	GroupNodes        []ServerGroup              `json:"groupNodes"`
 	Trash             []Profile                  `json:"trash,omitempty"`
@@ -114,6 +117,10 @@ func (s *Store) Get(id string) (Profile, error) {
 	return Profile{}, errors.New("服务器配置不存在")
 }
 func (s *Store) Save(p Profile, clearSecret bool) (Profile, error) {
+	return s.saveProfile(p, clearSecret, false)
+}
+func (s *Store) saveProfile(p Profile, clearSecret, allowNewID bool) (Profile, error) {
+	p.Temporary = false
 	p.FinalShellID = ""
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -211,7 +218,7 @@ func (s *Store) Save(p Profile, clearSecret bool) (Profile, error) {
 	}
 	if p.ID == "" {
 		p.ID = randomID()
-	} else if index < 0 {
+	} else if index < 0 && !allowNewID {
 		return Profile{}, errors.New("服务器配置不存在，请重新新建")
 	}
 	if err := s.assignProfileGroupLocked(&p); err != nil {

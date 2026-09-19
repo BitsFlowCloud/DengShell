@@ -197,7 +197,7 @@ func TestFinalShellImportPartialFailuresAndBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Imported != 2 || result.Failed != 8 || result.NeedsPassword != 1 {
+	if result.Imported != 3 || result.Failed != 7 || result.NeedsPassword != 1 || result.NeedsProxy != 1 {
 		t.Fatalf("bad result counts: %+v", result)
 	}
 	encoded, _ := json.Marshal(result)

@@ -314,7 +314,7 @@ func (a *App) planMTRInstallation(requestCtx context.Context, sessionID, directi
 	plan.ExpiresAt = now.Add(10 * time.Minute)
 	plan.scope = "local"
 	if direction == "remote" {
-		profile, err := a.store.Get(s.ProfileID)
+		profile, err := a.connectionProfile(s.ProfileID)
 		if err != nil {
 			return MTRInstallPlan{}, err
 		}

@@ -134,3 +134,6 @@
 .connections-drawer .server-manager-create{padding-top:7px;margin-top:0}
 .connections-drawer .server-manager-create #new-connection{padding:7px 9px}
 .connections-drawer .server-manager-create #new-group{padding:7px 5px}
+
+/* Center the server picker within the viewport at every interface scale. */
+#connections-drawer { left:50%; transform:translateX(-50%); bottom:auto; top:calc(var(--titlebar-height,42px) + 12px); height:min(740px,calc(var(--view-height,100vh) - var(--titlebar-height,42px) - 44px)); }

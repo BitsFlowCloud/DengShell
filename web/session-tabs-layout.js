@@ -5,16 +5,26 @@
   let frame = 0, previousHeight = 0;
   function layout() {
     frame = 0;
-    const columns = Math.min(6, Math.max(1, tabs.childElementCount), Math.max(1, Math.floor((tabs.clientWidth + 8) / 148)));
-    const value = String(columns);
-    if (tabs.style.getPropertyValue('--session-columns') !== value) tabs.style.setProperty('--session-columns', value);
-    tabs.dataset.compactTabs = String(Math.min(240, (tabs.clientWidth - (columns - 1) * 8) / columns) < 190);
+    // Natural tab widths; consume the rest of a row only after its sixth tab.
+    // No wrapper nodes: drag, keyboard navigation and process tabs keep their IDs.
+    const items = [...tabs.children], width = tabs.clientWidth, gap = 8;
+    for (const tab of items) tab.style.marginRight = '0px';
+    let used = 0, count = 0;
+    for (const [index, tab] of items.entries()) {
+      const size = tab.getBoundingClientRect().width / (Number(document.body.style.zoom) || 1);
+      if (count && used + gap + size > width) { used = 0; count = 0; }
+      used += (count ? gap : 0) + size; count++;
+      if (count === 6 && index < items.length - 1) {
+        tab.style.marginRight = Math.max(0, width - used - 1) + 'px';
+        used = 0; count = 0;
+      }
+    }
     const height = titlebar.offsetHeight;
     if (height !== previousHeight) {
       previousHeight = height;
       document.documentElement.style.setProperty('--titlebar-height', `${height}px`);
       if (typeof fitActive === 'function') fitActive();
-      if (typeof fitServerExplorer === 'function') fitServerExplorer();
+      if (typeof $ === 'function' && typeof fitServerExplorer === 'function') fitServerExplorer();
     }
   }
   function schedule() {

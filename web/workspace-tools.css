@@ -16,7 +16,7 @@
 .commands-content { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: transparent transparent; padding: 6px 18px 18px; }
 .commands-content:is(:hover, :focus-within, .is-scrolling) { scrollbar-color: #a4b6c36b transparent; }
 .commands-content:is(:hover, :focus-within, .is-scrolling)::-webkit-scrollbar-thumb { background: #a4b6c36b; }
-.command-list { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 12px 10px; }
+.command-list { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; }
 [data-color="blue"] { --pill-bg: #e6f0f8; --pill-hover: #d7e8f5; --pill-fg: #477598; }
 [data-color="green"] { --pill-bg: #e7f2e9; --pill-hover: #d5e9da; --pill-fg: #507d61; }
 [data-color="amber"] { --pill-bg: #faf0dd; --pill-hover: #f2e4c7; --pill-fg: #957440; }
@@ -29,10 +29,10 @@
 [data-theme="dark"] [data-color="purple"] { --pill-bg: #403550; --pill-hover: #554467; --pill-fg: #cfb9e7; }
 [data-theme="dark"] [data-color="rose"] { --pill-bg: #4c3341; --pill-hover: #604252; --pill-fg: #e0b4c6; }
 [data-theme="dark"] [data-color="teal"] { --pill-bg: #264541; --pill-hover: #315c56; --pill-fg: #aed7ce; }
-.command-pill { display: inline-flex; align-items: center; background: var(--pill-bg); color: var(--pill-fg); border-radius: 100px; min-height: 34px; max-width: 100%; overflow: hidden; }
+.command-pill { display: inline-flex; align-items: center; background: var(--pill-bg); color: var(--pill-fg); border-radius: 100px; min-height: 28px; max-width: 100%; overflow: hidden; }
 .command-pill button { color: inherit; background: transparent; }
 .command-pill button:is(:hover, :focus-visible) { background: var(--pill-hover); color: var(--pill-fg); }
-.command-run { padding: 8px 16px; font-size: 12px; line-height: 18px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.command-run { padding: 5px 10px; font-size: 12px; line-height: 18px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .command-dragging { opacity: .45; }
 .command-drop-before { box-shadow: -3px 0 0 var(--accent); }
 .command-drop-after { box-shadow: 3px 0 0 var(--accent); }
@@ -101,3 +101,30 @@ dialog textarea::placeholder { color: var(--text-faint, #9fadb8); }
 #key-editor-dialog, #public-key-dialog { width: 540px; }
 #public-key-fingerprint { overflow-wrap: anywhere; }
 @media (max-width: 1100px) { #command-target { display: none; } #new-command { margin-left: auto; } }
+
+/* Saved templates open a small parameter form; editing stays an explicit action. */
+.command-composer { margin:0 0 12px; }
+.command-composer-compact { display:grid; grid-template-columns:minmax(0,1fr) minmax(150px,1fr); gap:8px 14px; padding:10px 12px; }
+.command-composer-compact :is(.composer-template-label,.command-parameter-buttons,#composer-preview,.composer-save-as,.command-composer-note) { display:none; }
+.command-composer-compact .command-composer-heading { margin:0; min-width:0; }
+.command-composer-compact .command-composer-heading strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.command-composer-compact .composer-target-label { flex-direction:row; align-items:center; margin:0; font-size:11px; }
+.command-composer-compact .composer-target-label > :is(select,.themed-select) { flex:1; min-width:0; }
+.command-composer-compact .command-parameter-fields { grid-column:1/-1; gap:8px; }
+.command-composer-compact .command-parameter-fields label { margin:0; font-size:12px; gap:4px; }
+.command-composer-compact .command-composer-footer { grid-column:1/-1; }
+.command-composer-compact .command-composer-footer label { margin:0; font-size:12px; }
+@media(max-width:650px) { .command-composer-compact { grid-template-columns:minmax(0,1fr); } }
+
+.transfer-notice { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+#clear-completed-transfers { flex:none; }
+
+#welcome-quick-connect { margin-bottom:14px; }
+#quick-connect-dialog { width:540px; max-height:calc(var(--view-height,100vh) - 24px); overflow:auto; }
+#quick-connect-output { white-space:pre-wrap; overflow-wrap:anywhere; max-height:160px; overflow:auto; font-size:12px; line-height:1.6; }
+#quick-connect-output:empty { display:none; }
+#quick-connect-dialog .dialog-buttons { display:flex; align-items:center; gap:12px; }
+#quick-connect-dialog .dialog-buttons button { flex:1; }
+#quick-save-dialog .checkbox-label { display:flex; flex-direction:row; align-items:center; }
+#quick-save-dialog input[type=checkbox] { width:16px; }
+#quick-save-error { color:var(--danger); }

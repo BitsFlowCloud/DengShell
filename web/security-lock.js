@@ -29,6 +29,7 @@
    document.documentElement.dataset.securityLocked='true';fitScreen();
    if(confirmed&&settings?.open){settings.close();clearSettingsSecrets();}
    isolate();window.DengShellSplash?.finish('locked');
+   if(changed&&el('exit-dialog')?.open){el('exit-dialog').close();queueMicrotask(()=>window.requestQuit?.());}
    if(screen&&!screen.open){originalModal.call(screen);el('security-unlock-open').focus();}
   }else{
    delete document.documentElement.dataset.securityLocked;
@@ -43,6 +44,7 @@
   // Responses from a request begun before a newer lock/unlock cannot clear it.
   if(Number(next.revision)<Number(state.revision))return;
   state=next;cover(forcingLock||state.locked);
+  const closeWindow=el('security-window-close');if(closeWindow)closeWindow.hidden=!window.go?.main?.Desktop?.ConfirmQuit;
   const manual=el('security-lock-button');if(manual){manual.disabled=!state.enabled;manual.title=state.enabled?'立即锁定所有窗口':'请先在设置中启用安全锁定';}
   const options=el('security-unlock-method');if(options){
    const previous=options.value,methods=[];
@@ -117,12 +119,28 @@
  for(const name of ['pointerdown','pointermove','keydown','wheel','touchstart'])window.addEventListener(name,activity,{capture:true,passive:true});
  window.addEventListener('focus',()=>{if(state.enabled){cover(true,false);refresh();}});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.enabled){cover(true,false);refresh();}});
- window.DengSecurityLock={ready,isLocked:()=>covered,whenUnlocked:()=>covered?new Promise(r=>waiters.push(r)):Promise.resolve(),blocked(){cover(true);refresh();},openSettings};
+ function confirmExit(description, action, cancel) {
+  if (!covered || !screen) return false;
+  const form = el('security-exit-form');
+  if (!form.hidden) return true;
+  const previous = el('security-unlock-form').hidden ? 'security-lock-message' : 'security-unlock-form';
+  el('security-unlock-value').value='';
+  el('security-lock-message').hidden=true; el('security-unlock-form').hidden=true;
+  el('security-exit-description').textContent=description; el('security-exit-error').textContent=''; form.hidden=false;
+  const restore=()=>{form.hidden=true;el(previous).hidden=false;};
+  el('security-exit-cancel').onclick=async()=>{await cancel();restore();el(previous==='security-lock-message'?'security-unlock-open':'security-unlock-value').focus();};
+  form.onsubmit=async event=>{event.preventDefault();const button=el('security-exit-confirm');button.disabled=true;
+   try{await action();restore();}catch(error){el('security-exit-error').textContent=error.message||String(error);}finally{button.disabled=false;}
+  };
+  el('security-exit-cancel').focus();return true;
+ }
+ window.DengSecurityLock={confirmExit,ready,isLocked:()=>covered,whenUnlocked:()=>covered?new Promise(r=>waiters.push(r)):Promise.resolve(),blocked(){cover(true);refresh();},openSettings};
  document.addEventListener('DOMContentLoaded',async()=>{
   screen=el('security-lock-screen');settings=el('security-lock-settings');
   screen.addEventListener('cancel',e=>e.preventDefault());screen.addEventListener('close',()=>{if(covered)originalModal.call(screen);});
   new MutationObserver(()=>{if(covered){isolate();fitScreen();}}).observe(document.body,{childList:true,attributes:true,attributeFilter:['style']});
   window.addEventListener('resize',fitScreen);
+  el('security-window-close').onclick=()=>window.requestQuit?.();
   el('security-lock-button').onclick=async()=>{if(!state.enabled)return;forcingLock=true;cover(true);try{const next=await call('lock',{});forcingLock=false;apply(next);}catch(e){forcingLock=false;el('security-lock-error').textContent=e.message;await refresh();}};
   el('manage-security-lock').onclick=openSettings;
   el('security-unlock-open').onclick=()=>{el('security-lock-message').hidden=true;el('security-unlock-form').hidden=false;el('security-unlock-error').textContent='';el('security-unlock-value').focus();};

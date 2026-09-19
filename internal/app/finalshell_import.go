@@ -46,6 +46,7 @@ type FinalShellImportItem struct {
 	Message       string `json:"message"`
 	NeedsKey      bool   `json:"needsKey,omitempty"`
 	NeedsPassword bool   `json:"needsPassword,omitempty"`
+	NeedsProxy    bool   `json:"needsProxy,omitempty"`
 }
 type FinalShellImportResult struct {
 	Directory      string                 `json:"directory"`
@@ -61,6 +62,7 @@ type FinalShellImportResult struct {
 	Failed         int                    `json:"failed"`
 	NeedsKey       int                    `json:"needsKey"`
 	NeedsPassword  int                    `json:"needsPassword"`
+	NeedsProxy     int                    `json:"needsProxy"`
 	Items          []FinalShellImportItem `json:"items"`
 }
 type finalShellCandidate struct {
@@ -106,9 +108,6 @@ func parseFinalShellProfile(data []byte) (Profile, string, error) {
 	if input.Deleted != 0 {
 		return Profile{}, "", errors.New("已删除的 FinalShell 连接不导入")
 	}
-	if input.ProxyID != "" && input.ProxyID != "0" && input.ProxyID != "-1" {
-		return Profile{}, "", errors.New("连接引用了独立代理配置，请补齐代理信息后手动建立连接")
-	}
 	if encoding := strings.ToLower(strings.ReplaceAll(input.Encoding, "-", "")); encoding != "" && encoding != "utf8" {
 		return Profile{}, "", errors.New("当前仅支持 UTF-8 终端连接，请调整 FinalShell 编码后重新导出")
 	}
@@ -135,6 +134,10 @@ func parseFinalShellProfile(data []byte) (Profile, string, error) {
 		message = "未找到匹配私钥；连接时将提示重新配置密钥"
 	default:
 		return Profile{}, "", errors.New("不支持此认证方式，请手动建立连接")
+	}
+	if input.ProxyID != "" && input.ProxyID != "0" && input.ProxyID != "-1" {
+		p.NeedsProxy = true
+		message += "；原连接使用代理，请在编辑连接中补充代理（或确认改为直连）后再连接"
 	}
 	identity := input.ID
 	if identity == "" {
@@ -240,6 +243,7 @@ func (s *Store) importFinalShell(ctx context.Context, directory string) (FinalSh
 		item.Name = p.Name
 		item.Message = message
 		item.Status = "pending"
+		item.NeedsProxy = p.NeedsProxy
 		item.NeedsKey = p.Auth == "key"
 		item.NeedsPassword = p.Auth == "password" && p.Secret == ""
 		folders := []string{"FinalShell 导入"}
@@ -312,6 +316,10 @@ func (s *Store) importFinalShell(ctx context.Context, directory string) (FinalSh
 		if existing != nil {
 			item.Status = "skipped"
 			item.ProfileID = existing.ID
+			item.NeedsProxy = existing.NeedsProxy
+			if item.NeedsProxy {
+				result.NeedsProxy++
+			}
 			item.NeedsKey = false
 			item.NeedsPassword = false
 			item.Message = "已存在，保留 DengShell 中的配置和凭据"
@@ -369,6 +377,9 @@ func (s *Store) importFinalShell(ctx context.Context, directory string) (FinalSh
 		item.ProfileID = p.ID
 		item.Status = "imported"
 		result.Imported++
+		if item.NeedsProxy {
+			result.NeedsProxy++
+		}
 		if item.NeedsKey {
 			result.NeedsKey++
 		}
