@@ -1,8 +1,5 @@
 /* Keep the workspace focused on the active terminal. */
 .brand { gap:8px; }
-.brand-name { display:inline-flex; align-items:flex-end; gap:7px; flex-shrink:0; white-space:nowrap; line-height:1; }
-.brand-name strong { line-height:1; }
-.titlebar .brand #app-version { display:inline-block; margin:0; font-size:11px; line-height:1; font-weight:450; letter-spacing:.15px; }
 .header-pill { width:37px; height:28px; border-radius:30px; margin-left:7px; flex-shrink:0; }
 #theme-toggle { color:#ab8b58; background:#f8edda; }
 #settings-button { color:#8291b4; background:#e9edf8; }

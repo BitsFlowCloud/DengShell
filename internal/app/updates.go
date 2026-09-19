@@ -26,7 +26,7 @@ const ApplicationVersion = "v0.01"
 
 // Increase this integer for every published build, including packaging-only
 // releases. Display versions alone do not distinguish the v0.01 revisions.
-const ApplicationBuild uint64 = 20260919052
+const ApplicationBuild uint64 = 20260919053
 
 // Public revision is separate from the monotonically increasing update build.
 const ApplicationRelease = 50

@@ -123,8 +123,14 @@ dialog textarea::placeholder { color: var(--text-faint, #9fadb8); }
 #quick-connect-dialog { width:540px; max-height:calc(var(--view-height,100vh) - 24px); overflow:auto; }
 #quick-connect-output { white-space:pre-wrap; overflow-wrap:anywhere; max-height:160px; overflow:auto; font-size:12px; line-height:1.6; }
 #quick-connect-output:empty { display:none; }
-#quick-connect-dialog .dialog-buttons { display:flex; align-items:center; gap:12px; }
-#quick-connect-dialog .dialog-buttons button { flex:1; }
+#quick-connect-dialog .dialog-buttons { display:flex; align-items:stretch; gap:12px; }
+#quick-connect-dialog .dialog-buttons > button {
+  display:flex; align-items:center; justify-content:center;
+  flex:1 1 0; width:0; min-width:0; min-height:40px;
+  box-sizing:border-box; padding:10px 14px;
+  font-family:inherit; font-size:12px; font-weight:500; line-height:1.5;
+  text-align:center; white-space:normal;
+}
 #quick-save-dialog .checkbox-label { display:flex; flex-direction:row; align-items:center; }
 #quick-save-dialog input[type=checkbox] { width:16px; }
 #quick-save-error { color:var(--danger); }

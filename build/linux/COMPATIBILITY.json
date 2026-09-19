@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "application": "DengShell v0.01 r50",
-  "testedExecutableSHA256": "1fd5de0c02cf95aa926a2e4d42bd198e865dda9af8800a28f69bf60c6c9498b4",
+  "testedExecutableSHA256": "c4c9d2997529530fd21de361e314c06fe151f145801c97484c959d775f5720e4",
   "requiredGLIBC": "2.34",
   "runtimeMatrix": [
     {

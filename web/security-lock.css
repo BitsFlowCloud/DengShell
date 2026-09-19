@@ -88,7 +88,6 @@ html[data-security-locked] #startup-splash { display:none!important; }
 #security-lock-settings .security-settings-footer .security-error { margin:0; flex:1; }
 #security-save { width:auto; min-width:108px; flex:none; }
 #security-lock-settings fieldset:disabled { opacity:.55; }
-[data-narrow="true"] .titlebar .brand .brand-name { display:none; }
 @media(prefers-reduced-motion:reduce) { #security-lock-settings *,#security-lock-screen * { transition:none!important; } }
 
 #security-lock-settings[data-verifying="true"] :is(.security-enable,#security-options,.security-footnote,.security-settings-footer) { display:none; }
