@@ -58,7 +58,10 @@ try{
  $running=Start-ExitNative $config
  Click '解锁'
  Wait-ExitQA {$null -ne (Control '解锁密码')} 'password field'
- $field=Control '解锁密码';$field.SetFocus();[System.Windows.Forms.SendKeys]::SendWait('4826');Click '解锁'
+ $editCondition=New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::Edit)
+ $field=@($root.FindAll([System.Windows.Automation.TreeScope]::Descendants,$editCondition))|Where-Object {!$_.Current.IsOffscreen -and $_.Current.IsKeyboardFocusable}|Select-Object -First 1
+ if($null -eq $field){throw 'Native password edit control missing'}
+ $field.SetFocus();[System.Windows.Forms.SendKeys]::SendWait('4826');Click '解锁'
  Wait-ExitQA {$null -ne (Control '设置')} 'unlocked workspace'
  Click '关闭窗口';Confirm-Persistent
  [DengExitQA]::PostMessage($handle,0x0010,[IntPtr]::Zero,[IntPtr]::Zero)|Out-Null;Confirm-Persistent
@@ -85,6 +88,12 @@ try{
  [IO.File]::WriteAllText((Join-Path $plain 'config.json'),($seed|ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))
  $running=Start-ExitNative $plain;Click '关闭窗口';Confirm-Persistent;Click '退出';Wait-ExitQA {$running.Refresh();$running.HasExited} 'normal native process exits';Passed 'Security disabled normal confirmed exit terminates process'
  $report.passed=$true
+}catch{
+ if($null -ne $script:root){
+  $items=@($script:root.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition))|ForEach-Object {@{name=$_.Current.Name;type=$_.Current.ControlType.ProgrammaticName;id=$_.Current.AutomationId;offscreen=$_.Current.IsOffscreen;focusable=$_.Current.IsKeyboardFocusable}}
+  $items|ConvertTo-Json -Depth 5|Set-Content -Encoding UTF8 (Join-Path $Output 'exit-controls.json')
+ }
+ throw
 }finally{
  foreach($p in $processes){Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue}
  $report|ConvertTo-Json -Depth 8|Set-Content -Encoding UTF8 (Join-Path $Output 'windows-exit-validation.json')
