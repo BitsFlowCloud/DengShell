@@ -5,12 +5,16 @@ New-Item -ItemType Directory -Force $Output | Out-Null
 $Output=(Resolve-Path $Output).Path
 $exitRoot=Join-Path $env:RUNNER_TEMP ('DengShell exit '+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory $exitRoot | Out-Null
-Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes,System.Windows.Forms
+Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes,System.Windows.Forms,System.Drawing
 Add-Type @'
 using System;
 using System.Text;
 using System.Runtime.InteropServices;
 public static class DengExitQA {
+ [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left,Top,Right,Bottom; }
+ [StructLayout(LayoutKind.Sequential)] public struct NOTIFYICONIDENTIFIER { public uint cbSize; public IntPtr hWnd; public uint uID; public Guid guidItem; }
+ [DllImport("shell32.dll")] public static extern int Shell_NotifyIconGetRect(ref NOTIFYICONIDENTIFIER id,out RECT rect);
+ public static int IconRect(IntPtr hwnd,uint pid,out RECT rect){var id=new NOTIFYICONIDENTIFIER{cbSize=(uint)Marshal.SizeOf(typeof(NOTIFYICONIDENTIFIER)),hWnd=hwnd,uID=pid};return Shell_NotifyIconGetRect(ref id,out rect);}
  public delegate bool EnumProc(IntPtr h,IntPtr l);
  [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc f,IntPtr l);
  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h,out uint p);
@@ -70,23 +74,21 @@ try{
  [DengExitQA]::PostMessage($handle,0x0010,[IntPtr]::Zero,[IntPtr]::Zero)|Out-Null;Confirm-Persistent;Click '继续使用'
  Passed 'Taskbar-equivalent WM_CLOSE restores hidden/minimized window and keeps confirmation visible'
  $tray=[DengExitQA]::Find($running.Id,'DengShellTrayWindow');if($tray -eq [IntPtr]::Zero){throw 'Native tray window missing'}
- $trayButtons=New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::Button)
- function Tray-Icon { @([System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Descendants,$trayButtons))|Where-Object {$_.Current.Name -like 'DengShell*' -and !$_.Current.IsOffscreen}|Select-Object -First 1 }
- if($null -eq (Tray-Icon)){
-  $chevron=@([System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Descendants,$trayButtons))|Where-Object {$_.Current.Name -in @('Show hidden icons','显示隐藏的图标','Notification Chevron') -and !$_.Current.IsOffscreen}|Select-Object -First 1
-  if($null -ne $chevron){$r=$chevron.Current.BoundingRectangle;[DengExitQA]::SetCursorPos([int]($r.X+$r.Width/2),[int]($r.Y+$r.Height/2))|Out-Null;[DengExitQA]::mouse_event(2,0,0,0,[UIntPtr]::Zero);[DengExitQA]::mouse_event(4,0,0,0,[UIntPtr]::Zero)}
+ # The GitHub hosted runner can have a noninteractive Explorer notification area.
+ # Query the actual Shell icon instead of relying on absent UI Automation providers.
+ $iconBounds=New-Object DengExitQA+RECT
+ $iconResult=[DengExitQA]::IconRect($tray,$running.Id,[ref]$iconBounds)
+ $report.tray=@{shellResult=$iconResult;rectangle=$iconBounds;tested=$false}
+ if($iconResult -ne 0 -or $iconBounds.Right -le $iconBounds.Left -or $iconBounds.Bottom -le $iconBounds.Top){
+  $report.tray.reason='Runner shell does not expose a notification icon rectangle; physical tray interaction unavailable'
+  Write-Warning $report.tray.reason
+ }else{
+  [DengExitQA]::SetCursorPos([int](($iconBounds.Left+$iconBounds.Right)/2),[int](($iconBounds.Top+$iconBounds.Bottom)/2))|Out-Null
+  [DengExitQA]::mouse_event(8,0,0,0,[UIntPtr]::Zero);[DengExitQA]::mouse_event(16,0,0,0,[UIntPtr]::Zero)
+  Wait-ExitQA {[DengExitQA]::Find($running.Id,'#32768') -ne [IntPtr]::Zero} 'native tray popup menu'
+  [System.Windows.Forms.SendKeys]::SendWait('{END}{ENTER}')
+  Confirm-Persistent;Click '继续使用';$report.tray.tested=$true;Passed 'Actual native tray context-menu exit reaches persistent confirmation'
  }
- Wait-ExitQA {$null -ne (Tray-Icon)} 'actual shell notification icon'
- $iconBounds=(Tray-Icon).Current.BoundingRectangle
- [DengExitQA]::SetCursorPos([int]($iconBounds.X+$iconBounds.Width/2),[int]($iconBounds.Y+$iconBounds.Height/2))|Out-Null
- [DengExitQA]::mouse_event(8,0,0,0,[UIntPtr]::Zero);[DengExitQA]::mouse_event(16,0,0,0,[UIntPtr]::Zero)
- $menuCondition=New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty,'退出 DengShell')
- Wait-ExitQA {$null -ne ([System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$menuCondition))} 'native tray Exit menu'
- $menuItem=[System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$menuCondition)
- $menuBounds=$menuItem.Current.BoundingRectangle
- [DengExitQA]::SetCursorPos([int]($menuBounds.X+$menuBounds.Width/2),[int]($menuBounds.Y+$menuBounds.Height/2))|Out-Null
- [DengExitQA]::mouse_event(2,0,0,0,[UIntPtr]::Zero);[DengExitQA]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
- Confirm-Persistent;Click '继续使用';Passed 'Actual native tray context-menu exit reaches persistent confirmation'
  Click '立即锁定';Wait-ExitQA {$null -ne (Control '软件已被锁定')} 'locked screen'
  Click '解锁';Wait-ExitQA {$null -ne (Control '返回锁定界面')} 'unlock form'
  [DengExitQA]::PostMessage($handle,0x0010,[IntPtr]::Zero,[IntPtr]::Zero)|Out-Null
@@ -102,6 +104,11 @@ try{
  $running=Start-ExitNative $plain;Click '关闭窗口';Confirm-Persistent;Click '退出';Wait-ExitQA {$running.Refresh();$running.HasExited} 'normal native process exits';Passed 'Security disabled normal confirmed exit terminates process'
  $report.passed=$true
 }catch{
+ $screen=[System.Windows.Forms.SystemInformation]::VirtualScreen
+ $bitmap=New-Object System.Drawing.Bitmap($screen.Width,$screen.Height)
+ $graphics=[System.Drawing.Graphics]::FromImage($bitmap)
+ $graphics.CopyFromScreen($screen.Left,$screen.Top,0,0,$bitmap.Size)
+ $bitmap.Save((Join-Path $Output 'exit-desktop.png'));$graphics.Dispose();$bitmap.Dispose()
  if($null -ne $script:root){
   $items=@([System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition))|ForEach-Object {@{name=$_.Current.Name;type=$_.Current.ControlType.ProgrammaticName;id=$_.Current.AutomationId;offscreen=$_.Current.IsOffscreen;focusable=$_.Current.IsKeyboardFocusable}}
   $items|ConvertTo-Json -Depth 5|Set-Content -Encoding UTF8 (Join-Path $Output 'exit-controls.json')
