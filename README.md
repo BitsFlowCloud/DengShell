@@ -4,7 +4,7 @@
 
 DengShell 是一款中文界面的开源 SSH 桌面工具，适合日常管理 VPS、维护 Linux 服务器、编辑远程配置和排查网络问题。支持 Windows 与 Linux 桌面，可同时连接多台服务器，并按自己的习惯调整字体、背景、布局和监控曲线。
 
-本说明对应 **v0.01 R50**。R30～R40 的累计变化汇总在 [更新日志](CHANGELOG.md)。
+本说明对应 **v0.01 R50**。R20 至 R50 的累计变化汇总在 [更新日志](CHANGELOG.md)。
 
 ## 内容导航
 
@@ -455,3 +455,7 @@ DengShell 应用代码采用 [MIT License](LICENSE)，可按许可使用、修�
 ## 加密同步
 
 安全锁右侧独立「同」按钮提供本机 / 自建 HTTPS 加密同步，可开启本机服务或通过一次性邀请加入已有空间。使用与恢复步骤见 [加密同步说明](docs/sync.md)，实现边界见 [同步协议说明](docs/sync-design.md)。
+
+## macOS 通用预览版
+
+提供 Apple 芯片与 Intel 通用 DMG/ZIP，最低 macOS 13。当前为临时签名、尚未公证，手动替换应用更新。安装与构建说明见 [macOS 说明](docs/MACOS.md)。

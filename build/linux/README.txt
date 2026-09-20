@@ -78,4 +78,4 @@ Arch 依赖 gtk3、webkit2gtk-4.1、bash、iputils、glibc、pacman、libarchive
 Windows、Debian/Ubuntu 和 Arch pacman 支持内置更新，确认后安装并重启。
 R28 起的 Arch 版可直接更新；更早版本先手动安装一次本次 R50，此后通过软件启动检查更新。
 Arch 使用 pkexec 请求系统授权，再执行 pacman -U 安装已验证签名的包；不添加 pacman 仓库。
-R30～R40 累计变化见 CHANGELOG.md；本轮验证边界见 FUNCTIONAL-AUDIT-r50.md。
+R20～R50 累计变化见 CHANGELOG.md；本轮验证边界见 FUNCTIONAL-AUDIT-r50.md。
