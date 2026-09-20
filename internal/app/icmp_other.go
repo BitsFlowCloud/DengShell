@@ -49,22 +49,32 @@ func ProbeICMP(ctx context.Context, targetIP string, timeout time.Duration) ICMP
 		}
 		return result
 	}
-	processTimeout := timeout
-	if runtime.GOOS == "darwin" && address.Is6() {
-		// Apple's ping6 -X accepts whole seconds. Its -W means something
-		// unrelated to a receive timeout; allow the rounded deadline to finish.
-		processTimeout = ((timeout + time.Second - 1) / time.Second) * time.Second
+	return runICMPCommand(ctx, runtime.GOOS, address, path, args, timeout)
+}
+
+func runICMPCommand(ctx context.Context, platform string, address netip.Addr, path string, args []string, timeout time.Duration) ICMPProbeResult {
+	result := ICMPProbeResult{Address: address.String(), Status: "unavailable"}
+	interruptForSummary := platform == "darwin" && address.Is6()
+	processTimeout := timeout + 250*time.Millisecond
+	if interruptForSummary {
+		processTimeout = timeout
 	}
-	probeCtx, cancel := context.WithTimeout(ctx, processTimeout+250*time.Millisecond)
+	probeCtx, cancel := context.WithTimeout(ctx, processTimeout)
 	defer cancel()
 	command := exec.CommandContext(probeCtx, path, args...)
+	if interruptForSummary {
+		// Apple's ping6 has no supported receive-timeout option. SIGINT asks
+		// it to print packet statistics and exit; kill it if it fails to stop.
+		command.Cancel = func() error { return command.Process.Signal(os.Interrupt) }
+		command.WaitDelay = 250 * time.Millisecond
+	}
 	command.Env = append(os.Environ(), "LC_ALL=C", "LANG=C", "IPUTILS_PING_PTR_LOOKUP=0")
 	output, err := command.CombinedOutput()
 	if ctx.Err() != nil {
 		result.Error = "ICMP 检测已取消"
 		return result
 	}
-	if probeCtx.Err() != nil {
+	if probeCtx.Err() != nil && !(interruptForSummary && command.ProcessState != nil && command.ProcessState.Exited()) {
 		result.Error = "本机 ping 进程未按时结束；未计入网络丢包"
 		return result
 	}
@@ -72,14 +82,14 @@ func ProbeICMP(ctx context.Context, targetIP string, timeout time.Duration) ICMP
 		result.Error = "无法启动本机 ping：" + err.Error()
 		return result
 	}
-	return parsePingOutputForPlatform(runtime.GOOS, targetIP, string(output), command.ProcessState.ExitCode())
+	return parsePingOutputForPlatform(platform, address.String(), string(output), command.ProcessState.ExitCode())
 }
 
 func pingCommandForPlatform(platform string, address netip.Addr, timeout time.Duration) (string, []string) {
 	if platform == "darwin" {
 		seconds := strconv.FormatInt(int64((timeout+time.Second-1)/time.Second), 10)
 		if address.Is6() {
-			return "/sbin/ping6", []string{"-n", "-c", "1", "-X", seconds, address.String()}
+			return "/sbin/ping6", []string{"-n", "-c", "1", address.String()}
 		}
 		milliseconds := strconv.FormatInt(int64((timeout+time.Millisecond-1)/time.Millisecond), 10)
 		return "/sbin/ping", []string{"-n", "-c", "1", "-W", milliseconds, "-t", seconds, address.String()}
