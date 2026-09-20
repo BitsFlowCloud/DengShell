@@ -391,7 +391,12 @@ func TestPathHistoryOnlySuccessfulSFTPVisits(t *testing.T) {
 		t.Fatal("directory read as text")
 	}
 	entries, _ = a.store.pathHistory(s.ProfileID, s.pathHistoryIdentity(), nil, false)
-	if len(entries) != 2 || entries[0].Path != target || entries[0].Kind != "file" || entries[1].Kind != "folder" {
+	// Text reads resolve symlinks; macOS temp directories use /var -> /private/var.
+	resolvedTarget, err := filepath.EvalSymlinks(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 2 || entries[0].Path != resolvedTarget || entries[0].Kind != "file" || entries[1].Kind != "folder" {
 		t.Fatal("successful visits not recorded", entries)
 	}
 	mux := http.NewServeMux()
