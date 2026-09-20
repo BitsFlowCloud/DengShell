@@ -25,11 +25,14 @@
 
 ## 验证
 
-- 本地完整 Go 测试、同步与安全锁并发竞争检查、前端语法检查。
+- 本地完整 Go 测试：649 项通过、44 项因环境条件跳过、0 项失败；同步用例无跳过。同步与安全锁并发竞争检查、Go 静态检查及前端语法检查通过。
 - 两个独立客户端的真实浏览器操作：创建、邀请、加入、同步、恢复码清理、安全锁；深浅色、窄窗口及缩放布局。
 - 独立 Docker 镜像以非 root、只读根文件系统、移除额外 capabilities 的方式运行。真实双客户端验证初始化、双向同步、容器重启、离线修改恢复和设备撤销。
 - 5,000 条连接同步及无变化时零上传；该数据量测试不能代表任意网络和硬件的速度。
-- Windows、Linux、Apple Silicon 和 Intel macOS 的最终 CI 结果及交付文件校验值记录在本次检查的本地验证报告中。
+- [Windows 和 Linux 同步 CI](https://github.com/BitsFlowCloud/DengShell/actions/runs/35500298164)：加密、服务端、客户端及安全锁的并发竞争检查全部通过。
+- [macOS CI](https://github.com/BitsFlowCloud/DengShell/actions/runs/35500298023)：Apple Silicon 与 Intel 的完整后端测试、桌面平台测试，以及同一个通用应用的实际启动检查全部通过（macOS 15.7.9）；启动前后应用包未改变。最低系统设置为 macOS 13，未在每个支持的系统小版本上逐一验证。
+- Windows 验证包含真实 Windows CI 后端测试和桌面客户端编译，本次未自动操作 Windows 原生 GUI。浏览器界面测试在 Linux/Chrome 中完成。
+- 交付文件及校验值记录在本地 `/home/bitsflow/.cache/dengshell-sync-audit-20260920/validation.json`；Windows EXE、macOS 通用 ZIP/DMG 更新至 `/home/bitsflow/share/`，旧包保留在本次检查缓存中的 `previous-deliverables/`。
 
 ## 已知边界
 
