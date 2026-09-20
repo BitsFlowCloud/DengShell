@@ -7,6 +7,7 @@
  let covered = !!state.locked, screen, settings, grant='', enrolling=false, lastSent=0, activityBusy=false, statusBusy=false, forcingLock=false;
  let resolveReady; const ready = new Promise(resolve => { resolveReady=resolve; });
  const waiters=[],inertBefore=new Map(),deferredDialogs=new Set();
+ let exitConfirmation=null;
  const el=id=>document.getElementById(id);
  const originalModal=HTMLDialogElement.prototype.showModal;
  HTMLDialogElement.prototype.showModal=function(){if(covered&&this.id!=='security-lock-screen'){deferredDialogs.add(this);return;}return originalModal.call(this);};
@@ -37,6 +38,9 @@
    if(screen?.open)screen.close();
    for(const [child,was]of inertBefore){if(child.isConnected)child.inert=was;}inertBefore.clear();
    for(const dialog of deferredDialogs){if(dialog.isConnected&&!dialog.open)originalModal.call(dialog);}deferredDialogs.clear();
+   // A focus check can temporarily cover an otherwise unlocked window. Keep
+   // an exit request visible when that check (or another window) unlocks us.
+   if(exitConfirmation&&!exitConfirmation.busy){exitConfirmation.restore();queueMicrotask(()=>window.requestQuit?.());}
    if(changed){for(const resolve of waiters.splice(0))resolve();window.dispatchEvent(new Event('dengshell:unlocked'));}
   }
  }
@@ -128,11 +132,19 @@
   el('security-unlock-value').value='';
   el('security-lock-message').hidden=true; el('security-unlock-form').hidden=true;
   el('security-exit-description').textContent=description; el('security-exit-error').textContent=''; form.hidden=false;
-  const restore=()=>{form.hidden=true;el(previous).hidden=false;};
-  el('security-exit-cancel').onclick=async()=>{await cancel();restore();el(previous==='security-lock-message'?'security-unlock-open':'security-unlock-value').focus();};
-  form.onsubmit=async event=>{event.preventDefault();const button=el('security-exit-confirm');button.disabled=true;
-   try{await action();restore();}catch(error){el('security-exit-error').textContent=error.message||String(error);}finally{button.disabled=false;}
+  const request={busy:false,restore(){if(exitConfirmation!==request)return;exitConfirmation=null;form.hidden=true;el(previous).hidden=false;}};
+  exitConfirmation=request;
+  const perform=async callback=>{
+   if(request.busy)return;request.busy=true;
+   const buttons=[el('security-exit-confirm'),el('security-exit-cancel')];buttons.forEach(b=>b.disabled=true);
+   try{await callback();request.restore();}
+   catch(error){
+    if(!covered){request.restore();window.requestQuit?.();el('exit-description').textContent=`暂时无法退出：${error.message||error}`;}
+    else el('security-exit-error').textContent=error.message||String(error);
+   }finally{request.busy=false;buttons.forEach(b=>b.disabled=false);}
   };
+  el('security-exit-cancel').onclick=async()=>{await perform(cancel);if(!exitConfirmation&&covered)el(previous==='security-lock-message'?'security-unlock-open':'security-unlock-value').focus();};
+  form.onsubmit=event=>{event.preventDefault();void perform(action);};
   el('security-exit-cancel').focus();return true;
  }
  window.DengSecurityLock={confirmExit,ready,isLocked:()=>covered,whenUnlocked:()=>covered?new Promise(r=>waiters.push(r)):Promise.resolve(),blocked(){cover(true);refresh();},openSettings};

@@ -87,14 +87,14 @@ def package(args):
     sourcefiles += [p for p in (ROOT/'docs').rglob('*') if p.is_file()]
     for name in ['dengshell.png','dengshell.svg','dengshell.ico','CONNECTION-CONFIG.md','config.example.json','COMMON-APPS.md',f'RELEASE-v0.01-r{RELEASE}.md','ONLINE-UPDATE-DESIGN.md','UPDATER-CONTRACT.md','SIGNED-UPDATES.md','FONT-VALIDATION.md','BACKGROUND-PROMPTS-v0.01.json','windows/app.manifest','windows/README.txt','linux/README.txt','linux/Dockerfile','linux/.dockerignore','linux/COMPATIBILITY.json']:
         sourcefiles.append(ROOT/'build'/name)
-    for folder in ['go-licenses','font-licenses','font-library-site','installer-licenses']:
+    for folder in ['go-licenses','font-licenses','font-library-site','installer-licenses','sync']:
         sourcefiles += [p for p in (ROOT/'build'/folder).glob('*') if p.is_file()]
     for name in ['FINALSHELL-IMPORT.md','COMMANDS-AND-EDITORS.md','FONT-REFORM-REPORT.md','FUNCTIONAL-RECHECK-20260914.md',f'FUNCTIONAL-AUDIT-r{RELEASE}.md','linux/Arch.Dockerfile']:
         sourcefiles.append(ROOT/'build'/name)
     for p in sorted(set(sourcefiles)):copy(p,source/p.relative_to(ROOT))
     copy(linuxbinary.parent/'build-info.json',source/'build/linux/native/build-info.json')
     zip_tree(source,out/'DengShell-source.zip',Path('DengShell'))
-    notes=f'R30 至 R{RELEASE} 累计更新：精简内置字体并加入在线字体库，分组颜色、递归删除与跨服务器编辑；修复 SSH 误断线和重连记录丢失，常驻资源前五进程，网速图延长至 60 秒，精读显示进程的 RSS，精简字体面板，修复模态提示遮挡与延迟网速采样断点。'
+    notes=(args.update_notes.read_text().strip() if args.update_notes else f'R{RELEASE} 更新：详情见官网更新日志。')
     for binary,artifact,platform,name in [(winbinary,winbinary,'windows-amd64','up.exe'),(linuxbinary,out/'up.deb','linux-amd64','up.deb'),(linuxbinary,out/'DengShell-linux-x64.pkg.tar.zst','linux-amd64-pacman','up.pkg.tar.zst')]:
         descriptor = site/(name+'.json')
         release_notes = notes
@@ -119,6 +119,7 @@ def package(args):
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--preserve-update-notes',action='store_true',help='Keep existing signed descriptor notes while updating the build and hashes')
+    parser.add_argument('--update-notes',type=Path,help='UTF-8 notes shown by existing clients for this signed update')
     parser.add_argument('--windows-binary',type=Path,required=True)
     parser.add_argument('--windows-reference',type=Path)
     parser.add_argument('--linux-binary',type=Path,default=ROOT/'build/linux/native/dengshell')

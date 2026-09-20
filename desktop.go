@@ -118,13 +118,12 @@ func (d *Desktop) beforeClose(ctx context.Context) bool {
 		d.mu.Unlock()
 		return false
 	}
-	pending := d.quitPending
 	d.quitPending = true
 	d.mu.Unlock()
 	d.RestoreWindow()
-	if !pending {
-		runtime.EventsEmit(ctx, "dengshell:confirm-quit")
-	}
+	// The frontend de-duplicates visible confirmations. Re-emit on another
+	// close request so a lost event or dismissed cover cannot strand the user.
+	runtime.EventsEmit(ctx, "dengshell:confirm-quit")
 	return true
 }
 

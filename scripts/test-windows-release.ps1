@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$Artifacts,[Parameter(Mandatory=$true)][string]$LegacyZip,[string]$Output='qa-results',[string]$LegacyRelease='legacy')
+﻿param([Parameter(Mandatory=$true)][string]$Artifacts,[Parameter(Mandatory=$true)][string]$LegacyZip,[string]$Output='qa-results',[string]$LegacyRelease='legacy')
 $ErrorActionPreference='Stop'
 $Artifacts=(Resolve-Path $Artifacts).Path; $LegacyZip=(Resolve-Path $LegacyZip).Path
 New-Item -ItemType Directory -Force $Output | Out-Null; $Output=(Resolve-Path $Output).Path
@@ -36,6 +36,7 @@ try{
  $expected=(Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant();$report.executableSHA256=$expected
  $report.installerSHA256=(Get-FileHash (Join-Path $Artifacts 'DengShell-Setup-x64.exe')).Hash.ToLowerInvariant()
  $config=Join-Path $qaRoot 'portable config';Seed-QA $config;$running=Start-Native $exe $config $true;Visible-QA $running 'packed portable EXE launches visibly even with SW_HIDE';powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-windows-ui.ps1 -DengProcessID $running.Id -Output $Output;if($LASTEXITCODE -ne 0){throw 'Native Windows UI Automation check failed'};Stop-QA $running
+ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-windows-exit.ps1 -Exe $exe -Output $Output;if($LASTEXITCODE -ne 0){throw 'Native Windows exit regression failed'}
  $install=Join-Path $qaRoot 'installed';$installer=Start-Process (Join-Path $Artifacts 'DengShell-Setup-x64.exe') -ArgumentList ('/S /D='+$install) -PassThru -Wait;Check-QA ($installer.ExitCode -eq 0) 'silent installer returns success'
  Check-QA ((Get-FileHash (Join-Path $install 'DengShell.exe')).Hash.ToLowerInvariant() -eq $expected) 'installer contains exact portable executable'
  $uninstallKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell';Check-QA ((Get-ItemProperty $uninstallKey).DisplayName -eq 'DengShell') 'registered in Windows uninstall control panel'

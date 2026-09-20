@@ -47,3 +47,14 @@ jobs:
           name: DengShell-windows-sync-validated
           path: build/sync-validation/DengShell.exe
           retention-days: 14
+      - name: Native Windows exit regression
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/test-windows-exit.ps1 -Exe build/sync-validation/DengShell.exe -Output build/exit-validation
+      - name: Retain native exit validation
+        if: always() && runner.os == 'Windows'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: DengShell-windows-exit-validation
+          path: build/exit-validation
+          retention-days: 14
