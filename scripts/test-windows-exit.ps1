@@ -71,8 +71,12 @@ try{
  Passed 'Taskbar-equivalent WM_CLOSE restores hidden/minimized window and keeps confirmation visible'
  $tray=[DengExitQA]::Find($running.Id,'DengShellTrayWindow');if($tray -eq [IntPtr]::Zero){throw 'Native tray window missing'}
  [DengExitQA]::PostMessage($tray,0x8001,[IntPtr]::Zero,[IntPtr]0x007b)|Out-Null
- Start-Sleep -Milliseconds 400
- [System.Windows.Forms.SendKeys]::SendWait('{END}{ENTER}')
+ $menuCondition=New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty,'退出 DengShell')
+ Wait-ExitQA {$null -ne ([System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$menuCondition))} 'native tray Exit menu'
+ $menuItem=[System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$menuCondition)
+ $menuBounds=$menuItem.Current.BoundingRectangle
+ [DengExitQA]::SetCursorPos([int]($menuBounds.X+$menuBounds.Width/2),[int]($menuBounds.Y+$menuBounds.Height/2))|Out-Null
+ [DengExitQA]::mouse_event(2,0,0,0,[UIntPtr]::Zero);[DengExitQA]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
  Confirm-Persistent;Click '继续使用';Passed 'Actual native tray context-menu exit reaches persistent confirmation'
  Click '立即锁定';Wait-ExitQA {$null -ne (Control '软件已被锁定')} 'locked screen'
  Click '解锁';Wait-ExitQA {$null -ne (Control '返回锁定界面')} 'unlock form'
