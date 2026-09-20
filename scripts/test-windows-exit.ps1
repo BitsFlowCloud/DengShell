@@ -70,7 +70,16 @@ try{
  [DengExitQA]::PostMessage($handle,0x0010,[IntPtr]::Zero,[IntPtr]::Zero)|Out-Null;Confirm-Persistent;Click '继续使用'
  Passed 'Taskbar-equivalent WM_CLOSE restores hidden/minimized window and keeps confirmation visible'
  $tray=[DengExitQA]::Find($running.Id,'DengShellTrayWindow');if($tray -eq [IntPtr]::Zero){throw 'Native tray window missing'}
- [DengExitQA]::PostMessage($tray,0x8001,[IntPtr]::Zero,[IntPtr]0x007b)|Out-Null
+ $trayButtons=New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::Button)
+ function Tray-Icon { @([System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Descendants,$trayButtons))|Where-Object {$_.Current.Name -like 'DengShell*' -and !$_.Current.IsOffscreen}|Select-Object -First 1 }
+ if($null -eq (Tray-Icon)){
+  $chevron=@([System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Descendants,$trayButtons))|Where-Object {$_.Current.Name -in @('Show hidden icons','显示隐藏的图标','Notification Chevron') -and !$_.Current.IsOffscreen}|Select-Object -First 1
+  if($null -ne $chevron){$r=$chevron.Current.BoundingRectangle;[DengExitQA]::SetCursorPos([int]($r.X+$r.Width/2),[int]($r.Y+$r.Height/2))|Out-Null;[DengExitQA]::mouse_event(2,0,0,0,[UIntPtr]::Zero);[DengExitQA]::mouse_event(4,0,0,0,[UIntPtr]::Zero)}
+ }
+ Wait-ExitQA {$null -ne (Tray-Icon)} 'actual shell notification icon'
+ $iconBounds=(Tray-Icon).Current.BoundingRectangle
+ [DengExitQA]::SetCursorPos([int]($iconBounds.X+$iconBounds.Width/2),[int]($iconBounds.Y+$iconBounds.Height/2))|Out-Null
+ [DengExitQA]::mouse_event(8,0,0,0,[UIntPtr]::Zero);[DengExitQA]::mouse_event(16,0,0,0,[UIntPtr]::Zero)
  $menuCondition=New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty,'退出 DengShell')
  Wait-ExitQA {$null -ne ([System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$menuCondition))} 'native tray Exit menu'
  $menuItem=[System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$menuCondition)
@@ -94,7 +103,7 @@ try{
  $report.passed=$true
 }catch{
  if($null -ne $script:root){
-  $items=@($script:root.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition))|ForEach-Object {@{name=$_.Current.Name;type=$_.Current.ControlType.ProgrammaticName;id=$_.Current.AutomationId;offscreen=$_.Current.IsOffscreen;focusable=$_.Current.IsKeyboardFocusable}}
+  $items=@([System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition))|ForEach-Object {@{name=$_.Current.Name;type=$_.Current.ControlType.ProgrammaticName;id=$_.Current.AutomationId;offscreen=$_.Current.IsOffscreen;focusable=$_.Current.IsKeyboardFocusable}}
   $items|ConvertTo-Json -Depth 5|Set-Content -Encoding UTF8 (Join-Path $Output 'exit-controls.json')
  }
  throw
