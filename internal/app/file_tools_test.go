@@ -47,7 +47,13 @@ func TestTextEncodingsRoundTripWithoutNewlineOrBOMChanges(t *testing.T) {
 func fileToolFixture(t *testing.T) (*App, *Session, string) {
 	requirePOSIXFilesystemFixture(t)
 	t.Helper()
-	root := t.TempDir()
+	// macOS temporary directories can start at /var -> /private/var. The
+	// remote fixture must expose its real path so link tests exercise only
+	// the links explicitly created by the test, not a host OS alias.
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	cc, sc := net.Pipe()
 	server, e := sftp.NewServer(sc)
 	if e != nil {

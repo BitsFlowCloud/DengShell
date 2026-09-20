@@ -16,6 +16,7 @@ import (
 )
 
 type App struct {
+	syncState        syncState
 	securityLock     securityLockState
 	sshDiagnostics   sshDiagnosticLog
 	uiFontMu         sync.Mutex
@@ -57,6 +58,7 @@ func New(configDir string) (*App, error) {
 		return nil, err
 	}
 	a.initializeUIFonts()
+	a.initializeSync()
 	a.updateCleanup.Add(1)
 	go func() { defer a.updateCleanup.Done(); a.runUpdateCleanup() }()
 	return a, nil
@@ -93,6 +95,7 @@ func (a *App) Close() {
 	}
 	a.mu.Unlock()
 	a.cancel()
+	a.closeSync()
 	a.updateCleanup.Wait()
 	a.updateCheck.mu.Lock()
 	if job := a.updateCheck.job; job != nil && job.Status != "downloading" && job.releaseLease != nil {
@@ -142,6 +145,7 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 	mux.HandleFunc("GET /api/ui-fonts/runtime", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, a.uiFontRuntime()) })
 	mux.HandleFunc("GET /api/config", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, a.configWithQuickProfiles()) })
 	a.registerSecurityLockHTTP(mux)
+	a.registerSyncHTTP(mux)
 	a.registerWindowHandoffHTTP(mux)
 	a.registerCommandHistoryHTTP(mux)
 	a.registerWindowViewsHTTP(mux)

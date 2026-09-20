@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	goruntime "runtime"
 	"time"
 )
 
@@ -34,6 +35,12 @@ func (d *Desktop) requestMinimize() {
 	d.minimizeHandled = true
 	d.mu.Unlock()
 	action := d.app.Appearance().MinimizeAction
+	if goruntime.GOOS == "darwin" && !platformTrayAvailable() {
+		// macOS uses the Dock. Do not restore a yellow-button minimization to
+		// ask about a system tray that this platform does not provide.
+		_ = d.ChooseMinimize("minimize")
+		return
+	}
 	if action == "ask" {
 		d.RestoreWindow()
 		d.mu.Lock()

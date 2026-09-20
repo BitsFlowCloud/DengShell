@@ -5,13 +5,24 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"runtime"
 	"syscall"
 	"time"
 )
 
 func runLocalDiagnostic(ctx context.Context, target string, d *Diagnostic) error {
 	path, err := exec.LookPath("mtr")
+	if err != nil && runtime.GOOS == "darwin" {
+		// Finder-launched apps do not inherit a user's Homebrew shell PATH.
+		for _, candidate := range []string{"/opt/homebrew/sbin/mtr", "/usr/local/sbin/mtr", "/opt/homebrew/bin/mtr", "/usr/local/bin/mtr"} {
+			if info, statErr := os.Stat(candidate); statErr == nil && info.Mode().IsRegular() && info.Mode().Perm()&0111 != 0 {
+				path, err = candidate, nil
+				break
+			}
+		}
+	}
 	if err != nil {
 		return &MissingToolError{Direction: "local"}
 	}

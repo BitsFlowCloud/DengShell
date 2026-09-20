@@ -27,6 +27,7 @@
   const changed=covered!==value;covered=value;
   if(value){
    document.documentElement.dataset.securityLocked='true';fitScreen();
+   if(changed)window.dispatchEvent(new Event('dengshell:locked'));
    if(confirmed&&settings?.open){settings.close();clearSettingsSecrets();}
    isolate();window.DengShellSplash?.finish('locked');
    if(changed&&el('exit-dialog')?.open){el('exit-dialog').close();queueMicrotask(()=>window.requestQuit?.());}

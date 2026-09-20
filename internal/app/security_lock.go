@@ -175,8 +175,12 @@ func (a *App) saveLockPolicy(p securityLockPolicy) error {
 func (a *App) SecurityLockStatus() SecurityLockStatus {
 	s := &a.securityLock
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.status()
+	status := s.status()
+	s.mu.Unlock()
+	if status.Locked {
+		a.pauseSyncForLock()
+	}
+	return status
 }
 func (a *App) RequireUnlocked() error {
 	if a.SecurityLockStatus().Locked {
@@ -187,7 +191,12 @@ func (a *App) RequireUnlocked() error {
 func (a *App) LockNow() (SecurityLockStatus, error) {
 	s := &a.securityLock
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	defer func() {
+		s.mu.Unlock()
+		if a.SecurityLockStatus().Locked {
+			a.pauseSyncForLock()
+		}
+	}()
 	if !s.policy.Enabled {
 		return s.status(), errors.New("请先在设置中启用安全锁定")
 	}

@@ -1,0 +1,84 @@
+name: macOS universal build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/macos-build-*']
+
+permissions:
+  contents: read
+
+env:
+  GOMAXPROCS: '4'
+  GOFLAGS: '-p=4'
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: '1.27.1'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Restore pinned dependencies and validate frontend
+        run: |
+          npm ci
+          npm run vendor
+          npm run check
+      - name: Verify Apple SDK and packaging environment
+        run: python3 scripts/check-environment.py --json build/macos/environment.json
+      - name: macOS backend and native platform tests
+        run: |
+          go test -buildvcs=false -timeout 12m ./...
+          go test -buildvcs=false -tags desktop,production -timeout 5m .
+      - name: Build universal app, ZIP and DMG
+        run: python3 scripts/build-macos.py --arch universal --jobs 4
+      - name: Native Apple Silicon launch
+        run: python3 scripts/test-macos-app.py build/macos/DengShell.app --output build/macos/native-arm64.json
+      - name: Retain macOS packages and evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: DengShell-macos-universal
+          path: |
+            build/macos/*.zip
+            build/macos/*.dmg
+            build/macos/*.json
+            build/macos/*.txt
+            build/macos/*.log
+          retention-days: 14
+          if-no-files-found: warn
+  intel-validation:
+    needs: build
+    runs-on: macos-15-intel
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: '1.27.1'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: DengShell-macos-universal
+          path: macos-artifact
+      - name: Intel backend and platform tests
+        run: |
+          go test -buildvcs=false -timeout 12m ./...
+          go test -buildvcs=false -tags desktop,production -timeout 5m .
+      - name: Verify the same universal app on Intel
+        run: |
+          (cd macos-artifact && shasum -a 256 --check SHA256SUMS.txt)
+          ditto -x -k macos-artifact/DengShell-macos-universal.zip macos-unpacked
+          python3 scripts/test-macos-app.py macos-unpacked/DengShell.app --output macos-artifact/native-amd64.json
+      - name: Retain Intel launch evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: DengShell-macos-intel-validation
+          path: macos-artifact/native-amd64.*
+          retention-days: 14

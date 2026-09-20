@@ -38,6 +38,7 @@
   <link rel="stylesheet" href="ui-appearance.css?v=20260919-v001-r50-b53">
   <link rel="stylesheet" href="finalshell-import.css?v=20260919-v001-r50-b53">
   <link rel="stylesheet" href="security-lock.css?v=20260919-v001-r50-b53">
+  <link rel="stylesheet" href="sync.css?v=20260920-sync1">
 </head>
 <body>
   <svg class="icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -86,6 +87,7 @@
       <button class="icon-button brand-settings" id="settings-button" title="设置" aria-label="设置" aria-haspopup="menu" aria-controls="settings-menu" aria-expanded="false"><img class="brand-logo" src="assets/dengshell.svg" alt="" draggable="false"></button>
       <button class="icon-button theme-toggle header-pill theme-pill" id="theme-toggle" aria-label="深色模式" aria-pressed="false" title="切换到深色模式"><svg class="theme-moon"><use href="#i-moon"/></svg><svg class="theme-sun"><use href="#i-sun"/></svg></button>
       <button class="icon-button header-pill" id="security-lock-button" aria-label="立即锁定" title="请先在设置中启用安全锁定" disabled><svg><use href="#i-lock"/></svg></button>
+      <button class="icon-button header-pill sync-pill" id="sync-button" aria-label="同步" title="加密同步" aria-haspopup="dialog"><span aria-hidden="true">同</span></button>
     </div>
     <nav class="session-bar" aria-label="SSH 会话">
       <button id="connection-button" class="connection-button" title="服务器管理" aria-label="服务器管理"><svg><use href="#i-server"/></svg></button>
@@ -314,6 +316,7 @@
   <script src="session-tabs-layout.js?v=20260919-v001-r50-b53"></script>
   <script src="system-identity.js?v=20260919-v001-r50-b53"></script>
   <script src="app.js?v=20260919-v001-r50-b53"></script>
+  <script src="sync.js?v=20260920-sync1"></script>
   <script src="quick-connect.js?v=20260919-v001-r50-b53"></script>
   <script src="process-view.js?v=20260919-v001-r50-b53"></script>
   <script src="common-apps.js?v=20260919-v001-r50-b53"></script>

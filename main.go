@@ -22,7 +22,7 @@ func main() {
 	browser := flag.Bool("browser", false, "run local browser mode instead of a desktop window")
 	address := flag.String("addr", "127.0.0.1:0", "local API listen address")
 	dev := flag.Bool("dev", false, "read frontend assets from the web directory")
-	config := flag.String("config", "", "portable configuration directory (default: data beside executable)")
+	config := flag.String("config", "", "configuration directory (default: data beside executable; macOS app: Application Support/DengShell)")
 	flag.Parse()
 	var content fs.FS
 	var contentErr error

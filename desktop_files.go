@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	goruntime "runtime"
 )
 
 func (d *Desktop) ChooseExternalEditor() (string, error) {
@@ -39,10 +40,14 @@ func (d *Desktop) OpenRemoteFile(sessionID, remote string) (string, error) {
 			return "", errors.New("自定义打开方式必须为可执行文件的绝对路径")
 		}
 		info, err := os.Stat(editor)
-		if err != nil || info.IsDir() {
+		isMacApp := err == nil && goruntime.GOOS == "darwin" && info.IsDir() && filepath.Ext(editor) == ".app"
+		if err != nil || (info.IsDir() && !isMacApp) {
 			return "", errors.New("找不到自定义编辑器，请在打开方式中重新选择")
 		}
 		cmd := exec.Command(editor, local)
+		if isMacApp {
+			cmd = exec.Command("/usr/bin/open", "-a", editor, "--", local)
+		}
 		e = cmd.Start()
 		if e == nil {
 			go cmd.Wait()

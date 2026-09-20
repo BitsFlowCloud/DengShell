@@ -24,6 +24,7 @@ id_ed25519
 /cloudshell-preview
 /build/linux/native/dengshell
 /build/linux/packages/
+/build/macos/
 /dist/
 *.exe
 *.deb

@@ -1,0 +1,50 @@
+.titlebar .brand #sync-button { display:grid; place-items:center; padding:0; margin:0; border:1px solid color-mix(in srgb,var(--accent,#426c83) 28%,transparent); background:color-mix(in srgb,var(--accent,#426c83) 12%,transparent); color:var(--accent,#426c83); --wails-draggable:no-drag; }
+#sync-button span { font-family:inherit; font-weight:600; font-size:15px; line-height:1; }
+#sync-button[data-status="error"] { color:#cf7777; border-color:#cf777770; }
+#sync-button[data-status="active"] { box-shadow:inset 0 -2px 0 #74b59c; }
+#sync-dialog { width:min(720px,calc(var(--view-width,100vw) - 32px)); max-width:calc(var(--view-width,100vw) - 24px); max-height:calc(var(--view-height,100vh) - 32px); padding:0; border:1px solid var(--border,#dbe5ee); border-radius:20px; background:var(--surface,#fff); color:var(--text,#273b49); overflow:hidden; box-shadow:0 28px 80px #0005; }
+#sync-dialog::backdrop { background:#07101e70; backdrop-filter:blur(5px); }
+#sync-dialog .sync-frame { display:flex; flex-direction:column; max-height:calc(var(--view-height,100vh) - 36px); }
+#sync-dialog .sync-heading { display:flex; align-items:center; gap:14px; padding:22px 24px 18px; border-bottom:1px solid var(--border,#dbe5ee); flex:none; }
+#sync-dialog .sync-heading h2 { font-size:19px; margin:0 0 5px; }
+#sync-dialog .sync-heading p { margin:0; font-size:12px; color:var(--muted,#78909e); line-height:1.6; }
+#sync-dialog .sync-heading > .icon-button { margin-left:auto; flex:none; }
+.sync-mark { width:40px; height:40px; display:grid; place-items:center; border-radius:12px; background:#5798b421; color:var(--accent,#426c83); font-size:22px; font-weight:600; flex:none; border:1px solid #5798b440; }
+#sync-dialog .sync-body { padding:20px 24px 24px; overflow:auto; min-height:0; }
+#sync-dialog .sync-section { margin:0 0 16px; padding:17px; border:1px solid var(--border,#dbe5ee); border-radius:14px; background:var(--surface-hover,#f4f7fa); }
+#sync-dialog .sync-section h3 { margin:0 0 12px; font-size:14px; }
+#sync-dialog .sync-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+#sync-dialog label:not(.sync-check) { display:flex; flex-direction:column; gap:7px; font-size:12px; color:var(--muted,#78909e); min-width:0; }
+#sync-dialog input:not([type="checkbox"]),#sync-dialog select,#sync-dialog textarea { box-sizing:border-box; width:100%; min-width:0; margin:0; height:42px; padding:10px 12px; border:1px solid var(--border,#dbe5ee); border-radius:9px; background:var(--surface,#fff); color:var(--text,#273b49); font:inherit; font-size:13px; }
+#sync-dialog textarea { height:88px; resize:vertical; line-height:1.5; overflow-wrap:anywhere; }
+#sync-dialog input:focus-visible,#sync-dialog textarea:focus-visible,#sync-dialog select:focus-visible { outline:2px solid var(--accent,#426c83); outline-offset:2px; }
+#sync-dialog .sync-check { display:flex; flex-direction:row; align-items:flex-start; gap:9px; margin:14px 0 4px; line-height:1.6; font-size:12px; color:var(--text,#273b49); }
+#sync-dialog .sync-check input { width:15px; height:15px; padding:0; margin:2px 0 0; flex:none; accent-color:var(--accent); }
+#sync-dialog .sync-note { font-size:12px; line-height:1.75; color:var(--muted,#78909e); margin:10px 0; overflow-wrap:anywhere; }
+#sync-dialog .sync-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:16px; }
+#sync-dialog .sync-actions button { display:inline-flex; justify-content:center; align-items:center; min-height:38px; padding:9px 16px; margin:0; border-radius:9px; font-size:13px; line-height:1.4; font-weight:500; }
+#sync-dialog .sync-actions .primary-button { flex:1; }
+#sync-dialog .sync-status-line { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted,#78909e); margin:0 0 16px; }
+.sync-status-dot { width:7px; height:7px; flex:none; border-radius:50%; background:#91a2ad; }
+.sync-status-dot[data-ok="true"] { background:#73b69c; }
+#sync-error { color:#ce777d; line-height:1.7; font-size:12px; white-space:pre-wrap; overflow-wrap:anywhere; margin-top:12px; }
+#sync-dialog [hidden] { display:none!important; }
+#sync-dialog details { margin-top:16px; font-size:12px; }
+#sync-dialog summary { color:var(--muted,#78909e); cursor:pointer; padding:5px 0; }
+#sync-dialog .sync-guide { padding-top:12px; border-top:1px solid var(--border); }
+#sync-dialog .sync-guide > summary { color:var(--text); font-weight:600; line-height:1.7; }
+#sync-dialog summary:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:4px; }
+#sync-dialog .sync-steps { list-style:none; counter-reset:sync-step; padding:0; margin:14px 0; display:grid; gap:12px; }
+#sync-dialog .sync-steps > li { counter-increment:sync-step; position:relative; min-width:0; padding:15px 15px 15px 48px; border:1px solid var(--border); border-radius:12px; background:var(--surface); }
+#sync-dialog .sync-steps > li::before { content:counter(sync-step); position:absolute; left:13px; top:14px; width:24px; height:24px; display:grid; place-items:center; border-radius:8px; background:color-mix(in srgb,var(--accent) 14%,transparent); color:var(--accent); font-weight:600; font-size:12px; }
+#sync-dialog .sync-steps h4 { font-size:13px; line-height:1.8; margin:0 0 6px; font-weight:600; }
+#sync-dialog .sync-steps p { font-size:12px; line-height:1.8; color:var(--muted); margin:6px 0; overflow-wrap:anywhere; }
+#sync-dialog .sync-secret { margin-top:16px; padding:16px; border-radius:12px; border:1px solid #c3a36855; background:#c3a3680c; }
+#sync-dialog .sync-secret h3 { margin:0 0 7px; font-size:14px; }
+#sync-dialog .sync-device-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid var(--border,#dbe5ee); font-size:12px; }
+#sync-dialog .sync-conflict { display:grid; grid-template-columns:minmax(0,1fr) minmax(160px,1fr); gap:12px; align-items:center; margin:12px 0; font-size:12px; }
+#sync-dialog .sync-conflict span { overflow-wrap:anywhere; }
+@media(max-width:560px) { #sync-dialog .sync-body{padding:16px} #sync-dialog .sync-heading{padding:18px 16px} #sync-dialog .sync-grid,#sync-dialog .sync-conflict{grid-template-columns:1fr} }
+#sync-dialog .themed-select { width:100%; }
+#sync-dialog .themed-select-trigger { box-sizing:border-box; height:42px; min-height:42px; padding:10px 12px; margin:0; border:1px solid var(--border); border-radius:9px; background:var(--surface); color:var(--text,#273b49); font-size:13px; }
+#sync-dialog .themed-select-trigger:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }

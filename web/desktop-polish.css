@@ -1,6 +1,6 @@
 /* Keep settings and theme reachable while the session rows grow independently. */
 .titlebar { grid-template-columns:max-content var(--pane-gap) minmax(0,1fr); }
-.titlebar .brand { display:grid; width:max-content; grid-template-columns:repeat(3,28px); align-items:center; align-self:start; margin-top:7px; gap:14px; }
+.titlebar .brand { display:grid; width:max-content; grid-template-columns:repeat(4,28px); align-items:center; align-self:start; margin-top:7px; gap:14px; }
 .titlebar .brand > .icon-button { width:28px; height:28px; margin:0; border-radius:9px; }
 .titlebar .brand #settings-button { background:transparent; }
 .titlebar .brand #settings-button:is(:hover,:focus-visible,[aria-expanded="true"]) { background:var(--surface-hover,#e6edf2); box-shadow:0 0 0 2px var(--border,#dbe5ee); }

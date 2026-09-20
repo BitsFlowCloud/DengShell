@@ -34,3 +34,43 @@ func TestPortableConfigurationFollowsExecutableAndNeverOldUserDirectory(t *testi
 		}
 	}
 }
+
+func TestMacOSBundleRecognition(t *testing.T) {
+	for _, tc := range []struct{ executable, bundle string }{
+		{"/Applications/DengShell.app/Contents/MacOS/DengShell", "/Applications/DengShell.app"},
+		{"/Volumes/DengShell/DengShell.app/Contents/MacOS/DengShell", "/Volumes/DengShell/DengShell.app"},
+		{"/tmp/ordinary/Contents/MacOS/DengShell", ""},
+		{"/tmp/DengShell.app/DengShell", ""},
+		{"/tmp/DengShell", ""},
+	} {
+		if got := macOSApplicationBundle(filepath.FromSlash(tc.executable)); got != filepath.FromSlash(tc.bundle) {
+			t.Fatalf("bundle for %q = %q; want %q", tc.executable, got, tc.bundle)
+		}
+	}
+}
+
+func TestMacOSBundleConfigurationSurvivesMovingApplication(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("macOS Application Support path")
+	}
+	root, err := os.UserConfigDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, location := range []string{"Applications", "Read Only Disk Image"} {
+		executable := filepath.Join(t.TempDir(), location, "DengShell.app", "Contents", "MacOS", "DengShell")
+		if err := os.MkdirAll(filepath.Dir(executable), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(executable, []byte("fixture"), 0500); err != nil {
+			t.Fatal(err)
+		}
+		got, err := portableDirectoryForExecutable(executable)
+		if err != nil || got != filepath.Join(root, "DengShell") {
+			t.Fatalf("bundle configuration = %q, %v", got, err)
+		}
+		if _, err := os.Stat(filepath.Join(filepath.Dir(executable), "data")); !os.IsNotExist(err) {
+			t.Fatal("configuration was written into the application bundle")
+		}
+	}
+}

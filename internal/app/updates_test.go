@@ -227,6 +227,12 @@ func TestDownloadMustMatchOfferAndBytes(t *testing.T) {
 				t.Fatal("unoffered download accepted")
 			}
 			job, e := a.StartUpdateDownload(hash)
+			if !NativePackageUpdateSupported() {
+				if e == nil || !strings.Contains(e.Error(), "不支持内置安装") {
+					t.Fatalf("unsupported host started an update download: %+v, %v", job, e)
+				}
+				return
+			}
 			if e != nil {
 				t.Fatal(e)
 			}
