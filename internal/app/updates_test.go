@@ -94,7 +94,7 @@ func TestUpdateDescriptorIdentityAndValidation(t *testing.T) {
 		{"old build", hash, "none", UpdateReceipt{}, func(d *UpdateDescriptor) { d.Build = ApplicationBuild - 1 }},
 		{"old display version with higher build", hash, "none", UpdateReceipt{}, func(d *UpdateDescriptor) { d.Version = "v0.00" }},
 		{"unknown version syntax", hash, "none", UpdateReceipt{}, func(d *UpdateDescriptor) { d.Version = "v0.01-old" }},
-		{"receipt version blocks old release", hash, "none", UpdateReceipt{Version: "v0.02"}, nil},
+		{"receipt version blocks old release", hash, "none", UpdateReceipt{Version: "v0.03"}, nil},
 		{"invalid sha", hash, "none", UpdateReceipt{}, func(d *UpdateDescriptor) { d.SHA256 = "bad" }},
 		{"invalid platform", hash, "none", UpdateReceipt{}, func(d *UpdateDescriptor) { d.Platform = "windows-amd64" }},
 		{"invalid product", hash, "none", UpdateReceipt{}, func(d *UpdateDescriptor) { d.Product = "other" }},

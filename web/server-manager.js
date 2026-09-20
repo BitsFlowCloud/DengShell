@@ -91,7 +91,7 @@ function serverManagerButton(text, action, className = '') {
 }
 function serverGroupPath(profile, tree) { return tree.paths.get(profile.groupId) || profile.group || '未分组'; }
 function serverMatches(profile, query, tree) {
-  return !query || [profile.name, profile.host, profile.user, serverGroupPath(profile, tree)].some(value => String(value || '').toLocaleLowerCase().includes(query));
+  return !query || [profile.name, profile.host, profile.user, profile.notes, serverGroupPath(profile, tree)].some(value => String(value || '').toLocaleLowerCase().includes(query));
 }
 function serverTimestamp(value) {
   const date = new Date(value);
@@ -164,6 +164,11 @@ function renderServerProfile(profile, tree, mode = 'servers', history = null) {
   if (!deleted) { button.setAttribute('aria-pressed', String(serverManager.selectedProfiles.has(profile.id))); button.setAttribute('aria-describedby', 'server-selection-hint'); }
   const glyph = node('span', 'server-icon'); glyph.append(icon('server'));
   const text = node('span', 'connection-card-text'); text.append(node('strong', '', profile.name), node('small', '', connecting.has(profile.id) ? '正在连接…' : `${profile.user}@${profile.host}:${profile.port}${profile.auth === 'key' && !profile.keyId && !profile.keyPath ? ' · 待配置私钥' : ''}`));
+  if (profile.notes?.trim()) {
+    const note = node('span', 'server-card-notes');
+    note.append(node('span', 'server-card-notes-label', '备注'), node('span', 'server-card-notes-text', window.DengProfileNotes.preview(profile.notes)));
+    note.title = profile.notes; text.append(note);
+  }
   button.append(glyph, text);
   if (!deleted) {
     const marker = node('span', 'server-selection-mark', '✓'); marker.setAttribute('aria-hidden','true'); marker.hidden = !serverManager.selectedProfiles.has(profile.id); button.append(marker);
@@ -175,6 +180,7 @@ function renderServerProfile(profile, tree, mode = 'servers', history = null) {
   });
   button.ondblclick = safe(event => { if (!deleted && !event.ctrlKey && !event.metaKey) { clearServerSelection(); return connect(profile.id); } });
   button.title = `${profile.name}\n${profile.user}@${profile.host}:${profile.port}\n${serverGroupPath(profile, tree)}`;
+  if (profile.notes) button.title += `\n备注：${profile.notes}`;
   button.onkeydown = event => {
     if ((event.ctrlKey || event.metaKey) && event.key === ' ') { event.preventDefault(); event.stopPropagation(); toggleServerSelection(profile); }
   };

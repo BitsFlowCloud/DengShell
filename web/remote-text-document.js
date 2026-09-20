@@ -16,6 +16,7 @@ window.DengRemoteTextDocument = class {
     this.loading = true; this.error = ''; this.changed();
     try {
       const data = await this.transport.api(`/api/sessions/${this.state.id}/file-content?path=${encodeURIComponent(this.path)}&encoding=${encodeURIComponent(encoding)}`);
+      if (data.historyError && typeof toast === "function") toast(data.historyError);
       if (!current()) return;
       this.baseline = data; this.model = new DengTextModel(data.text); this.changed(true);
     } catch (error) { if (current()) { this.error = error.message; throw error; } }

@@ -50,7 +50,7 @@ try{
   $handle=[DengQA]::Find($running.Id);[DengQA]::ShowWindow($handle,6)|Out-Null;Wait-QA {![DengQA]::IsWindowVisible($handle) -or [DengQA]::IsIconic($handle)} 'minimized or hidden before update';Start-Sleep -Seconds 2
   $wasTray=![DengQA]::IsWindowVisible($handle);$report["$mode-beforeUpdateHidden"]=$wasTray;Check-QA $wasTray "$mode minimized into system tray before update"
   $job=Join-Path $caseConfig '.update-1001';New-Item -ItemType Directory $job|Out-Null;$staged=Join-Path $job 'up.exe';Copy-Item $exe $staged;$helper=Join-Path $job 'dengshell-updater-1001.exe';Copy-Item $target $helper
-  $plan=@{schema=2;build=$(if($mode -eq 'legacy'){$build}else{$build+1});version='v0.01';parentPID=$running.Id;target=$target;staged=$staged;configDir=$caseConfig;oldSHA256=(Get-FileHash $target).Hash.ToLowerInvariant();packageSHA256=$expected;executableSHA256=$expected;platform='windows-amd64'}
+  $plan=@{schema=2;build=$(if($mode -eq 'legacy'){$build}else{$build+1});version=([regex]::Match((Get-Content internal/app/updates.go -Raw),'const ApplicationVersion = "([^"]+)"').Groups[1].Value);parentPID=$running.Id;target=$target;staged=$staged;configDir=$caseConfig;oldSHA256=(Get-FileHash $target).Hash.ToLowerInvariant();packageSHA256=$expected;executableSHA256=$expected;platform='windows-amd64'}
   $planFile=Join-Path $job 'plan.json';[IO.File]::WriteAllText($planFile,($plan|ConvertTo-Json),[Text.UTF8Encoding]::new($false))
   $worker=Start-Process $helper -ArgumentList @('--dengshell-update-helper',('"'+$planFile+'"')) -WindowStyle Hidden -PassThru
   $readyWatch=[Diagnostics.Stopwatch]::StartNew()

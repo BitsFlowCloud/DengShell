@@ -24,7 +24,7 @@ func (c *Config) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &fields); err != nil {
 		return err
 	}
-	for _, key := range []string{"temporaryServers", "schemaVersion", "servers", "groups", "groupNodes", "trash", "connectionHistory", "commandHistory", "hostKeys", "commands", "commandGroups", "keys", "proxies", "assets", "appearance"} {
+	for _, key := range []string{"temporaryServers", "schemaVersion", "servers", "groups", "groupNodes", "trash", "connectionHistory", "commandHistory", "pathHistory", "hostKeys", "commands", "commandGroups", "keys", "proxies", "assets", "appearance"} {
 		delete(fields, key)
 	}
 	next.TemporaryServers = nil // runtime-only quick connections never enter imported/persisted configuration
@@ -104,6 +104,9 @@ func (s *Store) upgradeConfig() error {
 	}
 	groups := groupIndex(s.config.GroupNodes)
 	for _, profile := range s.config.Servers {
+		if err := validateProfileNotes(profile.Notes); err != nil {
+			return err
+		}
 		if _, ok := groups[profile.GroupID]; !ok {
 			return fmt.Errorf("服务器「%s」引用不存在的分组，已保留原文件", profile.Name)
 		}
@@ -112,6 +115,7 @@ func (s *Store) upgradeConfig() error {
 		return errors.New("磁盘配置的 trash 是只读 API 字段；回收站服务器应位于 servers 并带 deletedAt，原文件已保留")
 	}
 	s.config.SchemaVersion = ConfigSchemaVersion
+	s.config.PathHistory = boundedPathHistory(s.config.PathHistory)
 	s.refreshLegacyGroupsLocked()
 	return nil
 }

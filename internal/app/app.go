@@ -148,6 +148,7 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 	a.registerSyncHTTP(mux)
 	a.registerWindowHandoffHTTP(mux)
 	a.registerCommandHistoryHTTP(mux)
+	a.registerPathHistoryHTTP(mux)
 	a.registerWindowViewsHTTP(mux)
 	a.registerConnectionManagementHTTP(mux)
 	a.registerFinalShellImportHTTP(mux)

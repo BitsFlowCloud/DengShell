@@ -19,7 +19,7 @@ try {
    document.documentElement.classList.add('frameless');document.querySelector('#window-controls').hidden=false;
  });
  await page.waitForFunction(()=>!document.querySelector('#startup-splash.is-running'));
- assert.deepEqual(await page.$$eval('.brand button',bs=>bs.map(b=>b.id)),['settings-button','theme-toggle','security-lock-button']);
+ assert.deepEqual(await page.$$eval('.brand button',bs=>bs.map(b=>b.id)),['settings-button','theme-toggle','security-lock-button','sync-button','connection-button']);
  assert.equal(await page.$('.session-bar #settings-button'),null);
  const initialTheme=await page.evaluate(()=>document.documentElement.dataset.theme);
  await page.waitForFunction(()=>!document.documentElement.dataset.lightSwitch);await page.click('#theme-toggle');await page.waitForFunction(t=>document.documentElement.dataset.theme!==t&&!document.documentElement.dataset.lightSwitch,{},initialTheme);
@@ -86,7 +86,7 @@ try {
      return {width:innerWidth,height:innerHeight,scale:effectiveScale,menu,tabs,brand,bar,controls,overflow:document.documentElement.scrollWidth>innerWidth+1};
    });
    assert(!metrics.overflow,JSON.stringify(metrics));assert(metrics.menu.left>=0&&metrics.menu.right<=width+1&&metrics.menu.bottom<=height+1,JSON.stringify(metrics));
-   assert(metrics.brand.right<=metrics.bar.left+1,JSON.stringify(metrics));assert(metrics.tabs.width>40,JSON.stringify(metrics));assert(metrics.controls.right<=width+1,JSON.stringify(metrics));
+   assert(metrics.brand.right<=metrics.bar.left+1 || metrics.brand.bottom<=metrics.bar.top+1,JSON.stringify(metrics));assert(metrics.tabs.width>40,JSON.stringify(metrics));assert(metrics.controls.right<=width+1,JSON.stringify(metrics));
    await page.keyboard.press('Escape');
    assert(await page.$eval('#session-tabs',e=>e.scrollWidth<=e.clientWidth+1));
    await page.$eval('#session-tabs',e=>e.scrollTop=e.scrollHeight);

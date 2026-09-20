@@ -5,11 +5,14 @@ on:
       release:
         description: Draft or published release tag to validate
         required: true
-        default: v0.01-r50
+        default: v0.02
       legacy_release:
         description: Older release for an actual upgrade check
         required: true
-        default: v0.01-r40
+        default: v0.01-r50
+env:
+  GOMAXPROCS: '4'
+  GOFLAGS: '-p=4'
 permissions:
   contents: read
 jobs:
@@ -45,8 +48,8 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          QA_RELEASE: ${{ inputs.release || 'v0.01-r50' }}
-          QA_LEGACY: ${{ inputs.legacy_release || 'v0.01-r40' }}
+          QA_RELEASE: ${{ inputs.release || 'v0.02' }}
+          QA_LEGACY: ${{ inputs.legacy_release || 'v0.01-r50' }}
         run: |
           New-Item -ItemType Directory -Force qa-artifacts,qa-legacy | Out-Null
           gh release download $env:QA_RELEASE --pattern DengShell-Setup-x64.exe --pattern DengShell-windows-x64.zip --dir qa-artifacts
@@ -56,7 +59,7 @@ jobs:
       - name: Native launch, installer and restart after update
         shell: pwsh
         env:
-          QA_LEGACY: ${{ inputs.legacy_release || 'v0.01-r40' }}
+          QA_LEGACY: ${{ inputs.legacy_release || 'v0.01-r50' }}
         run: ./scripts/test-windows-release.ps1 -Artifacts qa-artifacts -LegacyZip qa-legacy/DengShell-windows-x64.zip -Output qa-results -LegacyRelease $env:QA_LEGACY
       - name: Retain validation evidence
         if: always()

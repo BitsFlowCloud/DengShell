@@ -172,6 +172,9 @@ func (s *Store) prepareSyncWithBaseline(expected, next map[string]json.RawMessag
 			}
 			p.KeyPath = ""
 			p.FinalShellID = ""
+			if err := validateProfileNotes(p.Notes); err != nil {
+				return err
+			}
 			p.HasSecret = false
 			p.Proxy = ProxyConfig{Type: "direct"}
 			p.ProxyID = ""

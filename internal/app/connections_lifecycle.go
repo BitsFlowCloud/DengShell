@@ -79,6 +79,7 @@ func (s *Store) Purge(id string) error {
 	s.config.Appearance = cloneAppearance(s.config.Appearance)
 	delete(s.config.Appearance.Layout, "dengshell.history."+id)
 	delete(s.config.Appearance.Layout, "dengshell.nic."+id)
+	s.dropPathHistoryLocked(map[string]bool{id: true})
 	if err := s.writeLocked(); err != nil {
 		s.config = old
 		return err

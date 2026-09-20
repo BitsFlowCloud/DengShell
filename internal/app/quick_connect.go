@@ -180,6 +180,7 @@ func (a *App) registerQuickConnectHTTP(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/quick-connect/{id}/save", func(w http.ResponseWriter, r *http.Request) {
 		var input struct {
 			Name     string `json:"name"`
+			Notes    string `json:"notes"`
 			Group    string `json:"group"`
 			Secret   string `json:"secret"`
 			Remember bool   `json:"remember"`
@@ -211,6 +212,7 @@ func (a *App) registerQuickConnectHTTP(mux *http.ServeMux) {
 		p := entry.Profile
 		p.Temporary = false
 		p.Name = input.Name
+		p.Notes = input.Notes
 		p.Group = input.Group
 		if input.Remember {
 			p.Secret = input.Secret

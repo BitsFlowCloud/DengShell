@@ -25,6 +25,7 @@ const finalShellMaxFiles = 2000
 type finalShellConnection struct {
 	ID               string                     `json:"id"`
 	Name             string                     `json:"name"`
+	Description      string                     `json:"description"`
 	Host             string                     `json:"host"`
 	Port             int                        `json:"port"`
 	User             string                     `json:"user_name"`
@@ -112,6 +113,10 @@ func parseFinalShellProfile(data []byte) (Profile, string, error) {
 		return Profile{}, "", errors.New("当前仅支持 UTF-8 终端连接，请调整 FinalShell 编码后重新导出")
 	}
 	p := Profile{Name: strings.TrimSpace(input.Name), Host: strings.Trim(strings.TrimSpace(input.Host), "[]"), User: strings.TrimSpace(input.User), Port: input.Port, Proxy: ProxyConfig{Type: "direct"}}
+	p.Notes = input.Description
+	if err := validateProfileNotes(p.Notes); err != nil {
+		return Profile{}, "", err
+	}
 	if p.Name == "" || len(p.Name) > 100 || p.Host == "" || len(p.Host) > 253 || strings.ContainsAny(p.Host, " /\r\n\t\x00") || p.User == "" || len(p.User) > 256 || strings.ContainsAny(p.User, "\r\n\x00") || p.Port < 1 || p.Port > 65535 {
 		return Profile{}, "", errors.New("名称、地址、端口或用户名无效")
 	}

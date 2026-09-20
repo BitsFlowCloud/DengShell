@@ -85,7 +85,11 @@ func (a *App) listFiles(w http.ResponseWriter, r *http.Request) {
 		}
 		result = append(result, Entry{Name: f.Name(), Size: f.Size(), Kind: kind, Modified: f.ModTime().Format("2006-01-02 15:04"), ModifiedAt: f.ModTime().UnixMilli(), Mode: f.Mode().String(), Owner: owners.owner(f), Link: f.Mode()&os.ModeSymlink != 0})
 	}
-	writeJSON(w, map[string]any{"path": dir, "entries": result})
+	historyError := ""
+	if !directoriesOnly && r.Context().Err() == nil {
+		historyError = a.recordPathHistory(s, dir, "folder")
+	}
+	writeJSON(w, map[string]any{"path": dir, "entries": result, "historyError": historyError})
 }
 func (a *App) fileAction(w http.ResponseWriter, r *http.Request) {
 	s, err := a.session(r.PathValue("id"))

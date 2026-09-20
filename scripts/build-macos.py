@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from datetime import datetime
 
 ROOT = Path(__file__).resolve().parent.parent
 MINIMUM_MACOS = "13.0"
@@ -35,7 +36,7 @@ def build(args):
             raise SystemExit("Frontend dependencies are missing. Run npm ci && npm run vendor first.")
     source = (ROOT / "internal/app/updates.go").read_text()
     build_number = int(re.search(r"const ApplicationBuild uint64 = (\d+)", source)[1])
-    release = int(re.search(r"const ApplicationRelease = (\d+)", source)[1])
+    package_version = re.search(r'const ApplicationPackageVersion = "([^"]+)"', source)[1]
     archs = ["arm64", "amd64"] if args.arch == "universal" else [args.arch]
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -80,8 +81,8 @@ def build(args):
             "CFBundleName": "DengShell", "CFBundleDisplayName": "DengShell",
             "CFBundleIdentifier": "cloud.bitsflow.dengshell", "CFBundleExecutable": "DengShell",
             "CFBundlePackageType": "APPL", "CFBundleInfoDictionaryVersion": "6.0",
-            "CFBundleShortVersionString": "0.1.0",
-            "CFBundleVersion": f"{release}.{build_number % 1000 // 100}.{build_number % 100}",
+            "CFBundleShortVersionString": package_version,
+            "CFBundleVersion": f"{(datetime.strptime(str(build_number)[:8], '%Y%m%d') - datetime(2020, 1, 1)).days}.{build_number % 1000 // 100}.{build_number % 100}",
             "DengShellBuild": str(build_number), "CFBundleIconFile": "DengShell.icns",
             "LSMinimumSystemVersion": MINIMUM_MACOS, "NSHighResolutionCapable": True,
             "NSPrincipalClass": "NSApplication", "LSApplicationCategoryType": "public.app-category.developer-tools",
@@ -118,7 +119,7 @@ def build(args):
         files = [zip_path, dmg_path]
         checksums = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in files}
         (output / "SHA256SUMS.txt").write_text("".join(f"{digest}  {name}\n" for name, digest in checksums.items()))
-        metadata = {"build": build_number, "release": release, "architectures": archs,
+        metadata = {"build": build_number, "version": re.search(r'const ApplicationVersion = "([^"]+)"', source)[1], "architectures": archs,
                     "minimumMacOS": MINIMUM_MACOS, "signature": "ad-hoc" if args.sign_identity == "-" else "Developer ID",
                     "notarized": False, "parallelJobs": jobs,
                     "go": run("go", "version", capture_output=True, text=True).stdout.strip(),

@@ -132,10 +132,15 @@
 .process-table th button:hover { color:var(--text); background:var(--surface-hover,#edf3f7); border-radius:6px; }
 .process-table th[aria-sort]:not([aria-sort="none"]) { color:var(--accent,#7b9db4); }
 .process-table td { height:27px; font-size:10px; }
-.disk-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; align-items:start; }
-.disk-summary > span { display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0; font-size:10px; line-height:14px; color:var(--muted); white-space:nowrap; }
-.disk-summary > span + span { border-left:1px solid var(--border,#e7edf2); }
+.disk-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; align-items:stretch; }
+.disk-summary > span { display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0; padding:6px 8px; border-radius:9px; background:var(--surface-inset,#f4f7f9); font-size:10px; line-height:14px; color:var(--muted); white-space:nowrap; }
+.disk-summary > .disk-summary-total { grid-column:1 / -1; }
 .disk-summary b { max-width:100%; font-size:11px; line-height:16px; font-weight:550; color:var(--text-secondary,#71899c); font-variant-numeric:tabular-nums; }
+.disk-summary > .disk-summary-used { color:#94652f; background:#faf1e4; }
+.disk-summary > .disk-summary-available { color:#347c63; background:#eaf5ee; }
+.disk-summary > :is(.disk-summary-used,.disk-summary-available) b { color:inherit; }
+[data-theme="dark"] .disk-summary > .disk-summary-used { color:#dfbf91; background:#42382b; }
+[data-theme="dark"] .disk-summary > .disk-summary-available { color:#a5d4b8; background:#263d33; }
 [data-theme="dark"] .icmp-values b { color:#a1cdb7; }
 [data-theme="dark"] .icmp-values .has-loss { color:#df9690; }
 [data-short="true"] .process-table { max-height:132px; }

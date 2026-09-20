@@ -3,7 +3,7 @@ Unicode True
 !include "x64.nsh"
 !include "WinVer.nsh"
 Name "DengShell"
-Caption "DengShell v0.01 r${RELEASE} 安装"
+Caption "DengShell ${VERSION} 安装"
 OutFile "${OUTPUT}"
 InstallDir "$LOCALAPPDATA\Programs\DengShell"
 InstallDirRegKey HKCU "Software\DengShell" "InstallDir"
@@ -12,10 +12,10 @@ SetCompressor /SOLID lzma
 SetCompressorDictSize 16
 ShowInstDetails show
 ShowUninstDetails show
-VIProductVersion "0.1.0.${RELEASE}"
+VIProductVersion "${PACKAGE_VERSION}.${BUILD_REVISION}"
 VIAddVersionKey /LANG=2052 "ProductName" "DengShell"
 VIAddVersionKey /LANG=2052 "FileDescription" "DengShell 当前用户安装程序"
-VIAddVersionKey /LANG=2052 "FileVersion" "0.01 r${RELEASE}"
+VIAddVersionKey /LANG=2052 "FileVersion" "${VERSION}"
 VIAddVersionKey /LANG=2052 "LegalCopyright" "DengShell contributors · MIT"
 !define MUI_ICON "${ICON}"
 !define MUI_UNICON "${ICON}"
@@ -69,7 +69,7 @@ Section "DengShell" SEC_MAIN
   CreateShortcut "$DESKTOP\DengShell.lnk" "$INSTDIR\DengShell.exe" "" "$INSTDIR\DengShell.exe" 0
   WriteRegStr HKCU "Software\DengShell" "InstallDir" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell" "DisplayName" "DengShell"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell" "DisplayVersion" "v0.01 r${RELEASE}"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell" "DisplayVersion" "${VERSION}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell" "Publisher" "DengShell contributors"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell" "DisplayIcon" "$INSTDIR\DengShell.exe"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell" "UninstallString" '"$INSTDIR\data\support\Uninstall.exe"'

@@ -9,10 +9,11 @@ from pathlib import Path
 import argparse, hashlib, json, re, shutil, subprocess, tarfile, zipfile
 ROOT = Path(__file__).resolve().parent.parent
 BUILD = int(re.search(r'const ApplicationBuild uint64 = (\d+)', (ROOT/'internal/app/updates.go').read_text()).group(1))
-RELEASE = int(re.search(r'const ApplicationRelease = (\d+)', (ROOT/'internal/app/updates.go').read_text()).group(1))
+VERSION = re.search(r'const ApplicationVersion = "([^"]+)"', (ROOT/'internal/app/updates.go').read_text()).group(1)
+PACKAGE_VERSION = re.search(r'const ApplicationPackageVersion = "([^"]+)"', (ROOT/'internal/app/updates.go').read_text()).group(1)
 # Old pacman updaters bind pkgrel to the last three build digits.
 # Public release naming is independent of this internal package revision.
-LABEL = f'{str(BUILD)[:8]}-r{RELEASE}'
+LABEL = f'{VERSION}-{BUILD}'
 
 def digest(p):
     with p.open('rb') as f: return hashlib.file_digest(f, 'sha256').hexdigest()
@@ -36,10 +37,10 @@ def distribution(folder, binary, windows):
     for p in (ROOT/'web/assets/ui-fonts').glob('*-OFL.txt'): copy(p,folder/'data/licenses/ui-fonts'/p.name)
     for p in (ROOT/'web/assets/system-logos').glob('*.txt'): copy(p,folder/'data/licenses/system-logos'/p.name)
     copy(ROOT/'LICENSE',folder/'data/licenses/DengShell-MIT.txt')
-    for name in ['CONNECTION-CONFIG.md','config.example.json','COMMON-APPS.md','ONLINE-UPDATE-DESIGN.md','UPDATER-CONTRACT.md','SIGNED-UPDATES.md','FINALSHELL-IMPORT.md','COMMANDS-AND-EDITORS.md',f'FUNCTIONAL-AUDIT-r{RELEASE}.md',f'RELEASE-v0.01-r{RELEASE}.md']:
+    for name in ['CONNECTION-CONFIG.md','config.example.json','COMMON-APPS.md','ONLINE-UPDATE-DESIGN.md','UPDATER-CONTRACT.md','SIGNED-UPDATES.md','FINALSHELL-IMPORT.md','COMMANDS-AND-EDITORS.md',f'FUNCTIONAL-AUDIT-{VERSION}.md',f'RELEASE-{VERSION}.md']:
         copy(ROOT/'build'/name,folder/'data/docs'/name)
     readme = (ROOT/'README.md').read_text()
-    readme = re.sub(r'(?<=[(])((?:build|docs)/[^)]+)(?=[)])', lambda m: f'https://github.com/BitsFlowCloud/DengShell/blob/v0.01-r{RELEASE}/' + m.group(1), readme)
+    readme = re.sub(r'(?<=[(])((?:build|docs)/[^)]+)(?=[)])', lambda m: f'https://github.com/BitsFlowCloud/DengShell/blob/{VERSION}/' + m.group(1), readme)
     (folder/'data/docs/README.md').write_text(readme)
     copy(ROOT/'CHANGELOG.md',folder/'data/docs/CHANGELOG.md')
     copy(ROOT/('build/windows/README.txt' if windows else 'build/linux/README.txt'),folder/'data/docs/使用说明.txt')
@@ -73,7 +74,7 @@ def package(args):
     linux = distribution(work/'DengShell-linux-x64',linuxbinary,False)
     zip_tree(win,out/'DengShell-windows-x64.zip')
     subprocess.run(['python3',str(ROOT/'scripts/package-windows.py'),'--stage',str(win),'--output',str(out/'DengShell-Setup-x64.exe')],check=True)
-    subprocess.run(['python3',str(ROOT/'scripts/package-linux.py'),'--stage',str(linux),'--build-info',str(linuxbinary.parent/'build-info.json'),'--version','0.1.0','--release',str(BUILD % 1000),'--output',str(out)],check=True)
+    subprocess.run(['python3',str(ROOT/'scripts/package-linux.py'),'--stage',str(linux),'--build-info',str(linuxbinary.parent/'build-info.json'),'--version',PACKAGE_VERSION,'--release',str(BUILD % 1000),'--output',str(out)],check=True)
     copy(winbinary,out/'DengShell.exe')
     copy(out/'up.deb',out/'DengShell-linux-x64.deb')
     copy(out/'up.deb',out/'DengShell-ubuntu-x64.deb')
@@ -85,16 +86,16 @@ def package(args):
     for folder in ['web','internal','scripts','cmd','.github']:
         sourcefiles += [p for p in (ROOT/folder).rglob('*') if p.is_file() and '__pycache__' not in p.parts]
     sourcefiles += [p for p in (ROOT/'docs').rglob('*') if p.is_file()]
-    for name in ['dengshell.png','dengshell.svg','dengshell.ico','CONNECTION-CONFIG.md','config.example.json','COMMON-APPS.md',f'RELEASE-v0.01-r{RELEASE}.md','ONLINE-UPDATE-DESIGN.md','UPDATER-CONTRACT.md','SIGNED-UPDATES.md','FONT-VALIDATION.md','BACKGROUND-PROMPTS-v0.01.json','windows/app.manifest','windows/README.txt','linux/README.txt','linux/Dockerfile','linux/.dockerignore','linux/COMPATIBILITY.json']:
+    for name in ['dengshell.png','dengshell.svg','dengshell.ico','CONNECTION-CONFIG.md','config.example.json','COMMON-APPS.md',f'RELEASE-{VERSION}.md','ONLINE-UPDATE-DESIGN.md','UPDATER-CONTRACT.md','SIGNED-UPDATES.md','FONT-VALIDATION.md','BACKGROUND-PROMPTS-v0.01.json','windows/app.manifest','windows/README.txt','linux/README.txt','linux/Dockerfile','linux/.dockerignore','linux/COMPATIBILITY.json']:
         sourcefiles.append(ROOT/'build'/name)
     for folder in ['go-licenses','font-licenses','font-library-site','installer-licenses','sync']:
         sourcefiles += [p for p in (ROOT/'build'/folder).glob('*') if p.is_file()]
-    for name in ['FINALSHELL-IMPORT.md','COMMANDS-AND-EDITORS.md','FONT-REFORM-REPORT.md','FUNCTIONAL-RECHECK-20260914.md',f'FUNCTIONAL-AUDIT-r{RELEASE}.md','linux/Arch.Dockerfile']:
+    for name in ['FINALSHELL-IMPORT.md','COMMANDS-AND-EDITORS.md','FONT-REFORM-REPORT.md','FUNCTIONAL-RECHECK-20260914.md',f'FUNCTIONAL-AUDIT-{VERSION}.md','linux/Arch.Dockerfile']:
         sourcefiles.append(ROOT/'build'/name)
     for p in sorted(set(sourcefiles)):copy(p,source/p.relative_to(ROOT))
     copy(linuxbinary.parent/'build-info.json',source/'build/linux/native/build-info.json')
     zip_tree(source,out/'DengShell-source.zip',Path('DengShell'))
-    notes=(args.update_notes.read_text().strip() if args.update_notes else f'R{RELEASE} 更新：详情见官网更新日志。')
+    notes=(args.update_notes.read_text().strip() if args.update_notes else f'{VERSION} 更新：详情见官网更新日志。')
     for binary,artifact,platform,name in [(winbinary,winbinary,'windows-amd64','up.exe'),(linuxbinary,out/'up.deb','linux-amd64','up.deb'),(linuxbinary,out/'DengShell-linux-x64.pkg.tar.zst','linux-amd64-pacman','up.pkg.tar.zst')]:
         descriptor = site/(name+'.json')
         release_notes = notes
@@ -103,14 +104,14 @@ def package(args):
                 raise SystemExit(f'Cannot preserve missing update notes: {descriptor}')
             release_notes = json.loads(descriptor.read_text())['notes']
         copy(artifact,site/name)
-        info={'schemaVersion':2,'build':BUILD,'product':'DengShell','platform':platform,'version':'v0.01','notes':release_notes,'sha256':digest(artifact),'size':artifact.stat().st_size,'executableSHA256':digest(binary)}
+        info={'schemaVersion':2,'build':BUILD,'product':'DengShell','platform':platform,'version':VERSION,'notes':release_notes,'sha256':digest(artifact),'size':artifact.stat().st_size,'executableSHA256':digest(binary)}
         (site/(name+'.json')).write_text(json.dumps(info,ensure_ascii=False,indent=2)+'\n')
         subprocess.run([str(args.signer.resolve()), '-key', str(args.signing_key.resolve()),
                         '-in', str(site/(name+'.json')), '-out', str(site/(name+'.json'))], check=True)
     for name in ['DengShell-windows-x64.zip','DengShell-Setup-x64.exe','DengShell-linux-x64.deb','DengShell-linux-x64.rpm','DengShell-linux-x64.tar.gz','DengShell-linux-x64.pkg.tar.zst','DengShell-source.zip']:
         copy(out/name,site/'downloads'/name)
     files={p.name:{'bytes':p.stat().st_size,'sha256':digest(p)} for p in sorted(out.iterdir()) if p.suffix in ['.exe','.zip','.gz','.deb','.rpm','.zst']}
-    manifest={'version':'v0.01','build':LABEL,'applicationBuild':BUILD,'artifacts':files,'embeddedAssets':assets,'executableHashes':{'windows-amd64':digest(winbinary),'linux-amd64':digest(linuxbinary)}}
+    manifest={'version':VERSION,'build':LABEL,'applicationBuild':BUILD,'artifacts':files,'embeddedAssets':assets,'executableHashes':{'windows-amd64':digest(winbinary),'linux-amd64':digest(linuxbinary)}}
     (out/'release.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
     (out/'SHA256SUMS.txt').write_text(''.join(f"{v['sha256']}  {n}\n" for n,v in files.items()))
     (site/'downloads/SHA256SUMS.txt').write_text(''.join(f'{digest(p)}  {p.relative_to(site)}\n' for p in sorted(site.rglob('*')) if p.is_file() and p.suffix in ['.zip','.deb','.exe','.gz','.rpm','.zst']))

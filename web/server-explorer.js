@@ -60,7 +60,6 @@ function renderServerExplorer(tree, query) {
     }
     const select = serverManagerButton('', () => chooseServerFolder(group.id), 'server-folder-select'); select.dataset.groupAction = 'select'; select.title = all ? '显示所有分组的连接' : tree.paths.get(group.id); select.setAttribute('aria-current', String(group.id === serverManager.selectedGroup));
     select.append(serverGroupIcon(group.emoji), node('strong', 'server-folder-name', group.name));
-    if (!all) select.append(node('span', 'server-folder-level', `${depth + 1}级`));
     select.append(node('span', 'server-folder-count', String(total)));
     select.setAttribute('aria-label', `${all ? '' : `${depth + 1}级目录，`}${group.name}，${total}个连接`);
     select.onkeydown = event => {
@@ -88,7 +87,6 @@ function renderServerExplorer(tree, query) {
   folders.replaceChildren(fragment); folders.scrollTop = top; folders.scrollLeft = left;
   const selected = tree.byID.get(serverManager.selectedGroup), chain = serverFolderAncestors(tree, serverManager.selectedGroup), items = serverExplorerProfiles(tree, query);
   $('#server-explorer-title').textContent = query ? '搜索结果' : selected?.name || '全部连接';
-  $('#server-explorer-level').textContent = selected && !query ? `${(tree.depths.get(selected.id) || 0) + 1}级` : ''; $('#server-explorer-level').hidden = !selected || !!query;
   $('#server-explorer-count').textContent = `${items.length} 个连接`;
   $('#server-include-children').checked = serverManager.includeChildren; $('#server-descendants-label').hidden = !!query || !selected;
   const path = $('#server-explorer-path'); path.replaceChildren();
@@ -108,12 +106,17 @@ function reflectServerExplorerDetails() {
   if (profile) {
     details.append(node('strong', '', `${profile.name} · ${profile.user}@${profile.host}:${profile.port}`));
     const tree = serverGroupTree(); details.append(node('span', '', `${serverGroupPath(profile, tree)}${profile.auth === 'key' && !profile.keyId && !profile.keyPath ? ' · 待配置私钥' : ''}`)); details.title = `${profile.name}\n${profile.user}@${profile.host}:${profile.port}\n${serverGroupPath(profile, tree)}`;
+    if (profile.notes) {
+      const note = serverManagerButton(`备注：${profile.notes.replace(/\s+/g, ' ')}`, () => window.DengProfileNotes.open(profile), 'server-notes-preview');
+      note.title = '查看完整备注'; details.append(note);
+    }
   } else { details.append(node('strong', '', chosen.length ? `已选择 ${chosen.length} 个连接` : '单击选择，双击打开连接'), node('span', '', '右键管理连接；可用 Ctrl / ⌘ 多选，再打开所选连接。')); details.removeAttribute('title'); }
 }
 function openServerProfileMenu(profile, actions, anchor) {
   closeServerGroupMenu(); const menu = $('#server-group-menu'); serverManager.menuProfile = profile.id;
   const buttons = [];
   if (!profile.deletedAt) buttons.push(serverManagerButton('连接', () => { closeServerGroupMenu(); return connect(profile.id); }));
+  if (profile.notes) buttons.push(serverManagerButton('查看备注', () => window.DengProfileNotes.open(profile)));
   for (const button of actions.children) buttons.push(button);
   if (!profile.deletedAt) buttons.push(serverManagerButton('定位所属分组', () => { closeServerGroupMenu(); serverManager.tab = 'servers'; chooseServerFolder(profile.groupId); serverManager.selectedProfiles.add(profile.id); reflectServerSelection(); const row = [...$('#server-folder-list').querySelectorAll('[data-group-id]')].find(row => row.dataset.groupId === profile.groupId); row?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }));
   buttons.push(serverManagerButton('复制地址', async () => { await copyText(`${profile.user}@${profile.host}:${profile.port}`); closeServerGroupMenu(); toast('地址已复制'); }));
@@ -145,7 +148,7 @@ function initializeServerExplorer() {
   const folders = node('aside', 'server-folder-pane'); folders.id = 'server-folder-pane'; folders.setAttribute('aria-label', '分组目录');
   folders.innerHTML = '<div class="server-folder-heading"><strong>分组目录</strong><div><button type="button" id="server-expand-all" aria-label="展开全部分组" title="展开全部分组">展开</button><button type="button" id="server-collapse-all" aria-label="折叠全部分组" title="折叠全部分组">折叠</button></div></div><div id="server-folder-list" class="server-folder-list"></div>';
   const divider = node('div', 'server-manager-divider'); divider.id = 'server-manager-divider'; divider.tabIndex = 0; divider.setAttribute('role', 'separator'); divider.setAttribute('aria-orientation', 'vertical'); divider.setAttribute('aria-label', '调整分组栏宽度'); divider.setAttribute('aria-valuemin', '145'); divider.setAttribute('aria-controls', 'server-folder-pane'); divider.title = '拖动调整宽度；方向键调整，双击恢复';
-  const pane = node('div', 'server-explorer-content'); pane.innerHTML = '<div id="server-explorer-heading"><div class="server-explorer-heading-row"><strong id="server-explorer-title"></strong><span id="server-explorer-level" class="server-folder-level"></span><span id="server-explorer-count"></span></div><nav id="server-explorer-path" aria-label="当前分组路径"></nav><label id="server-descendants-label"><input type="checkbox" id="server-include-children">包含子分组</label></div>';
+  const pane = node('div', 'server-explorer-content'); pane.innerHTML = '<div id="server-explorer-heading"><div class="server-explorer-heading-row"><strong id="server-explorer-title"></strong><span id="server-explorer-count"></span></div><nav id="server-explorer-path" aria-label="当前分组路径"></nav><label id="server-descendants-label"><input type="checkbox" id="server-include-children">包含子分组</label></div>';
   const list = $('#connection-groups'); list.before(body); pane.append(list);
   const detail = node('div', 'server-explorer-details'); detail.id = 'server-explorer-details'; detail.setAttribute('role', 'status'); pane.append(detail); body.append(folders, divider, pane);
   $('#server-include-children').onchange = event => { serverManager.includeChildren = event.target.checked; clearServerSelection(); saveServerExplorer(); renderConnections(); };

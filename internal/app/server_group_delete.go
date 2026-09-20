@@ -114,6 +114,7 @@ func (s *Store) deleteGroupTree(id, revision, name string) (map[string]bool, err
 		delete(s.config.Appearance.Layout, "dengshell.history."+profileID)
 		delete(s.config.Appearance.Layout, "dengshell.nic."+profileID)
 	}
+	s.dropPathHistoryLocked(ids)
 	s.refreshLegacyGroupsLocked()
 	if err = s.writeLocked(); err != nil {
 		s.config = old

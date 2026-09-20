@@ -20,6 +20,7 @@ type Profile struct {
 	FinalShellID string      `json:"finalShellId,omitempty"`
 	ID           string      `json:"id"`
 	Name         string      `json:"name"`
+	Notes        string      `json:"notes,omitempty"`
 	Host         string      `json:"host"`
 	Port         int         `json:"port"`
 	User         string      `json:"user"`
@@ -42,6 +43,7 @@ type Config struct {
 	Trash             []Profile                  `json:"trash,omitempty"`
 	ConnectionHistory []ConnectionHistory        `json:"connectionHistory"`
 	CommandHistory    *GlobalCommandHistory      `json:"commandHistory,omitempty"`
+	PathHistory       []PathHistoryEntry         `json:"pathHistory,omitempty"`
 	Extra             map[string]json.RawMessage `json:"-"`
 	Servers           []Profile                  `json:"servers"`
 	Groups            []string                   `json:"groups"`
@@ -128,6 +130,9 @@ func (s *Store) saveProfile(p Profile, clearSecret, allowNewID bool) (Profile, e
 	p.Host = strings.Trim(strings.TrimSpace(p.Host), "[]")
 	p.User = strings.TrimSpace(p.User)
 	p.Group = strings.TrimSpace(p.Group)
+	if err := validateProfileNotes(p.Notes); err != nil {
+		return Profile{}, err
+	}
 	if err := p.Proxy.validate(); err != nil {
 		return Profile{}, err
 	}
@@ -207,6 +212,11 @@ func (s *Store) saveProfile(p Profile, clearSecret, allowNewID bool) (Profile, e
 				p.Proxy.Password = entry.Proxy.Password
 			}
 			break
+		}
+	}
+	if index < 0 || normalizeProfileNoteLines(p.Notes) != normalizeProfileNoteLines(s.config.Servers[index].Notes) {
+		if err := validateEditedProfileNotes(p.Notes); err != nil {
+			return Profile{}, err
 		}
 	}
 	if p.Auth == "key" && p.KeyPath == "" && p.KeyID == "" {

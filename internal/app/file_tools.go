@@ -29,11 +29,12 @@ import (
 const maxEditableBytes = 8 << 20
 
 type textDocument struct {
-	Path     string `json:"path"`
-	Text     string `json:"text"`
-	Encoding string `json:"encoding"`
-	SHA256   string `json:"sha256"`
-	Bytes    int    `json:"bytes"`
+	Path         string `json:"path"`
+	Text         string `json:"text"`
+	Encoding     string `json:"encoding"`
+	SHA256       string `json:"sha256"`
+	Bytes        int    `json:"bytes"`
+	HistoryError string `json:"historyError,omitempty"`
 }
 type fileToolError struct{ message, code string }
 
@@ -182,7 +183,11 @@ func (a *App) readTextHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	text, name, e := decodeText(data, r.URL.Query().Get("encoding"))
-	respond(w, textDocument{target, text, name, digestText(data), len(data)}, op.err(e))
+	historyError := ""
+	if e == nil && op.ctx.Err() == nil {
+		historyError = a.recordPathHistory(s, target, "file")
+	}
+	respond(w, textDocument{target, text, name, digestText(data), len(data), historyError}, op.err(e))
 }
 func (a *App) saveTextHTTP(w http.ResponseWriter, r *http.Request) {
 	s, e := a.session(r.PathValue("id"))
@@ -233,7 +238,7 @@ func (a *App) saveTextHTTP(w http.ResponseWriter, r *http.Request) {
 	if !bytes.Equal(before, data) {
 		e = writeRemoteText(op, s, target, data, info, input.SHA256)
 	}
-	respond(w, textDocument{target, input.Text, input.Encoding, digestText(data), len(data)}, op.err(e))
+	respond(w, textDocument{target, input.Text, input.Encoding, digestText(data), len(data), ""}, op.err(e))
 }
 func writeRemoteText(op *sftpOperation, s *Session, target string, data []byte, info os.FileInfo, expectedHash string) error {
 	if _, ok := s.files.HasExtension("posix-rename@openssh.com"); !ok {

@@ -75,7 +75,7 @@ package() {{
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, required=True)
-    parser.add_argument('--version', default='0.1.0')
+    parser.add_argument('--version', default=re.search(r'const ApplicationPackageVersion = "([^"]+)"', (ROOT/'internal/app/updates.go').read_text()).group(1))
     parser.add_argument('--release', required=True)
     parser.add_argument('--output', type=Path, required=True)
     package(parser.parse_args())

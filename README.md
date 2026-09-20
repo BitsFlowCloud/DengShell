@@ -4,7 +4,7 @@
 
 DengShell 是一款中文界面的开源 SSH 桌面工具，适合日常管理 VPS、维护 Linux 服务器、编辑远程配置和排查网络问题。支持 Windows 与 Linux 桌面，可同时连接多台服务器，并按自己的习惯调整字体、背景、布局和监控曲线。
 
-本说明对应 **v0.01 R50**。R20 至 R50 的累计变化汇总在 [更新日志](CHANGELOG.md)。
+本说明对应 **v0.02**。R50 以来的累计变化汇总在 [更新日志](CHANGELOG.md)。
 
 ## 内容导航
 
@@ -63,7 +63,7 @@ Linux 版本使用 GTK3 和 WebKitGTK 4.1，发行构建以 Ubuntu 22.04 / glibc
 
 **测试情况：**
 
-- **Linux：已测试通过。** 已在 Ubuntu 22.04、Ubuntu 24.04、Debian 12、Fedora 43 、openSUSE Tumbleweed 和 Arch Linux 容器中通过安装、原生界面启动及卸载保留配置测试。具体范围见 [功能审查与验证](build/FUNCTIONAL-AUDIT-r50.md)。
+- **Linux：已测试通过。** 已在 Ubuntu 22.04、Ubuntu 24.04、Debian 12、Fedora 43 、openSUSE Tumbleweed 和 Arch Linux 容器中通过安装、原生界面启动及卸载保留配置测试。具体范围见 [功能审查与验证](build/FUNCTIONAL-AUDIT-v0.02.md)。
 - **Windows：** 发布验证覆盖原生 WebView2 启动、安装／卸载保留配置、压缩程序及从最小化状态升级后显示窗口。自动验证使用 GitHub Windows 运行器，结果见 [Windows 验证记录](https://github.com/BitsFlowCloud/DengShell/actions/workflows/windows-release-validation.yml)；不等同于全部 Windows 10／11 实体设备、显卡和托盘组合已验证。
 
 ### Linux 安装示例

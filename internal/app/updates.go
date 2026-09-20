@@ -22,14 +22,15 @@ import (
 	"time"
 )
 
-const ApplicationVersion = "v0.01"
+const ApplicationVersion = "v0.02"
+
+// Package managers use a normalized version greater than the previous 0.1.0.
+const ApplicationPackageVersion = "0.2.0"
 
 // Increase this integer for every published build, including packaging-only
-// releases. Display versions alone do not distinguish the v0.01 revisions.
-const ApplicationBuild uint64 = 20260920059
+// releases. It also lets older clients identify repackaged releases.
+const ApplicationBuild uint64 = 20260920070
 
-// Public revision is separate from the monotonically increasing update build.
-const ApplicationRelease = 50
 const UpdateManifestURL = "https://ds.free-vps.org/up.deb.json"
 const updateTimeout = 3 * time.Second
 const maximumUpdateSize int64 = 1 << 30

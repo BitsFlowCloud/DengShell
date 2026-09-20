@@ -508,10 +508,12 @@ async function navigate(path, state = current()) {
     const data = await api(`/api/sessions/${state.id}/files?path=${encodeURIComponent(path)}`, { signal: state.navAbort.signal });
     if (state.navGeneration !== generation || !sessions.has(state.id)) return;
     state.cwd = data.path; state.entries = data.entries; state.folders.set(data.path, data.entries.filter(entry => entry.kind === 'folder')); DengFileBrowser.invalidate(state, data.path);
+    if (data.historyError) toast(data.historyError);
     if (activeID === state.id) { selectedName = ''; $('#file-filter').value = ''; renderFiles(); }
   } catch (error) { if (error.name === 'AbortError') return; if (activeID === state.id) { $('#path-input').value = state.cwd; $('#file-status-count').textContent = '目录读取失败'; } throw error; }
 }
 function renderFiles() {
+  window.DengPathHistory?.reflect();
   const state = current(); const filter = $('#file-filter').value.toLowerCase();
   const entries = (state?.entries || []).filter(e => e.name.toLowerCase().includes(filter)).slice().sort((a, b) => compareFileEntries(a, b, fileSortKey, ascending));
   $('#path-input').value = state?.cwd || ''; $('#path-input').disabled = !state?.connected; $('#drop-path').textContent = state?.cwd || '—';
@@ -675,7 +677,8 @@ function showConnectionForm(profile = null, groupID = '') {
   if (profile?.temporary) { window.DengQuickConnect.open(`ssh -p ${profile.port} ${profile.user}@${profile.host}`); return; }
   const form = $('#connection-form'); form.reset(); form.elements.id.value = profile?.id || '';
   renderKeyChoices(); renderProxyChoices(); form.elements.proxyId.value = profile?.proxyId || '';
-  for (const key of ['name', 'host', 'user', 'port', 'auth', 'keyPath', 'keyId']) if (profile?.[key] != null) form.elements[key].value = profile[key];
+  for (const key of ['name', 'notes', 'host', 'user', 'port', 'auth', 'keyPath', 'keyId']) if (profile?.[key] != null) form.elements[key].value = profile[key];
+  window.DengProfileNotes.init(form.elements.notes, profile?.notes || '');
   form.elements.proxyType.value = profile?.proxy?.type || 'direct';
   for (const [field, key] of [['proxyHost', 'host'], ['proxyPort', 'port'], ['proxyUser', 'user']]) form.elements[field].value = profile?.proxy?.[key] || '';
   form.elements.proxyPassword.placeholder = profile?.proxy?.hasPassword ? '已保存，留空保留' : '代理密码（可选）';
@@ -698,6 +701,7 @@ $('#new-connection').onclick = () => showConnectionForm(); $('#cancel-connection
 $('#choose-key').onclick = safe(async () => { const path = await native().ChooseKey(); if (path) $('#connection-form').elements.keyPath.value = path; });
 $('#connection-form').onsubmit = safe(async event => {
   event.preventDefault(); const form = event.target, values = Object.fromEntries(new FormData(form)), isNew = !values.id;
+  if (!window.DengProfileNotes.validate(form.elements.notes)) return;
   const key = managedKeys.find(key => key.id === values.keyId), needsSecret = values.auth === 'password' || (values.auth === 'key' && (!key || (key.encrypted && !key.hasPassphrase)));
   const secret = needsSecret ? values.secret : '', remember = needsSecret && form.elements.remember.checked;
   const previous = profiles.find(profile => profile.id === values.id);
