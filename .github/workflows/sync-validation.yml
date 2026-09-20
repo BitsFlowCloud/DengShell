@@ -1,0 +1,49 @@
+name: Self-hosted sync validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/macos-build-*', 'codex/sync-audit-*']
+    paths:
+      - 'internal/**'
+      - 'web/sync.*'
+      - 'scripts/test-sync*'
+      - 'build/sync/**'
+      - '.github/workflows/sync-validation.yml'
+
+permissions:
+  contents: read
+
+env:
+  GOMAXPROCS: '4'
+  GOFLAGS: '-p=4'
+
+jobs:
+  sync:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: '1.27.1'
+      - name: Service and encryption race tests
+        run: go test -buildvcs=false -race -timeout 8m ./internal/syncserver ./internal/syncvault
+      - name: Client synchronization and lock race tests
+        run: go test -buildvcs=false -race -timeout 8m ./internal/app -run "TestSync|TestSecurityLock"
+      - name: Build Windows desktop client
+        if: runner.os == 'Windows'
+        env:
+          CGO_ENABLED: '0'
+        run: go build -buildvcs=false -trimpath -tags desktop,production -ldflags "-s -w -H windowsgui" -o build/sync-validation/DengShell.exe .
+      - name: Retain Windows client
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: DengShell-windows-sync-validated
+          path: build/sync-validation/DengShell.exe
+          retention-days: 14

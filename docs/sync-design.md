@@ -13,7 +13,7 @@ Each device appends immutable full snapshots. Vector clocks on records track cau
 
 Before publishing, the candidate configuration graph is validated. A durable encrypted pending journal precedes upload. The application checks its current configuration projection again before applying, refusing to overwrite edits made during I/O. Private keys are validated, written with create-exclusive semantics and never silently replaced under an existing ID. Configuration is atomically persisted with pre-sync encrypted backups. Existing display order is retained per device. A history restore is an explicit local edit that goes through the normal sync pipeline on the next cycle.
 
-Backend limits: 16 MiB per snapshot, 128 devices/vector dimensions at the format level, 50,000 entries. The self-hosted backend admits 32 active credentials, 8 pending invitations, 8 concurrent requests, limits failed authorization attempts, and caps encrypted snapshots at 256 MiB. Per-device retention is 20 snapshots.
+Backend limits: 16 MiB per snapshot, 128 devices/vector dimensions at the format level, 50,000 entries. The self-hosted backend admits 32 active credentials, 8 pending invitations, 8 concurrent requests, limits failed authorization attempts, and caps encrypted snapshots at 256 MiB. Per-device retention is at most 20 snapshots. Global capacity pressure may remove older history from any device, never its latest head; insertion and pruning commit or roll back together.
 
 ## Operational limits
 

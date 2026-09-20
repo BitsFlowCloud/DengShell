@@ -60,10 +60,12 @@ type syncState struct {
 	mu           sync.Mutex
 	controlMu    sync.Mutex
 	activeCancel context.CancelFunc
+	closed       bool
 	wg           sync.WaitGroup
 	profile      *syncProfile
 	key, salt    []byte
 	digest       string
+	needsSave    bool
 	backend      syncvault.Backend
 	host         *syncserver.Server
 	hostSettings syncHostSettings
@@ -148,6 +150,12 @@ func (a *App) initializeSync() {
 }
 func (a *App) closeSync() {
 	s := &a.syncState
+	s.controlMu.Lock()
+	s.closed = true
+	if s.activeCancel != nil {
+		s.activeCancel()
+	}
+	s.controlMu.Unlock()
 	s.wg.Wait()
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -170,6 +178,7 @@ func (a *App) pauseSyncLocked() {
 	clear(s.key)
 	s.key = nil
 	s.salt = nil
+	s.needsSave = false
 	s.conflicts = nil
 }
 func (a *App) syncStatus() syncStatus {
@@ -204,8 +213,9 @@ func (a *App) syncStatus() syncStatus {
 	}
 	return out
 }
-func (a *App) saveSyncLocked() error {
+func (a *App) saveSyncLocked() (err error) {
 	s := &a.syncState
+	defer func() { s.needsSave = err != nil }()
 	p := s.profile
 	if p == nil || len(s.key) != 32 {
 		return errors.New("同步空间未解锁")
@@ -246,6 +256,9 @@ func (a *App) saveSyncLocked() error {
 }
 func (a *App) useSyncProfileLocked(p *syncProfile, password string) error {
 	s := &a.syncState
+	if e := a.RequireUnlocked(); e != nil {
+		return e
+	}
 	if p.Provider != "local" {
 		return errors.New("仅支持本机 / 自建同步服务")
 	}
@@ -262,6 +275,11 @@ func (a *App) useSyncProfileLocked(p *syncProfile, password string) error {
 		clear(key)
 		return e
 	}
+	if e = a.RequireUnlocked(); e != nil {
+		clear(key)
+		backend.Close()
+		return e
+	}
 	p.Version = 1
 	p.Base = map[string]json.RawMessage{}
 	p.Seen = map[string]syncvault.Object{}
@@ -272,6 +290,8 @@ func (a *App) useSyncProfileLocked(p *syncProfile, password string) error {
 	s.digest = ""
 	s.backend = backend
 	s.lastError = ""
+	s.failures = 0
+	s.retryAt = time.Time{}
 	s.next = time.Now().Add(2 * time.Second)
 	if e = a.saveSyncLocked(); e != nil {
 		a.pauseSyncLocked()
@@ -280,9 +300,15 @@ func (a *App) useSyncProfileLocked(p *syncProfile, password string) error {
 	return nil
 }
 func (a *App) unlockSync(password string) error {
+	return a.unlockSyncContext(context.Background(), password)
+}
+func (a *App) unlockSyncContext(ctx context.Context, password string) error {
+	ctx, finish, e := a.beginSyncOperation(ctx)
+	if e != nil {
+		return e
+	}
+	defer finish()
 	s := &a.syncState
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	if time.Now().Before(s.retryAt) {
 		return errors.New("同步口令尝试过于频繁，请稍后重试")
 	}
@@ -307,8 +333,11 @@ func (a *App) unlockSync(password string) error {
 		clear(key)
 		return errors.New("同步配置损坏，原文件保持不变")
 	}
-	if _, e = p.Metadata.Unlock("", syncvault.Encode(p.Master)); e != nil {
+	verified, e := p.Metadata.Unlock("", syncvault.Encode(p.Master))
+	clear(verified)
+	if e != nil {
 		clear(key)
+		clear(p.Master)
 		return e
 	}
 	if p.Provider != "local" {
@@ -327,11 +356,21 @@ func (a *App) unlockSync(password string) error {
 	if p.Base == nil {
 		p.Base = map[string]json.RawMessage{}
 	}
+	if e = a.RequireUnlocked(); e == nil {
+		e = ctx.Err()
+	}
+	if e != nil {
+		clear(key)
+		clear(p.Master)
+		backend.Close()
+		return e
+	}
 	s.profile = &p
 	s.backend = backend
 	s.key = key
 	s.salt = salt
 	s.digest = syncvault.Hash(b)
+	s.needsSave = false
 	s.failures = 0
 	s.lastError = ""
 	s.next = time.Now()
@@ -385,28 +424,12 @@ func (a *App) enrollSyncLocked(ctx context.Context) error {
 	return e
 }
 func (a *App) synchronize(ctx context.Context, resolutions map[string]string) (err error) {
-	if e := a.RequireUnlocked(); e != nil {
+	ctx, finish, e := a.beginSyncOperation(ctx)
+	if e != nil {
 		return e
 	}
+	defer finish()
 	s := &a.syncState
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	ctx, cancel := context.WithCancel(ctx)
-	s.controlMu.Lock()
-	s.activeCancel = cancel
-	s.controlMu.Unlock()
-	defer func() {
-		cancel()
-		s.controlMu.Lock()
-		s.activeCancel = nil
-		s.controlMu.Unlock()
-		if a.SecurityLockStatus().Locked {
-			a.pauseSyncLocked()
-		}
-	}()
-	if e := a.RequireUnlocked(); e != nil {
-		return e
-	}
 	defer func() {
 		s.next = time.Now().Add(30 * time.Second)
 		if err != nil {
@@ -425,6 +448,13 @@ func (a *App) synchronize(ctx context.Context, resolutions map[string]string) (e
 	onDisk, readErr := readConfigFile(filepath.Join(a.store.dir, syncConfigName), syncvault.MaxLocalFile)
 	if readErr != nil || syncvault.Hash(onDisk) != s.digest {
 		return errors.New("同步配置被其他实例修改，请重新打开同步空间")
+	}
+	// A previous disk error may leave only an in-memory pending upload or merge
+	// baseline. Persist it before performing any further remote operations.
+	if s.needsSave {
+		if e := a.saveSyncLocked(); e != nil {
+			return e
+		}
 	}
 	beforeState := syncvault.Hash(syncRaw(p))
 	if e := a.enrollSyncLocked(ctx); e != nil {
@@ -460,12 +490,18 @@ func (a *App) synchronize(ctx context.Context, resolutions map[string]string) (e
 	dirty := false
 	for k, v := range local {
 		if old, ok := p.Base[k]; !ok || !syncvault.EqualJSON(v, old) {
+			if saved, ok := candidate.Entries[k]; ok && syncvault.EqualJSON(saved.Value, v) {
+				continue // Already published by a resumed pending upload.
+			}
 			candidate.Entries[k] = syncvault.Entry{Value: v, Clock: localClock}
 			dirty = true
 		}
 	}
 	for k := range p.Base {
 		if _, ok := local[k]; !ok {
+			if saved, ok := candidate.Entries[k]; ok && syncvault.EqualJSON(saved.Value, []byte("null")) {
+				continue
+			}
 			candidate.Entries[k] = syncvault.Entry{Value: json.RawMessage("null"), Clock: localClock}
 			dirty = true
 		}
@@ -491,8 +527,10 @@ func (a *App) synchronize(ctx context.Context, resolutions map[string]string) (e
 			return errors.New("云端数据缺失或版本回退，已暂停同步；本机数据保持不变")
 		}
 	}
-	variants := map[string][]syncvault.Entry{}
-	labels := map[string][]string{}
+	variants := map[string][]syncVariant{}
+	for k, entry := range candidate.Entries {
+		variants[k] = []syncVariant{{entry, "本机保留的版本"}}
+	}
 	for _, o := range heads {
 		if old, ok := p.Seen[o.Device]; ok && old.Hash == o.Hash {
 			continue
@@ -515,6 +553,7 @@ func (a *App) synchronize(ctx context.Context, resolutions map[string]string) (e
 						var other ServerGroup
 						if rk != k && strings.HasPrefix(rk, "group/") && json.Unmarshal(rv.Value, &other) == nil && other.Name == g.Name && other.ParentID == "" {
 							delete(candidate.Entries, k)
+							delete(variants, k)
 							break
 						}
 					}
@@ -524,30 +563,30 @@ func (a *App) synchronize(ctx context.Context, resolutions map[string]string) (e
 		if o.Device == p.Device && o.Sequence > p.Snapshot.Clock[p.Device] {
 			return errors.New("检测到同一设备配置在其他位置写入，请重新配对此设备")
 		}
-		merged, conflicts := syncvault.Merge(candidate, remote)
-		for _, k := range conflicts {
-			if len(variants[k]) == 0 {
-				variants[k] = append(variants[k], candidate.Entries[k])
-				labels[k] = append(labels[k], "本机保留的版本")
-			}
-			variants[k] = append(variants[k], remote.Entries[k])
-			labels[k] = append(labels[k], "设备 "+o.Device[:8]+" 的版本")
+		candidate.Clock = syncvault.Union(candidate.Clock, remote.Clock)
+		for k, entry := range remote.Entries {
+			variants[k] = addSyncVariant(variants[k], syncVariant{entry, "设备 " + o.Device[:8] + " 的版本"})
 		}
-		candidate = merged
 	}
 	s.conflicts = nil
-	for k, entries := range variants {
+	for k, frontier := range variants {
+		entries := coalesceSyncVariants(frontier)
+		if len(entries) == 1 {
+			candidate.Entries[k] = entries[0].entry
+			continue
+		}
 		selected := -1
 		choices := []syncChoice{}
 		seen := map[string]bool{}
-		for i, entry := range entries {
+		for i, variant := range entries {
+			entry := variant.entry
 			id := choiceID(entry)
 			if id == resolutions[k] {
 				selected = i
 			}
 			if !seen[id] {
 				seen[id] = true
-				label := labels[k][i]
+				label := variant.label
 				if syncvault.EqualJSON(entry.Value, []byte("null")) {
 					label += "（删除）"
 				}
@@ -555,10 +594,10 @@ func (a *App) synchronize(ctx context.Context, resolutions map[string]string) (e
 			}
 		}
 		if selected < 0 {
-			s.conflicts = append(s.conflicts, syncConflict{k, conflictLabel(k, entries[0]), choices})
+			s.conflicts = append(s.conflicts, syncConflict{k, conflictLabel(k, entries[0].entry), choices})
 			continue
 		}
-		entry := entries[selected]
+		entry := entries[selected].entry
 		entry.Clock = syncvault.Union(candidate.Clock, localClock)
 		candidate.Entries[k] = entry
 		candidate.Clock = syncvault.Union(candidate.Clock, entry.Clock)
@@ -570,6 +609,18 @@ func (a *App) synchronize(ctx context.Context, resolutions map[string]string) (e
 	}
 	if disambiguateSyncGroups(&candidate, localClock) {
 		dirty = true
+	}
+	// Pull-only merges must obey the same bounds as uploaded snapshots. Two
+	// individually valid heads can exceed the protocol/local-journal limits.
+	check := candidate
+	check.Device = p.Device
+	check.Sequence = max(candidate.Clock[p.Device], 1)
+	check.Clock = syncvault.Union(candidate.Clock, syncvault.Clock{p.Device: check.Sequence})
+	if e = syncvault.Validate(check); e != nil {
+		return e
+	}
+	if len(syncRaw(check)) > syncvault.MaxBlob-64 {
+		return errors.New("合并后的同步数据超过快照容量限制，已保留本机数据")
 	}
 	if e = a.RequireUnlocked(); e != nil {
 		return e
@@ -606,7 +657,8 @@ func (a *App) synchronize(ctx context.Context, resolutions map[string]string) (e
 	if e = a.RequireUnlocked(); e != nil {
 		return e
 	}
-	if e = a.store.applySync(local, next, p.Metadata.Secrets); e != nil {
+	var applied map[string]json.RawMessage
+	if e = a.store.prepareSyncWithBaseline(local, next, p.Metadata.Secrets, true, &applied); e != nil {
 		return e
 	}
 	p.Snapshot = candidate
@@ -615,13 +667,13 @@ func (a *App) synchronize(ctx context.Context, resolutions map[string]string) (e
 			p.Seen[id] = o
 		}
 	}
-	p.Base = next
+	p.Base = applied
 	if syncvault.Hash(syncRaw(p)) != beforeState {
 		if e = a.saveSyncLocked(); e != nil {
 			return e
 		}
 	}
-	if !sameProjection(local, next) {
+	if !sameProjection(local, applied) {
 		s.changed++
 	}
 	if dirty {
@@ -639,15 +691,26 @@ func (a *App) synchronize(ctx context.Context, resolutions map[string]string) (e
 }
 
 func (a *App) disconnectSync() error {
+	a.cancelActiveSync()
+	_, finish, e := a.beginSyncOperation(context.Background())
+	if e != nil {
+		return e
+	}
+	defer finish()
 	s := &a.syncState
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	unlock, e := lockConfigDirectory(a.store.dir)
+	if e != nil {
+		return e
+	}
+	defer unlock()
 	path := filepath.Join(a.store.dir, syncConfigName)
 	if _, e := os.Stat(path); e == nil {
 		target := filepath.Join(a.store.dir, fmt.Sprintf("dengshell.sync.disconnected-%s.enc", time.Now().UTC().Format("20060102T150405.000000000")))
 		if e = os.Rename(path, target); e != nil {
 			return e
 		}
+	} else if !os.IsNotExist(e) {
+		return e
 	}
 	a.pauseSyncLocked()
 	s.digest = ""

@@ -27,16 +27,17 @@ import (
 )
 
 type Server struct {
-	mu         sync.Mutex
-	db         *sql.DB
-	cert       *certificates
-	http       *http.Server
-	listener   net.Listener
-	Connection syncvault.Connection
-	Bootstrap  string
-	limit      chan struct{}
-	failures   map[string]attempt
-	release    func()
+	mu              sync.Mutex
+	db              *sql.DB
+	cert            *certificates
+	http            *http.Server
+	listener        net.Listener
+	Connection      syncvault.Connection
+	Bootstrap       string
+	limit           chan struct{}
+	failures        map[string]attempt
+	release         func()
+	maxStorageBytes int64
 }
 type attempt struct {
 	at    time.Time
@@ -81,6 +82,11 @@ func Open(dir, ip string, port int) (*Server, error) {
 			return nil, errors.New("同步服务数据路径不是普通文件")
 		}
 	}
+	if _, err := os.Stat(filepath.Join(dir, "sync.db")); err == nil {
+		if _, err = os.Stat(filepath.Join(dir, "identity.pem")); os.IsNotExist(err) {
+			return nil, errors.New("同步身份文件缺失，请恢复包含 identity.pem 的完整备份；未重新生成身份")
+		}
+	}
 	c, e := openCertificates(dir, ip)
 	if e != nil {
 		return nil, e
@@ -104,7 +110,7 @@ func Open(dir, ip string, port int) (*Server, error) {
 		return nil, e
 	}
 	db.SetMaxOpenConns(1)
-	s := &Server{db: db, cert: c, limit: make(chan struct{}, 8), failures: map[string]attempt{}, release: release}
+	s := &Server{db: db, cert: c, limit: make(chan struct{}, 8), failures: map[string]attempt{}, release: release, maxStorageBytes: 256 << 20}
 	ok := false
 	defer func() {
 		if !ok {
@@ -180,6 +186,7 @@ func (s *Server) Close() {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		_ = s.http.Shutdown(ctx)
+		_ = s.http.Close()
 	}
 	_ = s.db.Close()
 	if s.release != nil {
@@ -226,6 +233,31 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		failure(w, 429, "同步服务繁忙，请稍后重试")
 		return
+	}
+	// Receive bounded request bodies before taking the shared state lock.
+	// An incomplete join/upload must not stall every other authorized device.
+	var bodyLimit int64
+	if r.Method == "POST" {
+		switch r.URL.Path {
+		case "/v1/setup", "/v1/join", "/v1/revoke":
+			bodyLimit = 32 << 10
+			_ = http.NewResponseController(w).SetReadDeadline(time.Now().Add(5 * time.Second))
+		case "/v1/snapshots":
+			// Large unauthenticated uploads are rejected by the normal auth path
+			// without buffering their body. Authentication is checked again below.
+			if _, err := s.authenticate(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")); err == nil {
+				bodyLimit = (syncvault.MaxBlob * 4 / 3) + 65536
+			}
+		}
+	}
+	if bodyLimit > 0 {
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, bodyLimit))
+		_ = r.Body.Close()
+		if err != nil {
+			failure(w, 400, "请求格式或大小无效")
+			return
+		}
+		r.Body = io.NopCloser(bytes.NewReader(body))
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -432,6 +464,10 @@ func (s *Server) list(w http.ResponseWriter) {
 		o.ID = o.Hash
 		out = append(out, o)
 	}
+	if rows.Err() != nil {
+		failure(w, 500, "读取快照失败")
+		return
+	}
 	send(w, 200, out)
 }
 func (s *Server) get(w http.ResponseWriter, id string) {
@@ -461,34 +497,37 @@ func (s *Server) put(w http.ResponseWriter, r *http.Request, d syncvault.Device)
 		return
 	}
 	var previous []byte
-	if e := s.db.QueryRow("SELECT data FROM snapshots WHERE hash=?", o.Hash).Scan(&previous); e == nil {
-		if bytes.Equal(previous, in.Data) {
+	var previousDevice string
+	var previousSequence uint64
+	if e := s.db.QueryRow("SELECT data,device,seq FROM snapshots WHERE hash=?", o.Hash).Scan(&previous, &previousDevice, &previousSequence); e == nil {
+		if previousDevice == o.Device && previousSequence == o.Sequence && bytes.Equal(previous, in.Data) {
 			send(w, 200, map[string]bool{"ok": true})
 			return
 		}
 		failure(w, 409, "快照冲突")
 		return
+	} else if !errors.Is(e, sql.ErrNoRows) {
+		failure(w, 500, "读取快照失败")
+		return
 	}
 	var latest uint64
-	var total int64
-	_ = s.db.QueryRow("SELECT COALESCE(MAX(seq),0) FROM snapshots WHERE device=?", d.ID).Scan(&latest)
-	_ = s.db.QueryRow("SELECT COALESCE(sum(length(data)),0) FROM snapshots").Scan(&total)
+	if e := s.db.QueryRow("SELECT COALESCE(MAX(seq),0) FROM snapshots WHERE device=?", d.ID).Scan(&latest); e != nil {
+		failure(w, 500, "读取快照失败")
+		return
+	}
 	if o.Sequence <= latest {
 		failure(w, 409, "设备版本冲突，请重新配对此设备")
 		return
 	}
-	if total+int64(len(in.Data)) > 256<<20 {
-		failure(w, 507, "同步空间已达 256 MiB，请先备份并管理历史版本")
+	e := s.storeSnapshot(o, in.Data)
+	if errors.Is(e, errStorageCapacity) {
+		failure(w, 507, errStorageCapacity.Error())
 		return
 	}
-	_, e := s.db.Exec("INSERT INTO snapshots VALUES(?,?,?,?,?)", o.Hash, d.ID, o.Sequence, time.Now().Unix(), in.Data)
 	if e != nil {
 		failure(w, 500, "保存快照失败")
 		return
 	}
-	// Keep 20 versions per device, including the current head. No other device's
-	// snapshots or pending local edits are removed by this operation.
-	_, _ = s.db.Exec("DELETE FROM snapshots WHERE device=? AND hash NOT IN (SELECT hash FROM snapshots WHERE device=? ORDER BY seq DESC LIMIT 20)", d.ID, d.ID)
 	send(w, 200, map[string]bool{"ok": true})
 }
 func (s *Server) devices(w http.ResponseWriter) {
@@ -506,6 +545,10 @@ func (s *Server) devices(w http.ResponseWriter) {
 			return
 		}
 		out = append(out, d)
+	}
+	if rows.Err() != nil {
+		failure(w, 500, "设备列表读取失败")
+		return
 	}
 	send(w, 200, out)
 }

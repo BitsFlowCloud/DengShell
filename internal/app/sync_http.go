@@ -16,6 +16,9 @@ import (
 func (a *App) startSyncHostLocked(settings syncHostSettings) string {
 	s := &a.syncState
 	if s.host != nil {
+		if settings.IP != s.hostSettings.IP || settings.Port != s.hostSettings.Port {
+			return "本机同步服务已在其他地址或端口运行，请先停止服务再更改"
+		}
 		return ""
 	}
 	if net.ParseIP(settings.IP) == nil || settings.Port < 1024 || settings.Port > 65535 {
@@ -53,9 +56,12 @@ func (a *App) newLocalSync(ctx context.Context, in struct {
 	Recovery string `json:"recovery"`
 	Secrets  bool   `json:"secrets"`
 }) (string, error) {
+	ctx, finish, e := a.beginSyncOperation(ctx)
+	if e != nil {
+		return "", e
+	}
+	defer finish()
 	s := &a.syncState
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	if _, e := os.Stat(filepath.Join(a.store.dir, syncConfigName)); !os.IsNotExist(e) {
 		return "", errors.New("请先断开当前同步位置")
 	}
@@ -113,9 +119,12 @@ func (a *App) newLocalSync(ctx context.Context, in struct {
 	return syncvault.Encode(master), nil
 }
 func (a *App) joinLocalSync(ctx context.Context, code, name, password, recovery string) (string, error) {
+	ctx, finish, e := a.beginSyncOperation(ctx)
+	if e != nil {
+		return "", e
+	}
+	defer finish()
 	s := &a.syncState
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	if _, e := os.Stat(filepath.Join(a.store.dir, syncConfigName)); !os.IsNotExist(e) {
 		return "", errors.New("请先断开当前同步位置")
 	}
@@ -174,7 +183,7 @@ func (a *App) joinLocalSync(ctx context.Context, code, name, password, recovery 
 }
 func (a *App) registerSyncHTTP(mux *http.ServeMux) {
 	a.registerSyncHistoryHTTP(mux)
-	mux.HandleFunc("GET /api/sync/status", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, a.syncStatus()) })
+	mux.HandleFunc("GET /api/sync/status", func(w http.ResponseWriter, r *http.Request) { a.respondSync(w, a.syncStatus(), nil) })
 	mux.HandleFunc("GET /api/sync/addresses", func(w http.ResponseWriter, r *http.Request) {
 		name, _ := os.Hostname()
 		writeJSON(w, map[string]any{"addresses": localSyncAddresses(), "name": name})
@@ -192,7 +201,7 @@ func (a *App) registerSyncHTTP(mux *http.ServeMux) {
 			return
 		}
 		code, e := a.newLocalSync(r.Context(), in)
-		respond(w, map[string]string{"recovery": code}, e)
+		a.respondSync(w, map[string]string{"recovery": code}, e)
 	})
 	mux.HandleFunc("POST /api/sync/local/join", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ Code, Name, Password, Recovery string }
@@ -200,24 +209,27 @@ func (a *App) registerSyncHTTP(mux *http.ServeMux) {
 			return
 		}
 		code, e := a.joinLocalSync(r.Context(), in.Code, in.Name, in.Password, in.Recovery)
-		respond(w, map[string]string{"recovery": code}, e)
+		a.respondSync(w, map[string]string{"recovery": code}, e)
 	})
 	mux.HandleFunc("POST /api/sync/unlock", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ Password string }
 		if !decode(w, r, &in) {
 			return
 		}
-		respond(w, map[string]bool{"ok": true}, a.unlockSync(in.Password))
+		a.respondSync(w, map[string]bool{"ok": true}, a.unlockSyncContext(r.Context(), in.Password))
 	})
 	mux.HandleFunc("POST /api/sync/pause", func(w http.ResponseWriter, r *http.Request) {
-		s := &a.syncState
-		s.mu.Lock()
+		a.cancelActiveSync()
+		_, finish, ok := a.lockSyncHTTP(w, r)
+		if !ok {
+			return
+		}
+		defer finish()
 		a.pauseSyncLocked()
-		s.mu.Unlock()
-		writeJSON(w, map[string]bool{"ok": true})
+		a.respondSync(w, map[string]bool{"ok": true}, nil)
 	})
 	mux.HandleFunc("POST /api/sync/disconnect", func(w http.ResponseWriter, r *http.Request) {
-		respond(w, map[string]bool{"ok": true}, a.disconnectSync())
+		a.respondSync(w, map[string]bool{"ok": true}, a.disconnectSync())
 	})
 	mux.HandleFunc("POST /api/sync/run", func(w http.ResponseWriter, r *http.Request) {
 		var in struct {
@@ -228,12 +240,15 @@ func (a *App) registerSyncHTTP(mux *http.ServeMux) {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 90*time.Second)
 		defer cancel()
-		respond(w, map[string]bool{"ok": true}, a.synchronize(ctx, in.Resolutions))
+		a.respondSync(w, map[string]bool{"ok": true}, a.synchronize(ctx, in.Resolutions))
 	})
 	mux.HandleFunc("POST /api/sync/invite", func(w http.ResponseWriter, r *http.Request) {
+		r, finish, ok := a.lockSyncHTTP(w, r)
+		if !ok {
+			return
+		}
+		defer finish()
 		s := &a.syncState
-		s.mu.Lock()
-		defer s.mu.Unlock()
 		c, ok := s.backend.(*syncserver.Client)
 		if !ok || s.profile == nil || !s.profile.Owner {
 			writeError(w, 403, errors.New("仅自建同步的管理设备可以生成邀请"))
@@ -245,12 +260,15 @@ func (a *App) registerSyncHTTP(mux *http.ServeMux) {
 		if e == nil {
 			code, e = syncvault.Pack(invite)
 		}
-		respond(w, map[string]any{"code": code, "expires": invite.Expires}, e)
+		a.respondSync(w, map[string]any{"code": code, "expires": invite.Expires}, e)
 	})
 	mux.HandleFunc("GET /api/sync/devices", func(w http.ResponseWriter, r *http.Request) {
+		r, finish, ok := a.lockSyncHTTP(w, r)
+		if !ok {
+			return
+		}
+		defer finish()
 		s := &a.syncState
-		s.mu.Lock()
-		defer s.mu.Unlock()
 		c, ok := s.backend.(*syncserver.Client)
 		if !ok {
 			writeError(w, 400, errors.New("请先解锁本机 / 自建同步空间"))
@@ -258,50 +276,63 @@ func (a *App) registerSyncHTTP(mux *http.ServeMux) {
 		}
 		var devices []syncvault.Device
 		e := c.Request(r.Context(), "GET", "/v1/devices", nil, &devices)
-		respond(w, devices, e)
+		a.respondSync(w, devices, e)
 	})
 	mux.HandleFunc("POST /api/sync/revoke", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ ID string }
 		if !decode(w, r, &in) {
 			return
 		}
+		r, finish, ok := a.lockSyncHTTP(w, r)
+		if !ok {
+			return
+		}
+		defer finish()
 		s := &a.syncState
-		s.mu.Lock()
-		defer s.mu.Unlock()
 		c, ok := s.backend.(*syncserver.Client)
 		if !ok || s.profile == nil || !s.profile.Owner {
 			writeError(w, 403, errors.New("当前设备不能管理自建同步授权"))
 			return
 		}
 		e := c.Request(r.Context(), "POST", "/v1/revoke", map[string]string{"id": in.ID}, nil)
-		respond(w, map[string]bool{"ok": true}, e)
+		a.respondSync(w, map[string]bool{"ok": true}, e)
 	})
 	mux.HandleFunc("POST /api/sync/recovery", func(w http.ResponseWriter, r *http.Request) {
+		r, finish, ok := a.lockSyncHTTP(w, r)
+		if !ok {
+			return
+		}
+		defer finish()
 		s := &a.syncState
-		s.mu.Lock()
-		defer s.mu.Unlock()
 		if s.profile == nil {
 			writeError(w, 400, errors.New("请先解锁同步空间"))
 			return
 		}
-		writeJSON(w, map[string]string{"recovery": syncvault.Encode(s.profile.Master)})
+		a.respondSync(w, map[string]string{"recovery": syncvault.Encode(s.profile.Master)}, nil)
 	})
 	mux.HandleFunc("POST /api/sync/host/stop", func(w http.ResponseWriter, r *http.Request) {
+		a.cancelActiveSync()
+		r, finish, ok := a.lockSyncHTTP(w, r)
+		if !ok {
+			return
+		}
+		defer finish()
 		s := &a.syncState
-		s.mu.Lock()
-		defer s.mu.Unlock()
 		if s.host != nil {
 			s.host.Close()
 			s.host = nil
 		}
 		s.hostSettings.Enabled = false
 		e := atomicConfigFile(filepath.Join(a.store.dir, "sync-service.json"), syncRaw(s.hostSettings))
-		respond(w, map[string]bool{"ok": true}, e)
+		a.respondSync(w, map[string]bool{"ok": true}, e)
 	})
 	mux.HandleFunc("POST /api/sync/host/start", func(w http.ResponseWriter, r *http.Request) {
+		r, finish, ok := a.lockSyncHTTP(w, r)
+		if !ok {
+			return
+		}
+		defer finish()
 		s := &a.syncState
-		s.mu.Lock()
-		defer s.mu.Unlock()
 		s.hostSettings.Enabled = true
 		s.hostError = a.startSyncHostLocked(s.hostSettings)
 		var e error
@@ -310,6 +341,6 @@ func (a *App) registerSyncHTTP(mux *http.ServeMux) {
 		} else {
 			e = atomicConfigFile(filepath.Join(a.store.dir, "sync-service.json"), syncRaw(s.hostSettings))
 		}
-		respond(w, map[string]bool{"ok": true}, e)
+		a.respondSync(w, map[string]bool{"ok": true}, e)
 	})
 }

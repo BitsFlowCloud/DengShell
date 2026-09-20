@@ -114,7 +114,8 @@ func (c *certificates) get(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	if now.Before(c.root.NotBefore) || !now.Before(c.root.NotAfter) {
 		return nil, errors.New("同步根证书无效，需要通过可信设备重新绑定")
 	}
-	if c.leaf != nil && c.leaf.Leaf.NotAfter.After(now.Add(30*24*time.Hour)) {
+	if c.leaf != nil && !now.Before(c.leaf.Leaf.NotBefore) && c.leaf.Leaf.NotAfter.After(now) &&
+		(c.leaf.Leaf.NotAfter.After(now.Add(30*24*time.Hour)) || c.leaf.Leaf.NotAfter.Equal(c.root.NotAfter)) {
 		return c.leaf, nil
 	}
 	key, e := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

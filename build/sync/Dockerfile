@@ -6,7 +6,7 @@ COPY internal/syncvault ./internal/syncvault
 COPY internal/syncserver ./internal/syncserver
 COPY internal/updateproxy ./internal/updateproxy
 COPY cmd/dengshell-sync ./cmd/dengshell-sync
-RUN CGO_ENABLED=0 go build -buildvcs=false -trimpath -ldflags="-s -w" -o /dengshell-sync ./cmd/dengshell-sync
+RUN CGO_ENABLED=0 GOMAXPROCS=4 go build -p 4 -buildvcs=false -trimpath -ldflags="-s -w" -o /dengshell-sync ./cmd/dengshell-sync
 FROM scratch
 COPY --from=build /dengshell-sync /dengshell-sync
 USER 65532:65532

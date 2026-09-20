@@ -13,6 +13,9 @@ import (
 
 var validID = regexp.MustCompile(`^[a-f0-9]{64}$`)
 
+const MaxDevices = 128
+const MaxEntries = 50000
+
 func ID() string            { return Hash(Random()) }
 func ValidID(s string) bool { return validID.MatchString(s) }
 
@@ -144,7 +147,7 @@ func Clone(s Snapshot) Snapshot {
 	return n
 }
 func Validate(s Snapshot) error {
-	if s.Version != Protocol || !ValidID(s.Vault) || !ValidID(s.Device) || s.Sequence == 0 || s.Sequence > 1<<53 || s.Clock[s.Device] != s.Sequence || len(s.Clock) > 128 || len(s.Entries) > 50000 {
+	if s.Version != Protocol || !ValidID(s.Vault) || !ValidID(s.Device) || s.Sequence == 0 || s.Sequence > 1<<53 || s.Clock[s.Device] != s.Sequence || len(s.Clock) > MaxDevices || len(s.Entries) > MaxEntries {
 		return errors.New("同步快照格式或容量无效")
 	}
 	for id, n := range s.Clock {
@@ -239,7 +242,7 @@ func Heads(objects []Object) ([]Object, error) {
 			by[o.Device] = o
 		}
 	}
-	if len(by) > 128 {
+	if len(by) > MaxDevices {
 		return nil, errors.New("同步设备数量超过限制")
 	}
 	out := []Object{}

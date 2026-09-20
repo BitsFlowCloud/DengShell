@@ -36,6 +36,20 @@ try{
  await api('owner','/api/sync/run',{});await api('peer','/api/sync/run',{});const cfg=await api('peer','/api/config');assert(cfg.servers.some(p=>p.name==='UI fixture server'&&!p.hasSecret));checks.push('Actual UI creates HTTPS service and one-use invite; second backend joins and syncs server without password');
  await a.bringToFront();await waitIdle(a);await a.click('#sync-history-open');await a.waitForFunction(()=>!document.querySelector('#sync-history-panel').hidden);assert((await a.$$eval('#sync-history-select option',es=>es.length))>0);
  await a.click('#sync-close');await a.click('#sync-button');await waitIdle(a);
+ // Closing the window must also discard a recovery response still in flight.
+ await a.setRequestInterception(true);
+ let releaseRecovery;
+ const heldRecovery=new Promise(resolve=>releaseRecovery=resolve);
+ const intercept=request=>{if(new URL(request.url()).pathname==='/api/sync/recovery')releaseRecovery(request);else void request.continue();};
+ a.on('request',intercept);
+ await a.click('#sync-recovery-show');const pendingRecovery=await heldRecovery;
+ await a.click('#sync-close');
+ const recoveryResponse=a.waitForResponse(r=>new URL(r.url()).pathname==='/api/sync/recovery');
+ await pendingRecovery.continue();await (await recoveryResponse).text();await waitIdle(a);
+ assert.equal(await a.$eval('#sync-secret-value',e=>e.value),'');assert.equal(await a.$eval('#sync-secret-panel',e=>e.hidden),true);
+ a.off('request',intercept);await a.setRequestInterception(false);
+ checks.push('Closing the sync window discards an in-flight recovery response');
+ await a.click('#sync-button');await waitIdle(a);
  const grant=await api('owner','/api/security-lock/authorize',{});
  // The exact API contract is shared with security-lock.js.
  await api('owner','/api/security-lock/settings',{grant:grant.grant,enabled:true,passwordEnabled:true,password:'1234',idleSeconds:0});

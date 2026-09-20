@@ -28,8 +28,11 @@ func (s *Store) syncProjection(secrets bool) (map[string]json.RawMessage, error)
 	return s.syncProjectionLocked(secrets)
 }
 func (s *Store) syncProjectionLocked(secrets bool) (map[string]json.RawMessage, error) {
+	return s.syncConfigProjection(s.config, secrets, nil)
+}
+func (s *Store) syncConfigProjection(config Config, secrets bool, keyData map[string][]byte) (map[string]json.RawMessage, error) {
 	out := map[string]json.RawMessage{}
-	for _, p := range s.config.Servers {
+	for _, p := range config.Servers {
 		if p.Temporary {
 			continue
 		}
@@ -46,18 +49,22 @@ func (s *Store) syncProjectionLocked(secrets bool) (map[string]json.RawMessage, 
 		}
 		out["server/"+p.ID] = syncRaw(p)
 	}
-	for _, g := range s.config.GroupNodes {
+	for _, g := range config.GroupNodes {
 		out["group/"+g.ID] = syncRaw(g)
 	}
-	for _, c := range s.config.Commands {
+	for _, c := range config.Commands {
 		out["command/"+c.ID] = syncRaw(c)
 	}
-	for _, name := range s.config.CommandGroups {
+	for _, name := range config.CommandGroups {
 		out["command-group/"+syncvault.Hash([]byte(name))] = syncRaw(name)
 	}
 	if secrets {
-		for _, k := range s.config.Keys {
-			b, e := readConfigFile(filepath.Join(s.dir, "keys", k.ID), 2<<20)
+		for _, k := range config.Keys {
+			b, ok := keyData[k.ID]
+			var e error
+			if !ok {
+				b, e = readConfigFile(filepath.Join(s.dir, "keys", k.ID), 2<<20)
+			}
 			if e != nil {
 				return nil, errors.New("无法读取托管私钥，已停止同步")
 			}
@@ -106,6 +113,9 @@ func (s *Store) applySync(expected, next map[string]json.RawMessage, secrets boo
 	return s.prepareSync(expected, next, secrets, true)
 }
 func (s *Store) prepareSync(expected, next map[string]json.RawMessage, secrets, commit bool) error {
+	return s.prepareSyncWithBaseline(expected, next, secrets, commit, nil)
+}
+func (s *Store) prepareSyncWithBaseline(expected, next map[string]json.RawMessage, secrets, commit bool, baseline *map[string]json.RawMessage) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	current, e := s.syncProjectionLocked(secrets)
@@ -116,6 +126,9 @@ func (s *Store) prepareSync(expected, next map[string]json.RawMessage, secrets, 
 		return errors.New("同步期间本机配置已变化，将在下次同步时合并")
 	}
 	if sameProjection(current, next) {
+		if baseline != nil {
+			*baseline = current
+		}
 		return nil
 	}
 	b, e := json.Marshal(s.config)
@@ -249,6 +262,19 @@ func (s *Store) prepareSync(expected, next map[string]json.RawMessage, secrets, 
 	preserveSyncOrder(s.config.Commands, candidate.Commands, func(c QuickCommand) string { return c.ID })
 	preserveSyncOrder(s.config.Keys, candidate.Keys, func(k ManagedKey) string { return k.ID })
 	preserveSyncOrder(s.config.CommandGroups, candidate.CommandGroups, func(s string) string { return s })
+	// Local-only credentials, paths and proxy choices are preserved above.
+	// Capture the actual applied projection under this same mutex, so it cannot
+	// be mistaken for a fresh edit on the next cycle or hide a concurrent edit.
+	applied, e := s.syncConfigProjection(candidate, secrets, keyData)
+	if e != nil {
+		return e
+	}
+	if sameProjection(current, applied) {
+		if baseline != nil {
+			*baseline = current
+		}
+		return nil
+	}
 	// Existing private key material is immutable under an ID. Never replace an
 	// existing user's key file as a side effect of receiving a remote snapshot.
 	created := []string{}
@@ -321,6 +347,9 @@ func (s *Store) prepareSync(expected, next map[string]json.RawMessage, secrets, 
 		return e
 	}
 	committed = true
+	if baseline != nil {
+		*baseline = applied
+	}
 	if files, err := os.ReadDir(backupDir); err == nil && len(files) > 10 {
 		for _, f := range files[:len(files)-10] {
 			if !f.IsDir() && strings.HasSuffix(f.Name(), ".enc") {

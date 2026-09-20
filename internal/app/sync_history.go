@@ -10,9 +10,12 @@ import (
 
 func (a *App) registerSyncHistoryHTTP(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/sync/history", func(w http.ResponseWriter, r *http.Request) {
+		r, finish, ok := a.lockSyncHTTP(w, r)
+		if !ok {
+			return
+		}
+		defer finish()
 		s := &a.syncState
-		s.mu.Lock()
-		defer s.mu.Unlock()
 		if s.profile == nil || s.backend == nil {
 			writeError(w, 400, errors.New("请先解锁同步空间"))
 			return
@@ -27,16 +30,19 @@ func (a *App) registerSyncHistoryHTTP(mux *http.ServeMux) {
 			}
 			return objects[i].Device < objects[j].Device
 		})
-		respond(w, objects, e)
+		a.respondSync(w, objects, e)
 	})
 	mux.HandleFunc("POST /api/sync/restore", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ ID string }
 		if !decode(w, r, &in) {
 			return
 		}
+		r, finish, ok := a.lockSyncHTTP(w, r)
+		if !ok {
+			return
+		}
+		defer finish()
 		s := &a.syncState
-		s.mu.Lock()
-		defer s.mu.Unlock()
 		if s.profile == nil || s.backend == nil {
 			writeError(w, 400, errors.New("请先解锁同步空间"))
 			return
@@ -83,6 +89,6 @@ func (a *App) registerSyncHistoryHTTP(mux *http.ServeMux) {
 				s.notice = "历史版本已恢复到本机，将作为一次新修改同步到其他设备。"
 			}
 		}
-		respond(w, map[string]bool{"ok": true}, e)
+		a.respondSync(w, map[string]bool{"ok": true}, e)
 	})
 }

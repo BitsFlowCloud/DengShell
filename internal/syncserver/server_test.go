@@ -4,6 +4,7 @@ import (
 	"cloudshell/internal/syncvault"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -177,4 +178,59 @@ func TestWindowsFileURIAndExclusiveServerDirectory(t *testing.T) {
 		t.Fatal("service lease did not release", e)
 	}
 	next.Close()
+}
+
+func TestSnapshotRetryRejectsChangedIdentity(t *testing.T) {
+	s, c, _, _ := fixture(t)
+	device, e := s.authenticate(c.Token)
+	if e != nil {
+		t.Fatal(e)
+	}
+	data := []byte(strings.Repeat("ciphertext fixture", 4))
+	o := syncvault.Object{Device: device.ID, Sequence: 1, Hash: syncvault.Hash(data), Size: int64(len(data))}
+	if e = c.Write(context.Background(), o, data); e != nil {
+		t.Fatal(e)
+	}
+	o.Sequence = 2
+	if e = c.Write(context.Background(), o, data); e == nil {
+		t.Fatal("same ciphertext was acknowledged as a different snapshot sequence")
+	}
+}
+
+func TestHistoryQuotaRetainsCurrentHeadsAndAllowsFurtherSync(t *testing.T) {
+	s, c, _, _ := fixture(t)
+	s.maxStorageBytes = 1000
+	d, e := s.authenticate(c.Token)
+	if e != nil {
+		t.Fatal(e)
+	}
+	for seq := uint64(1); seq <= 25; seq++ {
+		data := []byte(fmt.Sprintf("%010d%s", seq, strings.Repeat("encrypted-data", 20)))
+		o := syncvault.Object{Device: d.ID, Sequence: seq, Hash: syncvault.Hash(data), Size: int64(len(data))}
+		if e = c.Write(context.Background(), o, data); e != nil {
+			t.Fatalf("history blocked new snapshot %d: %v", seq, e)
+		}
+	}
+	objects, e := c.List(context.Background())
+	if e != nil {
+		t.Fatal(e)
+	}
+	heads, e := syncvault.Heads(objects)
+	if e != nil || len(heads) != 1 || heads[0].Sequence != 25 {
+		t.Fatal(heads, e)
+	}
+	if len(objects) > 20 || len(objects) < 2 {
+		t.Fatalf("incorrect history retention: %d", len(objects))
+	}
+	before := mustJSON(objects)
+	s.maxStorageBytes = 40
+	data := []byte(strings.Repeat("would not fit", 8))
+	o := syncvault.Object{Device: d.ID, Sequence: 26, Hash: syncvault.Hash(data), Size: int64(len(data))}
+	if e = c.Write(context.Background(), o, data); e == nil {
+		t.Fatal("current head capacity limit ignored")
+	}
+	after, e := c.List(context.Background())
+	if e != nil || !syncvault.EqualJSON(before, mustJSON(after)) {
+		t.Fatal("failed upload pruned existing history", e)
+	}
 }
