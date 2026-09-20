@@ -66,7 +66,7 @@ def build(args):
         else:
             shutil.copy2(binaries[0], executable)
         executable.chmod(0o755)
-        run("xcrun", "lipo", "-verify_arch", *["x86_64" if a == "amd64" else a for a in archs], executable)
+        run("xcrun", "lipo", executable, "-verify_arch", *["x86_64" if a == "amd64" else a for a in archs])
 
         iconset = stage / "DengShell.iconset"
         iconset.mkdir()
