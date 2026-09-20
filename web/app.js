@@ -317,6 +317,7 @@ function createTerminal(state) {
     host.append(view); state.connectionView = view;
   }
   installTerminalFontMetrics(state);
+  installTerminalMouseCoordinates(state);
   bindTerminalContext(state);
   bindShellIntegration(state);
   if (state.restoration?.clientState?.shellIntegration) state.shellIntegration = { ...state.restoration.clientState.shellIntegration };

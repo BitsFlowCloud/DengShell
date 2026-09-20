@@ -1,5 +1,41 @@
 'use strict';
 
+// xterm 6 expects unscaled CSS pixels for selection, mouse reports and drag
+// scrolling. Measure the actual coordinate scale (rather than OS DPI or the
+// requested UI scale), since Chromium and WebKit handle CSS zoom differently.
+// This adapter is tied to the pinned xterm 6 services, like our font adapter.
+function installTerminalMouseCoordinates(state) {
+  const term = state.term, core = term?._core;
+  const mouse = core?._mouseService, selection = core?._selectionService, screen = core?.screenElement;
+  if (!screen || !mouse?.getCoords || !mouse?.getMouseReportCoords || !selection?._getMouseEventScrollAmount) return;
+  const probe = document.createElement('span');
+  probe.setAttribute('aria-hidden', 'true');
+  probe.style.cssText = 'position:absolute;left:0;top:0;display:block;width:100px;height:100px;padding:0;border:0;margin:0;visibility:hidden;pointer-events:none';
+  function coordinates(event, element) {
+    const measured = probe.getBoundingClientRect();
+    const scaleX = measured.width / 100, scaleY = measured.height / 100;
+    if (!(scaleX > 0 && scaleY > 0) || scaleX === 1 && scaleY === 1) return event;
+    const rect = element.getBoundingClientRect();
+    return { clientX: rect.left + (event.clientX - rect.left) / scaleX, clientY: rect.top + (event.clientY - rect.top) / scaleY };
+  }
+  const restorers = [];
+  function adapt(service, name, elementFor) {
+    const original = service[name];
+    const wrapped = function (event, ...args) { return original.call(this, coordinates(event, elementFor(...args)), ...args); };
+    service[name] = wrapped;
+    restorers.push(() => { if (service[name] === wrapped) service[name] = original; });
+  }
+  term.loadAddon({
+    activate() {
+      screen.append(probe);
+      adapt(mouse, 'getCoords', element => element);
+      adapt(mouse, 'getMouseReportCoords', element => element);
+      adapt(selection, '_getMouseEventScrollAmount', () => screen);
+    },
+    dispose() { restorers.forEach(restore => restore()); probe.remove(); }
+  });
+}
+
 // Shell-confirmed commands only. Never infer history from keys, echoed screen
 // contents, password prompts, pasted input, or a terminal application's input.
 function bindShellIntegration(state) {

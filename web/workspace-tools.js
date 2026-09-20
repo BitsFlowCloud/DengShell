@@ -10,7 +10,7 @@ function renderCommands() {
     const button = node('button', value === commandGroup ? 'selected' : '', label);
     button.type = 'button'; button.title = value ? `${label} · 拖动排序，右键重命名` : label; button.setAttribute('aria-pressed', String(value === commandGroup));
     button.dataset.commandGroup = value;
-    button.onclick = () => { if (performance.now() < commandDragUntil) return; commandGroup = value; renderCommands(); };
+    button.onclick = () => { if (performance.now() < commandDragUntil) return; if (commandGroup !== value) window.DengCommandComposer?.collapseQuick(); commandGroup = value; renderCommands(); };
     if (value) bindCommandDrag(button, 'group', value);
     return button;
   }));

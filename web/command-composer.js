@@ -21,7 +21,8 @@ window.DengCommandComposer = (() => {
     if (!usable(state)) throw new Error('目标连接已断开或正在转移，请重新选择连接');
     const body = prepare(text, appendCR, state.term.modes?.bracketedPasteMode && !state.term.options?.ignoreBracketedPasteMode);
     if (current() !== state) activate(state.id);
-    return pasteTerminalText(state, body, { execute: appendCR });
+    if (pasteTerminalText(state, body, { execute: appendCR }) === false) throw new Error('命令未发送，请检查连接后重试');
+    return true;
   }
   function insert(area, index) {
     const text = `[p#${index} 参数${index}]`, start = area.selectionStart;
@@ -47,6 +48,9 @@ window.DengCommandComposer = (() => {
       if (previousHeight) style.setProperty('--files-height', previousHeight); else style.removeProperty('--files-height');
     }
     previousHeight = expandedHeight = null;
+  }
+  function collapseQuick() {
+    if (compact && panel && !panel.hidden) collapse();
   }
   function render() {
     if (!activeDraft) return;
@@ -102,7 +106,7 @@ window.DengCommandComposer = (() => {
   }
   function run(command) {
     if (parameters(command.body).length || /\[p#/.test(command.body) || !usable(current())) { open(command, null, true); return; }
-    try { send(current(), command.body, command.appendCR === true); }
+    try { send(current(), command.body, command.appendCR === true); collapseQuick(); }
     catch (error) { open(command, null, true); toast(error.message); }
   }
   function init() {
@@ -119,7 +123,7 @@ window.DengCommandComposer = (() => {
     const foot = node('div', 'command-composer-footer'), crLabel = node('label', 'checkbox-label'); cr = node('input'); cr.type = 'checkbox'; cr.id = 'composer-append-cr';
     cr.onchange = () => { activeDraft.appendCR = cr.checked; render(); }; crLabel.append(cr, document.createTextNode('末尾添加回车 CR'));
     sendButton = node('button', 'primary-button', '仅填入终端'); sendButton.id = 'composer-send';
-    sendButton.onclick = safe(() => { render(); if (sendButton.disabled) return; send(sessions.get(activeDraft.targetID), resolve(activeDraft.body, activeDraft.values), cr.checked); });
+    sendButton.onclick = safe(() => { render(); if (sendButton.disabled) return; send(sessions.get(activeDraft.targetID), resolve(activeDraft.body, activeDraft.values), cr.checked); collapseQuick(); });
     const saveAs = node('button', 'upload-button composer-save-as', '存为快捷命令'); saveAs.onclick = () => editCommand({ name: '', body: activeDraft.body, appendCR: cr.checked, group: commandGroup });
     foot.append(crLabel, saveAs, sendButton); note = node('p', 'command-composer-note'); note.setAttribute('role', 'status');
     panel.append(head, targetLabel, label, parameterButtons(template), fields, preview, foot, note);
@@ -132,5 +136,5 @@ window.DengCommandComposer = (() => {
     expand.onclick = () => open(null, $('#command-input').value); $('#command-history').before(expand);
   }
   document.addEventListener('DOMContentLoaded', init, { once: true });
-  return { parameters, resolve, prepare, send, run, open, reflect, insert, parameterButtons };
+  return { parameters, resolve, prepare, send, run, open, reflect, insert, parameterButtons, collapseQuick };
 })();
