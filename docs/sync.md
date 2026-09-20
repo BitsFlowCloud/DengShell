@@ -39,7 +39,8 @@ Docker 方式，在项目根目录执行：
 
 ```sh
 docker build -f build/sync/Dockerfile -t dengshell-sync .
-sudo install -d -m 700 -o 65532 -g 65532 ./sync-data
+sudo install -d -m 700 ./sync-data
+sudo chown 65532:65532 ./sync-data
 docker run -d --name dengshell-sync --restart unless-stopped \
   --read-only --cap-drop ALL --security-opt no-new-privileges \
   -p 18443:18443 -v "$PWD/sync-data:/data" dengshell-sync \
