@@ -76,36 +76,38 @@ try{
  [DengExitQA]::PostMessage($handle,0x0010,[IntPtr]::Zero,[IntPtr]::Zero)|Out-Null;Confirm-Persistent;Click '继续使用'
  Passed 'Taskbar-equivalent WM_CLOSE restores hidden/minimized window and keeps confirmation visible'
  $tray=[DengExitQA]::Find($running.Id,'DengShellTrayWindow');if($tray -eq [IntPtr]::Zero){throw 'Native tray window missing'}
- # Query the actual Shell icon instead of relying on absent UI Automation providers.
- $iconBounds=New-Object DengExitQA+RECT
- $iconResult=[DengExitQA]::IconRect($tray,$running.Id,[ref]$iconBounds)
- $initialIconResult=$iconResult
- if($iconResult -eq 1 -and $iconBounds.Right -gt $iconBounds.Left -and $iconBounds.Bottom -gt $iconBounds.Top){
-  # Explorer may return the overflow control when the icon is hidden. Open it,
-  # then ask Shell again for the actual icon rectangle before right-clicking.
-  [DengExitQA]::SetCursorPos([int](($iconBounds.Left+$iconBounds.Right)/2),[int](($iconBounds.Top+$iconBounds.Bottom)/2))|Out-Null
-  [DengExitQA]::mouse_event(2,0,0,0,[UIntPtr]::Zero);[DengExitQA]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
-  Start-Sleep -Milliseconds 500
+ # Explorer can move a newly added icon into overflow while the test is
+ # running. Resolve its rectangle afresh for each bounded attempt, and only
+ # proceed after a visible popup owned by DengShell actually exists.
+ $report.tray=@{tested=$false;attempts=@()};$menuWindow=[IntPtr]::Zero
+ for($attempt=1;$attempt -le 3 -and $menuWindow -eq [IntPtr]::Zero;$attempt++){
+  if($attempt -gt 1){[System.Windows.Forms.SendKeys]::SendWait('{ESC}');Start-Sleep -Milliseconds 500}
+  $iconBounds=New-Object DengExitQA+RECT
+  $iconResult=[DengExitQA]::IconRect($tray,$running.Id,[ref]$iconBounds);$initialIconResult=$iconResult
+  if($iconResult -eq 1 -and $iconBounds.Right -gt $iconBounds.Left -and $iconBounds.Bottom -gt $iconBounds.Top){
+   [DengExitQA]::SetCursorPos([int](($iconBounds.Left+$iconBounds.Right)/2),[int](($iconBounds.Top+$iconBounds.Bottom)/2))|Out-Null
+   [DengExitQA]::mouse_event(2,0,0,0,[UIntPtr]::Zero);[DengExitQA]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
+   Start-Sleep -Milliseconds 700
+  }
+  Start-Sleep -Milliseconds 300
   $iconResult=[DengExitQA]::IconRect($tray,$running.Id,[ref]$iconBounds)
- }
- $report.tray=@{initialShellResult=$initialIconResult;shellResult=$iconResult;rectangle=$iconBounds;tested=$false}
- if($iconResult -ne 0 -or $iconBounds.Right -le $iconBounds.Left -or $iconBounds.Bottom -le $iconBounds.Top){
-  $report.tray.reason='Runner shell does not expose a notification icon rectangle; physical tray interaction unavailable'
-  Write-Warning $report.tray.reason
- }else{
+  $report.tray.attempts+=@{initialShellResult=$initialIconResult;shellResult=$iconResult;rectangle=$iconBounds}
+  if($iconResult -ne 0 -or $iconBounds.Right -le $iconBounds.Left -or $iconBounds.Bottom -le $iconBounds.Top){continue}
   [DengExitQA]::SetCursorPos([int](($iconBounds.Left+$iconBounds.Right)/2),[int](($iconBounds.Top+$iconBounds.Bottom)/2))|Out-Null
   [DengExitQA]::mouse_event(8,0,0,0,[UIntPtr]::Zero);[DengExitQA]::mouse_event(16,0,0,0,[UIntPtr]::Zero)
-  Wait-ExitQA {[DengExitQA]::Find($running.Id,'#32768',$true) -ne [IntPtr]::Zero} 'native tray popup menu'
-  $menuWindow=[DengExitQA]::Find($running.Id,'#32768',$true);$menuBounds=New-Object DengExitQA+RECT
-  if(![DengExitQA]::GetWindowRect($menuWindow,[ref]$menuBounds)){throw 'Tray popup rectangle unavailable'}
-  $report.tray.menuRectangle=$menuBounds
-  if($menuBounds.Left -eq 0 -and $menuBounds.Top -eq 0 -and $menuBounds.Right -eq 100 -and $menuBounds.Bottom -eq 100){throw 'Tray popup has uninitialized placeholder bounds'}
-  # This native menu has two entries: Open, then Exit. Click the second item.
-  [DengExitQA]::SetCursorPos([int](($menuBounds.Left+$menuBounds.Right)/2),[int]($menuBounds.Top+($menuBounds.Bottom-$menuBounds.Top)*0.75))|Out-Null
-  Start-Sleep -Milliseconds 150
-  [DengExitQA]::mouse_event(2,0,0,0,[UIntPtr]::Zero);[DengExitQA]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
-  Confirm-Persistent;Click '继续使用';$report.tray.tested=$true;Passed 'Actual native tray context-menu exit reaches persistent confirmation'
+  $menuDeadline=[DateTime]::UtcNow.AddSeconds(3)
+  do{$menuWindow=[DengExitQA]::Find($running.Id,'#32768',$true);if($menuWindow -ne [IntPtr]::Zero){break};Start-Sleep -Milliseconds 100}while([DateTime]::UtcNow -lt $menuDeadline)
  }
+ if($menuWindow -eq [IntPtr]::Zero){throw 'Native DengShell tray popup was not visible after three fresh icon-position attempts'}
+ $menuBounds=New-Object DengExitQA+RECT
+ if(![DengExitQA]::GetWindowRect($menuWindow,[ref]$menuBounds)){throw 'Tray popup rectangle unavailable'}
+ $report.tray.menuRectangle=$menuBounds
+ if($menuBounds.Left -eq 0 -and $menuBounds.Top -eq 0 -and $menuBounds.Right -eq 100 -and $menuBounds.Bottom -eq 100){throw 'Tray popup has uninitialized placeholder bounds'}
+ # This native menu has two entries: Open, then Exit. Click the second item.
+ [DengExitQA]::SetCursorPos([int](($menuBounds.Left+$menuBounds.Right)/2),[int]($menuBounds.Top+($menuBounds.Bottom-$menuBounds.Top)*0.75))|Out-Null
+ Start-Sleep -Milliseconds 150
+ [DengExitQA]::mouse_event(2,0,0,0,[UIntPtr]::Zero);[DengExitQA]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
+ Confirm-Persistent;Click '继续使用';$report.tray.tested=$true;Passed 'Actual native tray context-menu exit reaches persistent confirmation'
  Click '立即锁定';Wait-ExitQA {$null -ne (Control '软件已被锁定')} 'locked screen'
  Click '解锁';Wait-ExitQA {$null -ne (Control '返回锁定界面')} 'unlock form'
  [DengExitQA]::PostMessage($handle,0x0010,[IntPtr]::Zero,[IntPtr]::Zero)|Out-Null
