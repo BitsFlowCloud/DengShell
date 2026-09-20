@@ -74,11 +74,19 @@ try{
  [DengExitQA]::PostMessage($handle,0x0010,[IntPtr]::Zero,[IntPtr]::Zero)|Out-Null;Confirm-Persistent;Click '继续使用'
  Passed 'Taskbar-equivalent WM_CLOSE restores hidden/minimized window and keeps confirmation visible'
  $tray=[DengExitQA]::Find($running.Id,'DengShellTrayWindow');if($tray -eq [IntPtr]::Zero){throw 'Native tray window missing'}
- # The GitHub hosted runner can have a noninteractive Explorer notification area.
  # Query the actual Shell icon instead of relying on absent UI Automation providers.
  $iconBounds=New-Object DengExitQA+RECT
  $iconResult=[DengExitQA]::IconRect($tray,$running.Id,[ref]$iconBounds)
- $report.tray=@{shellResult=$iconResult;rectangle=$iconBounds;tested=$false}
+ $initialIconResult=$iconResult
+ if($iconResult -eq 1 -and $iconBounds.Right -gt $iconBounds.Left -and $iconBounds.Bottom -gt $iconBounds.Top){
+  # Explorer may return the overflow control when the icon is hidden. Open it,
+  # then ask Shell again for the actual icon rectangle before right-clicking.
+  [DengExitQA]::SetCursorPos([int](($iconBounds.Left+$iconBounds.Right)/2),[int](($iconBounds.Top+$iconBounds.Bottom)/2))|Out-Null
+  [DengExitQA]::mouse_event(2,0,0,0,[UIntPtr]::Zero);[DengExitQA]::mouse_event(4,0,0,0,[UIntPtr]::Zero)
+  Start-Sleep -Milliseconds 500
+  $iconResult=[DengExitQA]::IconRect($tray,$running.Id,[ref]$iconBounds)
+ }
+ $report.tray=@{initialShellResult=$initialIconResult;shellResult=$iconResult;rectangle=$iconBounds;tested=$false}
  if($iconResult -ne 0 -or $iconBounds.Right -le $iconBounds.Left -or $iconBounds.Bottom -le $iconBounds.Top){
   $report.tray.reason='Runner shell does not expose a notification icon rectangle; physical tray interaction unavailable'
   Write-Warning $report.tray.reason
