@@ -22,11 +22,12 @@ public static class DengExitQA {
  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h,uint m,IntPtr w,IntPtr l);
  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h,int n);
  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+ [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h,out RECT r);
  [DllImport("user32.dll")] public static extern bool SetCursorPos(int x,int y);
  [DllImport("user32.dll")] public static extern void mouse_event(uint f,uint x,uint y,uint d,UIntPtr e);
  [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
- public static IntPtr Find(uint pid,string cls){IntPtr found=IntPtr.Zero;EnumWindows((h,l)=>{uint p;GetWindowThreadProcessId(h,out p);var s=new StringBuilder(256);GetClassName(h,s,256);if(p==pid && s.ToString()==cls){found=h;return false;}return true;},IntPtr.Zero);return found;}
+ public static IntPtr Find(uint pid,string cls,bool visible=false){IntPtr found=IntPtr.Zero;EnumWindows((h,l)=>{uint p;GetWindowThreadProcessId(h,out p);var s=new StringBuilder(256);GetClassName(h,s,256);if(p==pid && s.ToString()==cls && (!visible || IsWindowVisible(h))){found=h;return false;}return true;},IntPtr.Zero);return found;}
 }
 '@
 [DengExitQA]::SetProcessDPIAware()|Out-Null
@@ -94,10 +95,11 @@ try{
  }else{
   [DengExitQA]::SetCursorPos([int](($iconBounds.Left+$iconBounds.Right)/2),[int](($iconBounds.Top+$iconBounds.Bottom)/2))|Out-Null
   [DengExitQA]::mouse_event(8,0,0,0,[UIntPtr]::Zero);[DengExitQA]::mouse_event(16,0,0,0,[UIntPtr]::Zero)
-  Wait-ExitQA {[DengExitQA]::Find($running.Id,'#32768') -ne [IntPtr]::Zero} 'native tray popup menu'
-  $menuWindow=[DengExitQA]::Find($running.Id,'#32768');$menuBounds=New-Object DengExitQA+RECT
+  Wait-ExitQA {[DengExitQA]::Find($running.Id,'#32768',$true) -ne [IntPtr]::Zero} 'native tray popup menu'
+  $menuWindow=[DengExitQA]::Find($running.Id,'#32768',$true);$menuBounds=New-Object DengExitQA+RECT
   if(![DengExitQA]::GetWindowRect($menuWindow,[ref]$menuBounds)){throw 'Tray popup rectangle unavailable'}
   $report.tray.menuRectangle=$menuBounds
+  if($menuBounds.Left -eq 0 -and $menuBounds.Top -eq 0 -and $menuBounds.Right -eq 100 -and $menuBounds.Bottom -eq 100){throw 'Tray popup has uninitialized placeholder bounds'}
   # This native menu has two entries: Open, then Exit. Click the second item.
   [DengExitQA]::SetCursorPos([int](($menuBounds.Left+$menuBounds.Right)/2),[int]($menuBounds.Top+($menuBounds.Bottom-$menuBounds.Top)*0.75))|Out-Null
   Start-Sleep -Milliseconds 150
