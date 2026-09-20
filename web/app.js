@@ -327,7 +327,7 @@ function createTerminal(state) {
     if (event.ctrlKey && !event.altKey && event.code === 'KeyC') {
       event.preventDefault();
       if (event.shiftKey) copyTerminalSelection(state).catch(() => toast('无法访问剪贴板'));
-      else { terminal.clearSelection(); sendInput(state, '\x03'); }
+      else { terminal.clearSelection(); terminal.scrollToBottom(); sendInput(state, '\x03'); }
       return false;
     }
     if (event.ctrlKey && !event.altKey && event.shiftKey && event.code === 'KeyV') { event.preventDefault(); pasteClipboard(state).catch(() => toast('无法访问剪贴板')); return false; }
@@ -630,8 +630,10 @@ function renderMonitor(stats) {
   meter('#swap-meter', stats?.swapTotal ? stats.swapUsed / stats.swapTotal * 100 : 0, stats ? `${prettySize(stats.swapUsed)} / ${prettySize(stats.swapTotal)}` : '—', !!stats);
   renderProcesses(stats);
   const disks = stats?.disks || []; const root = disks.find(disk => disk.path === '/') || disks[0];
-  $('#disk-used').textContent = root ? compactDiskSize(root.used) : '—'; $('#disk-total').textContent = root ? compactDiskSize(root.total) : '—'; const availablePercent = root?.total ? Math.max(0, Math.min(100, root.available / root.total * 100)) : 0; $('#disk-percent').textContent = root ? `${availablePercent.toFixed(1)}%` : '—'; $('.disk-summary').title = root?.path || '分区容量'; $('.disk-total-bar i').style.width = `${availablePercent}%`;
-  $('#disk-list').replaceChildren(...disks.map(disk => { const row = node('div', 'disk-row'); row.append(node('span', '', disk.path), node('span', '', `${prettySize(disk.available)} / ${prettySize(disk.total)}`)); row.title = disk.path; return row; }));
+  $('#disk-used').textContent = root ? prettySize(root.used) : '—';
+  $('#disk-available').textContent = root ? prettySize(root.available) : '—';
+  $('#disk-total').textContent = root ? prettySize(root.total) : '—';
+  $('.disk-summary').title = root ? `分区 ${root.path} · 可用空间为文件系统报告值` : '分区容量';
   $('#disk-read').textContent = stats?.sampleReady ? prettySize(stats.diskRead) + '/s' : '—'; $('#disk-write').textContent = stats?.sampleReady ? prettySize(stats.diskWrite) + '/s' : '—';
   renderNetwork(stats);
   renderServerAddresses(stats);

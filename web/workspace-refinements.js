@@ -80,14 +80,21 @@ async function copyText(text) { if (native()?.WriteClipboard) await native().Wri
 async function pasteClipboard(state) {
   if (!state?.ready) return;
   const text = native()?.ReadClipboard ? await native().ReadClipboard() : await navigator.clipboard.readText();
-  if (!sessions.has(state.id) || !state.ready) return;
-  pasteTerminalText(state, text);
+  if (sessions.get(state.id) !== state || !state.ready) return;
+  pasteTerminalClipboard(state, text);
 }
 async function copyTerminalSelection(state) {
   const selection = state?.term.getSelection(); if (!selection) return;
   await copyText(selection); toast('选中文字已复制');
 }
 function bindTerminalContext(state) {
+  // Capture native Ctrl/Cmd+V and Shift+Insert before xterm's paste listener.
+  // The custom clipboard shortcut and context menu use the same path below.
+  state.host.addEventListener('paste', event => {
+    if (!event.clipboardData) return;
+    event.preventDefault(); event.stopPropagation();
+    pasteTerminalClipboard(state, event.clipboardData.getData('text/plain'));
+  }, true);
   state.host.addEventListener('contextmenu', event => {
     event.preventDefault(); event.stopPropagation(); terminalMenuSession = state;
     const menu = $('#terminal-menu'); menu.hidden = false;
@@ -126,7 +133,6 @@ function renderCommandHistory() {
 }
 function resizeCommandInput() { const input = $('#command-input'); input.style.height = 'auto'; input.style.height = `${Math.min(76, input.scrollHeight)}px`; }
 function openCommandHistory() { historySession = current(); $('#history-filter').value = ''; renderCommandHistory(); $('#history-dialog').showModal(); $('#history-filter').focus(); refreshGlobalCommandHistory().catch(error => toast(`命令历史刷新失败：${error.message || error}`)); }
-function compactDiskSize(bytes) { const unit = bytes >= 1024 ** 4 ? 'T' : 'G'; return `${(bytes / 1024 ** (unit === 'T' ? 4 : 3)).toFixed(1)}${unit}`; }
 function processMemoryText(process) {
   if (!process.memoryReady || process.memoryEstimated || !Number.isSafeInteger(process.memory) || process.memory < 0) return '—';
   for (const [power,unit] of [[4,'TiB'],[3,'GiB'],[2,'MiB'],[1,'KiB']]) if (process.memory >= 1024 ** power) return `${(process.memory / 1024 ** power).toFixed(2)} ${unit}`;

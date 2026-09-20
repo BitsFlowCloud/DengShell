@@ -43,12 +43,25 @@ function acceptShellIntegration(state, metadata) {
 }
 
 function pasteTerminalText(state, text, { execute = false } = {}) {
-  if (!state?.ready || typeof text !== 'string') return false;
+  if (!state?.connected || !state.ready || state.closed || state.detaching || state.restoring || state.ownershipUncertain || typeof text !== 'string') return false;
   state.term.clearSelection();
   // xterm consults the remote program's current bracketed-paste mode, keeping
   // pasted newlines distinct from an explicit command submission.
+  const bracketed = state.term.modes.bracketedPasteMode && !state.term.options.ignoreBracketedPasteMode;
   state.term.paste(text);
-  if (execute) sendInput(state, '\r');
+  // Bracketed paste always needs a CR outside the closing marker. In plain
+  // mode a trailing newline already submits the last line; do not submit twice.
+  if (execute && (bracketed || !/[\r\n]$/.test(text))) sendInput(state, '\r');
   state.term.focus();
   return true;
+}
+
+function pasteTerminalClipboard(state, text) {
+  if (!state?.term || typeof text !== 'string') return false;
+  const multiline = text.replace(/\r\n?/g, '\n').trim().includes('\n');
+  // Do not add a command submission to a full-screen editor or to input for
+  // a running program. Shell integration reports the prompt authoritatively;
+  // shells without integration retain the normal-screen paste fallback.
+  const atPrompt = state.term.buffer.active.type === 'normal' && (!state.shellIntegration?.ready || state.shellIntegration.atPrompt);
+  return pasteTerminalText(state, text, { execute: multiline && atPrompt });
 }

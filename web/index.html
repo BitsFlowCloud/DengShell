@@ -15,12 +15,12 @@
   <link rel="stylesheet" href="workspace-tools.css?v=20260919-v001-r50-b53">
   <link rel="stylesheet" href="appearance.css?v=20260919-v001-r50-b53">
   <link rel="stylesheet" href="process-view.css?v=20260919-v001-r50-b53">
-  <link rel="stylesheet" href="workspace-refinements.css?v=20260919-v001-r50-b53">
+  <link rel="stylesheet" href="workspace-refinements.css?v=20260920-v001-r50-b59">
   <link rel="stylesheet" href="file-browser.css?v=20260919-v001-r50-b53">
   <link rel="stylesheet" href="themed-select.css?v=20260919-v001-r50-b53">
   <link rel="stylesheet" href="config-document.css?v=20260919-v001-r50-b53">
   <link rel="stylesheet" href="startup-update.css?v=20260919-v001-r50-b53">
-  <link rel="stylesheet" href="desktop-polish.css?v=20260919-v001-r50-b53">
+  <link rel="stylesheet" href="desktop-polish.css?v=20260920-v001-r50-b59">
   <link rel="stylesheet" href="splash.css?v=20260919-v001-r50-b53">
   <link rel="stylesheet" href="server-manager.css?v=20260919-v001-r50-b53">
   <link rel="stylesheet" href="help-guide.css?v=20260919-v001-r50-b53">
@@ -88,9 +88,9 @@
       <button class="icon-button theme-toggle header-pill theme-pill" id="theme-toggle" aria-label="深色模式" aria-pressed="false" title="切换到深色模式"><svg class="theme-moon"><use href="#i-moon"/></svg><svg class="theme-sun"><use href="#i-sun"/></svg></button>
       <button class="icon-button header-pill" id="security-lock-button" aria-label="立即锁定" title="请先在设置中启用安全锁定" disabled><svg><use href="#i-lock"/></svg></button>
       <button class="icon-button header-pill sync-pill" id="sync-button" aria-label="同步" title="加密同步" aria-haspopup="dialog"><span aria-hidden="true">同</span></button>
+      <button id="connection-button" class="connection-button" title="服务器管理" aria-label="服务器管理"><svg><use href="#i-server"/></svg></button>
     </div>
     <nav class="session-bar" aria-label="SSH 会话">
-      <button id="connection-button" class="connection-button" title="服务器管理" aria-label="服务器管理"><svg><use href="#i-server"/></svg></button>
       <div id="session-tabs" class="session-tabs"></div>
       <button class="icon-button add-session" id="add-session" aria-label="快速连接" title="快速连接"><svg><use href="#i-plus"/></svg></button>
       <button class="icon-button" id="toggle-monitor" aria-label="系统与磁盘信息" title="系统与磁盘信息" aria-expanded="false"><svg><use href="#i-cpu"/></svg></button>
@@ -115,7 +115,11 @@
         <section class="process-details process-card"><header class="process-heading">活跃进程 <span id="monitor-state" title="系统监控状态">待连接</span><span id="process-count">—</span></header><div class="process-table" tabindex="0" aria-label="资源占用前五的进程"><table><colgroup><col class="process-memory-col"><col class="process-cpu-col"><col class="process-name-col"></colgroup><thead><tr><th aria-sort="none"><button id="sort-process-memory" title="显示内存占用最高的前 5 个进程，双击恢复 CPU 排名">内存 <span></span></button></th><th aria-sort="none"><button id="sort-process-cpu" title="显示采样间隔内 CPU 占用最高的前 5 个进程；单核满载为 100%。">CPU <span></span></button></th><th>进程</th></tr></thead><tbody id="process-list"></tbody></table></div></section>
 
       </section>
-      <section class="disk-section"><h2 title="磁盘容量与挂载信息约每 30 秒更新；读写速率按监控采样更新"><svg><use href="#i-disk"/></svg>磁盘空间</h2><div class="disk-summary"><span>已使用 <b id="disk-used">—</b> / 总计 <b id="disk-total">—</b></span><span>可用百分比 <b id="disk-percent">—</b></span></div><div class="disk-total-bar" title="可用空间比例"><i style="width:0"></i></div><div class="disk-table-head"><span>挂载路径</span><span>可用 / 总量</span></div><div id="disk-list"></div><div class="disk-io"><div class="disk-readout read"><span>↓ 读取</span><strong id="disk-read">—</strong></div><div class="disk-readout write"><span>↑ 写入</span><strong id="disk-write">—</strong></div></div></section>
+      <section class="disk-section">
+        <h2 title="磁盘容量约每 30 秒更新；读写速率按监控采样更新"><svg><use href="#i-disk"/></svg>磁盘空间</h2>
+        <div class="disk-summary"><span>已用空间<b id="disk-used">—</b></span><span>可用空间<b id="disk-available">—</b></span><span>总计空间<b id="disk-total">—</b></span></div>
+        <div class="disk-io"><div class="disk-readout read"><span>↓ 读取</span><strong id="disk-read">—</strong></div><div class="disk-readout write"><span>↑ 写入</span><strong id="disk-write">—</strong></div></div>
+      </section>
     </aside>
     <div class="splitter vertical" id="sidebar-splitter" role="separator" aria-label="调整侧栏宽度" aria-orientation="vertical" aria-valuemin="240" aria-valuemax="460" aria-valuenow="304" tabindex="0"><span></span></div>
 
@@ -295,9 +299,9 @@
   <script src="font-library.js?v=20260919-v001-r50-b53"></script>
   <script src="file-browser.js?v=20260919-v001-r50-b53"></script>
   <script src="latency-chart.js?v=20260919-v001-r50-b53"></script>
-  <script src="workspace-refinements.js?v=20260919-v001-r50-b53"></script>
+  <script src="workspace-refinements.js?v=20260920-v001-r50-b59"></script>
   <script src="themed-select.js?v=20260919-v001-r50-b53"></script>
-  <script src="terminal-integration.js?v=20260919-v001-r50-b53"></script>
+  <script src="terminal-integration.js?v=20260920-v001-r50-b59"></script>
   <script src="mtr-installation.js?v=20260919-v001-r50-b53"></script>
   <script src="config-document.js?v=20260919-v001-r50-b53"></script>
   <script src="finalshell-import.js?v=20260919-v001-r50-b53"></script>
@@ -305,7 +309,7 @@
   <script src="portable-preferences.js?v=20260919-v001-r50-b53"></script>
   <script src="server-manager.js?v=20260919-v001-r50-b53"></script>
   <script src="server-explorer.js?v=20260919-v001-r50-b53"></script>
-  <script src="help-guide.js?v=20260919-v001-r50-b53"></script>
+  <script src="help-guide.js?v=20260920-v001-r50-b59"></script>
   <script src="chart-styles.js?v=20260919-v001-r50-b53"></script>
   <script src="appearance-tools.js?v=20260919-v001-r50-b53"></script>
   <script src="terminal-snapshot.js?v=20260919-v001-r50-b53"></script>
@@ -315,7 +319,7 @@
   <script src="session-windows.js?v=20260919-v001-r50-b53"></script>
   <script src="session-tabs-layout.js?v=20260919-v001-r50-b53"></script>
   <script src="system-identity.js?v=20260919-v001-r50-b53"></script>
-  <script src="app.js?v=20260919-v001-r50-b53"></script>
+  <script src="app.js?v=20260920-v001-r50-b59"></script>
   <script src="sync.js?v=20260920-sync1"></script>
   <script src="quick-connect.js?v=20260919-v001-r50-b53"></script>
   <script src="process-view.js?v=20260919-v001-r50-b53"></script>
