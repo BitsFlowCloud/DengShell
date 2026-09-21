@@ -61,3 +61,34 @@
   .directory-tree .tree-toggle { width: 15px; }
   .directory-tree .tree-link { gap: 4px; }
 }
+
+/* Text metrics vary across installed UI fonts. Let each toolbar grow with its
+   controls rather than overflowing the fixed short-window row above it. */
+.files-panel .file-tabs { flex:0 0 auto; height:auto; min-height:36px; padding-block:5px; }
+.files-panel .file-tab { line-height:1.4; }
+.files-panel .file-toolbar { flex:0 0 auto; height:auto; min-height:36px; padding-block:4px; }
+.files-panel .path-form { min-height:28px; }
+.files-panel .path-form input { line-height:1.4; }
+.files-panel .upload-button { line-height:1.4; }
+.files-panel .file-search { min-width:0; }
+#directory-favorites { position:fixed; inset:auto; margin:0; z-index:24; display:flex; flex-direction:column; gap:8px; padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--surface); color:var(--text); box-shadow:0 8px 30px #10253633; overflow:hidden; font-size:12px; }
+#directory-favorites::backdrop { background:transparent; }
+.directory-favorites-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; flex:none; }
+.directory-favorites-heading strong { font-size:14px; }
+#directory-favorites-count,#directory-favorites-target { color:var(--muted); font-size:11px; }
+#directory-favorites-target { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:none; }
+#favorite-current-directory { flex:none; min-height:32px; padding:7px 10px; text-align:left; border-radius:7px; background:var(--surface-selected); color:var(--accent); font-size:12px; }
+#directory-favorites-search { flex:none; width:100%; padding:7px 9px; border:1px solid var(--border); border-radius:7px; background:var(--surface-inset); color:var(--text); font-size:12px; }
+#directory-favorites-list { min-height:0; overflow:auto; overscroll-behavior:contain; }
+.directory-favorite-row { display:flex; align-items:center; gap:4px; border-radius:7px; }
+.directory-favorite-row:hover { background:var(--surface-hover); }
+.directory-favorite-path { display:flex; align-items:center; gap:8px; min-width:0; flex:1; padding:9px 6px; text-align:left; font-size:12px; }
+.directory-favorite-path svg { width:15px; height:15px; color:var(--muted); }
+.directory-favorite-path span { min-width:0; overflow-wrap:anywhere; line-height:1.5; }
+.directory-favorite-remove { color:var(--muted); }
+.directory-favorite-remove svg { width:14px; height:14px; }
+#directory-favorites-empty,#directory-favorites-error { margin:0; font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
+#directory-favorites-empty { color:var(--muted); }
+#directory-favorites-error { color:var(--danger,#c56770); flex:none; }
+#directory-favorites-error:empty { display:none; }
+@container (max-width:480px) { .file-toolbar .file-search { display:none; } }

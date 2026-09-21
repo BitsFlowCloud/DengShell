@@ -37,23 +37,24 @@ type Profile struct {
 }
 
 type Config struct {
-	TemporaryServers  []Profile                  `json:"temporaryServers,omitempty"`
-	SchemaVersion     int                        `json:"schemaVersion"`
-	GroupNodes        []ServerGroup              `json:"groupNodes"`
-	Trash             []Profile                  `json:"trash,omitempty"`
-	ConnectionHistory []ConnectionHistory        `json:"connectionHistory"`
-	CommandHistory    *GlobalCommandHistory      `json:"commandHistory,omitempty"`
-	PathHistory       []PathHistoryEntry         `json:"pathHistory,omitempty"`
-	Extra             map[string]json.RawMessage `json:"-"`
-	Servers           []Profile                  `json:"servers"`
-	Groups            []string                   `json:"groups"`
-	HostKeys          map[string]string          `json:"hostKeys"`
-	Commands          []QuickCommand             `json:"commands"`
-	CommandGroups     []string                   `json:"commandGroups"`
-	Keys              []ManagedKey               `json:"keys"`
-	Proxies           []ManagedProxy             `json:"proxies"`
-	Assets            []ManagedAsset             `json:"assets"`
-	Appearance        Appearance                 `json:"appearance"`
+	TemporaryServers   []Profile                  `json:"temporaryServers,omitempty"`
+	SchemaVersion      int                        `json:"schemaVersion"`
+	GroupNodes         []ServerGroup              `json:"groupNodes"`
+	Trash              []Profile                  `json:"trash,omitempty"`
+	ConnectionHistory  []ConnectionHistory        `json:"connectionHistory"`
+	CommandHistory     *GlobalCommandHistory      `json:"commandHistory,omitempty"`
+	PathHistory        []PathHistoryEntry         `json:"pathHistory,omitempty"`
+	DirectoryFavorites []DirectoryFavorite        `json:"directoryFavorites,omitempty"`
+	Extra              map[string]json.RawMessage `json:"-"`
+	Servers            []Profile                  `json:"servers"`
+	Groups             []string                   `json:"groups"`
+	HostKeys           map[string]string          `json:"hostKeys"`
+	Commands           []QuickCommand             `json:"commands"`
+	CommandGroups      []string                   `json:"commandGroups"`
+	Keys               []ManagedKey               `json:"keys"`
+	Proxies            []ManagedProxy             `json:"proxies"`
+	Assets             []ManagedAsset             `json:"assets"`
+	Appearance         Appearance                 `json:"appearance"`
 }
 
 type Store struct {

@@ -515,6 +515,7 @@ async function navigate(path, state = current()) {
 }
 function renderFiles() {
   window.DengPathHistory?.reflect();
+  window.DengDirectoryFavorites?.reflect();
   const state = current(); const filter = $('#file-filter').value.toLowerCase();
   const entries = (state?.entries || []).filter(e => e.name.toLowerCase().includes(filter)).slice().sort((a, b) => compareFileEntries(a, b, fileSortKey, ascending));
   $('#path-input').value = state?.cwd || ''; $('#path-input').disabled = !state?.connected; $('#drop-path').textContent = state?.cwd || '—';

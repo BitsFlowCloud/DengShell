@@ -24,7 +24,7 @@ func (c *Config) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &fields); err != nil {
 		return err
 	}
-	for _, key := range []string{"temporaryServers", "schemaVersion", "servers", "groups", "groupNodes", "trash", "connectionHistory", "commandHistory", "pathHistory", "hostKeys", "commands", "commandGroups", "keys", "proxies", "assets", "appearance"} {
+	for _, key := range []string{"temporaryServers", "schemaVersion", "servers", "groups", "groupNodes", "trash", "connectionHistory", "commandHistory", "pathHistory", "directoryFavorites", "hostKeys", "commands", "commandGroups", "keys", "proxies", "assets", "appearance"} {
 		delete(fields, key)
 	}
 	next.TemporaryServers = nil // runtime-only quick connections never enter imported/persisted configuration
@@ -116,6 +116,7 @@ func (s *Store) upgradeConfig() error {
 	}
 	s.config.SchemaVersion = ConfigSchemaVersion
 	s.config.PathHistory = boundedPathHistory(s.config.PathHistory)
+	s.config.DirectoryFavorites = boundedDirectoryFavorites(s.config.DirectoryFavorites)
 	s.refreshLegacyGroupsLocked()
 	return nil
 }

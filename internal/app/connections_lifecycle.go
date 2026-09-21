@@ -80,6 +80,7 @@ func (s *Store) Purge(id string) error {
 	delete(s.config.Appearance.Layout, "dengshell.history."+id)
 	delete(s.config.Appearance.Layout, "dengshell.nic."+id)
 	s.dropPathHistoryLocked(map[string]bool{id: true})
+	s.dropDirectoryFavoritesLocked(map[string]bool{id: true})
 	if err := s.writeLocked(); err != nil {
 		s.config = old
 		return err

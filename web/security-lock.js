@@ -4,7 +4,7 @@
  'use strict';
  const boot = window.CLOUDSHELL || {};
  let state = boot.securityLock || { enabled:false, locked:false, revision:0 };
- let covered = !!state.locked, screen, settings, grant='', enrolling=false, lastSent=0, activityBusy=false, statusBusy=false, forcingLock=false;
+ let covered = !!state.locked, screen, settings, grant='', enrolling=false, lastSent=0, activityBusy=false, statusRequest=null, focusCheck=false, forcingLock=false;
  let resolveReady; const ready = new Promise(resolve => { resolveReady=resolve; });
  const waiters=[],inertBefore=new Map(),deferredDialogs=new Set();
  let exitConfirmation=null;
@@ -41,7 +41,7 @@
    // A focus check can temporarily cover an otherwise unlocked window. Keep
    // an exit request visible when that check (or another window) unlocks us.
    if(exitConfirmation&&!exitConfirmation.busy){exitConfirmation.restore();queueMicrotask(()=>window.requestQuit?.());}
-   if(changed){for(const resolve of waiters.splice(0))resolve();window.dispatchEvent(new Event('dengshell:unlocked'));}
+   if(changed){if(!focusCheck)for(const resolve of waiters.splice(0))resolve();window.dispatchEvent(new Event('dengshell:unlocked'));}
   }
  }
  function apply(next){
@@ -68,10 +68,21 @@
   const r=await fetch(boot.base+target,{method:body===undefined?'GET':'POST',headers:{'Content-Type':'application/json','X-CloudShell-Token':boot.token},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});
   const data=await r.json();if(!r.ok)throw Object.assign(new Error(data.error||'安全锁定服务暂不可用'),{code:data.code});return data;
  }
- async function refresh(){
-  if(statusBusy)return;statusBusy=true;
-  try{apply(await call('status'));}catch{if(state.enabled){cover(true);if(el('security-lock-error'))el('security-lock-error').textContent='暂时无法连接锁定服务，请稍后重试';}}
-  finally{statusBusy=false;}
+ function refresh(){
+  if(statusRequest)return statusRequest;
+  statusRequest=(async()=>{
+   try{apply(await call('status'));}catch{if(state.enabled){cover(true);if(el('security-lock-error'))el('security-lock-error').textContent='暂时无法连接锁定服务，请稍后重试';}}
+   finally{statusRequest=null;}
+  })();
+  return statusRequest;
+ }
+ async function checkFocus(){
+  if(!state.enabled||focusCheck)return;
+  // Moving a native window can refocus its WebView. A status check is not a
+  // lock transition: keep the current view/focus while rejecting input until
+  // the backend confirms it. Genuine locks and failed checks still cover it.
+  focusCheck=true;
+  try{await refresh();}finally{focusCheck=false;if(!covered)for(const resolve of waiters.splice(0))resolve();}
  }
  function reflectUnlock(){
   if(!screen)return;const method=el('security-unlock-method').value,field=el('security-unlock-value');
@@ -108,22 +119,23 @@
  }
  async function activity(event){
   if(!event.isTrusted||covered||!state.enabled||!state.idleSeconds||document.hidden||window.DengShellWindowHidden)return;
-  const interval=Math.min(1000,Math.max(100,state.idleSeconds*250));if(activityBusy||Date.now()-lastSent<interval)return;
+  const interval=Math.min(1000,Math.max(100,state.idleSeconds*250));if(focusCheck||activityBusy||Date.now()-lastSent<interval)return;
   lastSent=Date.now();activityBusy=true;try{apply(await call('activity',{}));}catch{cover(true);}finally{activityBusy=false;}
  }
  // Stop the application's global terminal/editor shortcuts at the first
  // capture listener. Native input editing/paste defaults still work in the form.
  for(const name of ['keydown','keyup','keypress','copy','cut','paste'])window.addEventListener(name,event=>{
+  if(focusCheck&&!covered){event.preventDefault();event.stopImmediatePropagation();return;}
   if(!covered)return;
   if(event.key==='Escape'||((event.ctrlKey||event.metaKey)&&!['a','c','v','x'].includes(event.key?.toLowerCase()))||!screen?.contains(event.target)){event.preventDefault();}
   event.stopImmediatePropagation();
  },true);
  for(const name of ['pointerdown','click','dblclick','contextmenu','wheel','drop','dragover'])window.addEventListener(name,event=>{
-  if(covered&&!screen?.contains(event.target)){event.preventDefault();event.stopImmediatePropagation();}
+  if((focusCheck&&!covered)||(covered&&!screen?.contains(event.target))){event.preventDefault();event.stopImmediatePropagation();}
  },{capture:true,passive:false});
  for(const name of ['pointerdown','pointermove','keydown','wheel','touchstart'])window.addEventListener(name,activity,{capture:true,passive:true});
- window.addEventListener('focus',()=>{if(state.enabled){cover(true,false);refresh();}});
- document.addEventListener('visibilitychange',()=>{if(!document.hidden&&state.enabled){cover(true,false);refresh();}});
+ window.addEventListener('focus',checkFocus);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkFocus();});
  function confirmExit(description, action, cancel) {
   if (!covered || !screen) return false;
   const form = el('security-exit-form');
@@ -147,7 +159,7 @@
   form.onsubmit=event=>{event.preventDefault();void perform(action);};
   el('security-exit-cancel').focus();return true;
  }
- window.DengSecurityLock={confirmExit,ready,isLocked:()=>covered,whenUnlocked:()=>covered?new Promise(r=>waiters.push(r)):Promise.resolve(),blocked(){cover(true);refresh();},openSettings};
+ window.DengSecurityLock={confirmExit,ready,isLocked:()=>covered||focusCheck,whenUnlocked:()=>(covered||focusCheck)?new Promise(r=>waiters.push(r)):Promise.resolve(),blocked(){cover(true);refresh();},openSettings};
  document.addEventListener('DOMContentLoaded',async()=>{
   screen=el('security-lock-screen');settings=el('security-lock-settings');
   screen.addEventListener('cancel',e=>e.preventDefault());screen.addEventListener('close',()=>{if(covered)originalModal.call(screen);});

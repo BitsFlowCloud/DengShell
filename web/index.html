@@ -7,7 +7,7 @@
   <meta name="referrer" content="no-referrer">
   <script src="bootstrap.js"></script>
   <script>if(location.protocol!=='wails:'&&location.hostname!=='wails.localhost'){const nonce=new URLSearchParams(location.search).get('window');if(/^[A-Za-z0-9_-]{24,96}$/.test(nonce||'')){window.CLOUDSHELL.detachedNonce=nonce;window.CLOUDSHELL.startupAnimation=false;}}</script>
-  <script src="security-lock.js?v=20260920-v002-b70"></script>
+  <script src="security-lock.js?v=20260921-v002-b72"></script>
   <script src="theme.js?v=20260920-v002-b70"></script>
   <link rel="stylesheet" href="vendor/xterm.css">
   <link rel="stylesheet" href="style.css?v=20260920-v002-b70">
@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="appearance.css?v=20260920-v002-b70">
   <link rel="stylesheet" href="process-view.css?v=20260920-v002-b70">
   <link rel="stylesheet" href="workspace-refinements.css?v=20260920-v002-b70">
-  <link rel="stylesheet" href="file-browser.css?v=20260920-v002-b70">
+  <link rel="stylesheet" href="file-browser.css?v=20260921-v002-b72">
   <link rel="stylesheet" href="themed-select.css?v=20260920-v002-b70">
   <link rel="stylesheet" href="config-document.css?v=20260920-v002-b70">
   <link rel="stylesheet" href="startup-update.css?v=20260920-v002-b70">
@@ -56,7 +56,7 @@
     <symbol id="i-reconnect" viewBox="0 0 24 24"><path d="M8 3v4m8-4v4M6 7h12v4a6 6 0 0 1-12 0V7Zm6 10v4"/></symbol>
     <symbol id="i-disconnect" viewBox="0 0 24 24"><path d="m13 7 4 4m-9 2 3 3M7 13l-3 3a3 3 0 0 0 4 4l3-3M13 7l3-3a3 3 0 0 1 4 4l-3 3M4 4l16 16"/></symbol>
     <symbol id="i-erase" viewBox="0 0 24 24"><path d="m15 3 6 6-11 11H5l-3-3L15 3ZM8 11l6 6M10 20h11"/></symbol>
-    <symbol id="i-up" viewBox="0 0 24 24"><path d="m6 11 6-6 6 6M12 5v15"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4-6 4z"/></symbol><symbol id="i-up" viewBox="0 0 24 24"><path d="m6 11 6-6 6 6M12 5v15"/></symbol>
     <symbol id="i-upload" viewBox="0 0 24 24"><path d="m7 9 5-5 5 5M12 4v11M4 15v5h16v-5"/></symbol>
     <symbol id="i-file" viewBox="0 0 24 24"><path d="M5 3h9l5 5v13H5ZM14 3v6h5"/></symbol>
     <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 3v3m6-3v3M9 18v3m6-3v3M3 9h3m-3 6h3m12-6h3m-3 6h3"/><rect x="9" y="9" width="6" height="6" rx="1"/></symbol>
@@ -136,7 +136,7 @@
         <section class="files-panel" id="files-panel" aria-label="远程文件">
           <div class="file-tabs"><button class="file-tab active" data-pane="files"><svg><use href="#i-folder"/></svg>文件</button><button class="file-tab" data-pane="commands"><svg><use href="#i-code"/></svg>命令</button><button class="file-tab" data-pane="common-apps"><svg><use href="#i-layout"/></svg>常用应用</button><button class="file-tab" data-pane="transfers"><svg><use href="#i-upload"/></svg>传输任务<span id="transfer-count" class="count-badge">0</span></button><label class="follow-label"><input type="checkbox" id="follow-terminal">跟随终端目录</label><span class="files-tip">拖入文件或文件夹上传</span></div>
           <div id="files-view" class="files-view">
-            <div class="file-toolbar"><button class="icon-button" id="parent-directory" title="上一级目录" aria-label="上一级目录"><svg><use href="#i-up"/></svg></button><form id="path-form" class="path-form"><svg><use href="#i-folder"/></svg><input id="path-input" value="" placeholder="连接后显示远程目录" aria-label="远程目录路径" spellcheck="false"></form><button type="button" class="icon-button" id="path-history-button" title="历史路径：搜索访问过的文件和目录" aria-label="历史路径" disabled><svg><use href="#i-history"/></svg></button><button class="icon-button" id="refresh-files" title="刷新目录" aria-label="刷新目录"><svg><use href="#i-refresh"/></svg></button><span class="toolbar-divider"></span><button class="icon-button" id="mkdir" title="新建文件或文件夹" aria-label="新建文件或文件夹" aria-haspopup="menu" aria-expanded="false"><svg><use href="#i-plus"/></svg></button><button class="upload-button" id="choose-files"><svg><use href="#i-upload"/></svg>上传</button><div class="file-search"><svg><use href="#i-search"/></svg><input id="file-filter" aria-label="筛选文件" placeholder="筛选文件"></div><input type="file" id="file-picker" multiple hidden><input type="file" id="folder-picker" webkitdirectory multiple hidden></div>
+            <div class="file-toolbar"><button class="icon-button" id="parent-directory" title="上一级目录" aria-label="上一级目录"><svg><use href="#i-up"/></svg></button><button type="button" class="icon-button" id="directory-favorites-button" title="常用目录" aria-label="常用目录" aria-haspopup="dialog" aria-expanded="false" disabled><svg><use href="#i-bookmark"/></svg></button><form id="path-form" class="path-form"><svg><use href="#i-folder"/></svg><input id="path-input" value="" placeholder="连接后显示远程目录" aria-label="远程目录路径" spellcheck="false"></form><button type="button" class="icon-button" id="path-history-button" title="历史路径：搜索访问过的文件和目录" aria-label="历史路径" disabled><svg><use href="#i-history"/></svg></button><button class="icon-button" id="refresh-files" title="刷新目录" aria-label="刷新目录"><svg><use href="#i-refresh"/></svg></button><span class="toolbar-divider"></span><button class="icon-button" id="mkdir" title="新建文件或文件夹" aria-label="新建文件或文件夹" aria-haspopup="menu" aria-expanded="false"><svg><use href="#i-plus"/></svg></button><button class="upload-button" id="choose-files"><svg><use href="#i-upload"/></svg>上传</button><div class="file-search"><svg><use href="#i-search"/></svg><input id="file-filter" aria-label="筛选文件" placeholder="筛选文件"></div><input type="file" id="file-picker" multiple hidden><input type="file" id="folder-picker" webkitdirectory multiple hidden></div>
             <div class="file-content" tabindex="0" aria-label="目录与文件列表，可滚动浏览"><nav class="directory-tree" aria-label="远程目录树" id="directory-tree"></nav><div class="file-table-wrap"><table class="file-table"><thead><tr><th><button id="sort-files">文件名 <span id="sort-arrow" aria-hidden="true">↑</span></button></th><th><button id="sort-size">大小 <span aria-hidden="true">↕</span></button></th><th><button id="sort-time">修改时间 <span aria-hidden="true">↕</span></button></th><th>权限</th><th>用户 / 用户组</th></tr></thead><tbody id="file-list"></tbody></table><div id="file-empty" class="empty-state" hidden>当前目录没有匹配的文件</div></div></div>
             <div class="file-status"><span id="file-status-count">尚未连接</span><span id="file-actions"><button id="download-file" disabled>下载</button><button id="rename-file" disabled>重命名</button><button id="delete-file" disabled>删除</button></span><span id="file-owner-info">SFTP</span></div>
           </div>
@@ -300,6 +300,7 @@
   <script src="ui-appearance.js?v=20260920-v002-b70"></script>
   <script src="font-library.js?v=20260920-v002-b70"></script>
   <script src="path-history.js?v=20260920-v002-b70"></script>
+  <script src="directory-favorites.js?v=20260921-v002-b72"></script>
   <script src="connection-extras.js?v=20260920-v002-b70"></script>
   <script src="file-browser.js?v=20260920-v002-b70"></script>
   <script src="latency-chart.js?v=20260920-v002-b70"></script>
@@ -323,7 +324,7 @@
   <script src="session-windows.js?v=20260920-v002-b70"></script>
   <script src="session-tabs-layout.js?v=20260920-v002-b70"></script>
   <script src="system-identity.js?v=20260920-v002-b70"></script>
-  <script src="app.js?v=20260920-v002-b70"></script>
+  <script src="app.js?v=20260921-v002-b72"></script>
   <script src="sync.js?v=20260920-sync1"></script>
   <script src="quick-connect.js?v=20260920-v002-b70"></script>
   <script src="process-view.js?v=20260920-v002-b70"></script>
