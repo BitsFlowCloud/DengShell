@@ -60,7 +60,7 @@ func New(configDir string) (*App, error) {
 	a.initializeUIFonts()
 	a.initializeSync()
 	a.updateCleanup.Add(1)
-	go func() { defer a.updateCleanup.Done(); a.runUpdateCleanup() }()
+	go func(dir string) { defer a.updateCleanup.Done(); a.runUpdateCleanup(dir) }(s.dir)
 	return a, nil
 }
 func (a *App) URL() string   { return a.baseURL }

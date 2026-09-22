@@ -19,6 +19,9 @@ try {
   assert.equal(metrics.button,'在线字体');assert(metrics.centerError<1);assert(metrics.cards.every(c=>c.height<145&&!c.overflow));assert(!metrics.viewportOverflow);results.push(metrics);
  }
  await page.evaluate(async()=>{await chooseAppearance({uiScale:1});await openAppearance('font')});
+ // Zoom changes schedule fitting/clamping on the next frame. Click only after
+ // the controls settle, so the pointer reaches the visible checkbox label.
+ await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
  const card='#asset-list [data-font-id="builtin:jetbrains-mono"]';
  if(!await page.$eval(card+' input[type=checkbox]',e=>e.checked))await page.click(card+' .font-card-bold');assert.equal(await page.$eval(card+' .font-sample',e=>getComputedStyle(e).fontWeight),'700');
  await page.click(card+' .font-card-color-button');await page.waitForSelector('#font-color-dialog[open]');

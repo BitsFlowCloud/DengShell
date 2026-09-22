@@ -16,10 +16,10 @@ try {
   try {
    renderProcesses(state.stats);const cpu=rows();sortProcesses('memory');const memory=rows();
    state.stats={processSample:{available:false,error:'fixture timeout'}};renderProcesses(state.stats);const cached=rows(),cacheLabel=document.querySelector('#process-count').textContent;
-   return {cpu,memory,cached,cacheLabel,alwaysVisible:document.querySelector('.process-details').tagName==='SECTION'&&document.querySelector('.process-table').getBoundingClientRect().height>0,estimated:document.querySelector('#process-list').textContent.includes('≈'),trafficWindow:trafficWindowMilliseconds};
+   return {cpu,memory,cached,cacheLabel,alwaysVisible:document.querySelector('.process-details').tagName==='SECTION'&&document.querySelector('.process-table').getBoundingClientRect().height>0,memoryCells:[...document.querySelectorAll('#process-list tr')].map(row=>row.cells[0].textContent),trafficWindow:trafficWindowMilliseconds};
   } finally {activeID=original; sessions.delete('monitor-fixture');}
  });
- assert.deepEqual(result.cpu,[20,19,18,17,16]);assert.deepEqual(result.memory,[100,101,102,103,104]);assert.deepEqual(result.cached,result.memory);assert.match(result.cacheLabel,/保留缓存/);assert(result.alwaysVisible);assert(result.estimated);assert.equal(result.trafficWindow,60000);
+ assert.deepEqual(result.cpu,[20,19,18,17,16]);assert.deepEqual(result.memory,[100,101,102,103,104]);assert.deepEqual(result.cached,result.memory);assert.match(result.cacheLabel,/保留缓存/);assert(result.alwaysVisible);assert.deepEqual(result.memoryCells,Array(5).fill('—'),'estimated memory must not be presented as exact RSS');assert.equal(result.trafficWindow,60000);
  await (await page.$('.process-details')).screenshot({path:join(stage,'process-top-five.png')});
- assert.deepEqual(errors,[]);await writeFile(join(stage,'process-ui-test.json'),JSON.stringify({passed:true,...result,errors},null,2));console.log('PASS: permanent CPU/memory top five, stale cache label, RSS estimate and 60-second window.');
+ assert.deepEqual(errors,[]);await writeFile(join(stage,'process-ui-test.json'),JSON.stringify({passed:true,...result,errors},null,2));console.log('PASS: permanent CPU/memory top five, stale cache label, unavailable exact RSS and 60-second window.');
 } finally {await browser.close();}

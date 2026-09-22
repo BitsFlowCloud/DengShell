@@ -158,17 +158,19 @@ func legacyUpdateInactive(p cleanupUpdatePlan, dir string) bool {
 	return err == nil && json.Unmarshal(b, &status) == nil && status.PID > 0 && !updateProcessAlive(status.PID)
 }
 
-func (a *App) runUpdateCleanup() {
+func (a *App) runUpdateCleanup(configDir string) {
 	// Retries cover Windows helper image/log handles and the old-to-new startup
 	// overlap. Periodic sweeps also collect later abandoned downloads.
+	// Keep the startup directory for the worker's lifetime; do not read a Store
+	// being replaced or redirected while testing persistence failure recovery.
 	for _, delay := range []time.Duration{0, time.Second, 5 * time.Second, 30 * time.Second} {
 		if !a.waitUpdateCleanup(delay) {
 			return
 		}
-		cleanupUpdateDirectories(a.store.dir)
+		cleanupUpdateDirectories(configDir)
 	}
 	for a.waitUpdateCleanup(time.Hour) {
-		cleanupUpdateDirectories(a.store.dir)
+		cleanupUpdateDirectories(configDir)
 	}
 }
 

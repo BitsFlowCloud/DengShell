@@ -23,7 +23,7 @@ try {
     const id = 'scale-fixture';
     profiles.push({ id, name: 'Isolated terminal', user: 'qa', host: 'fixture.invalid', port: 22 });
     const state = { ...makeSessionState({ id, profileId: id, home: '/' }), localOnly: true };
-    sessions.set(id, state); createTerminal(state); state.connectionView.remove();
+    sessions.set(id, state); createTerminal(state);
     state.localOnly = false; state.ready = true; state.term.options.disableStdin = false;
     window.qaFrames = [];
     state.ws = { readyState: WebSocket.OPEN, send(data) { qaFrames.push(JSON.parse(data)); }, close() {} };

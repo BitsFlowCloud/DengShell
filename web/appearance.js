@@ -47,8 +47,21 @@ function allFonts() { return [...(fontCatalog?.fonts || []).map(font => ({ ...fo
 function allBackgrounds() { return [{ id: 'builtin:none', name: '纯色 · 专注', kind: 'builtin' }, ...backgroundCatalog.map(background => ({ ...background, id: `builtin:${background.id}`, kind: 'builtin' })), ...managedAssets.filter(asset => asset.kind === 'background')]; }
 async function assetURL(asset) {
   if (asset.file) return new URL(asset.file, location.href).href;
-  if (!assetData.has(asset.id)) assetData.set(asset.id, api(`/api/assets/${asset.id}/data`).then(data => data.dataUrl).catch(error => { assetData.delete(asset.id); throw error; }));
+  if (!assetData.has(asset.id)) {
+    const pending = api(`/api/assets/${asset.id}/data`).then(async data => {
+      // Large base64 images exceed CSS custom-property size limits. Keep the
+      // image in a Blob and put only its short local URL in --terminal-background.
+      if (asset.kind === 'background') return URL.createObjectURL(await (await fetch(data.dataUrl)).blob());
+      return data.dataUrl;
+    }).catch(error => { if (assetData.get(asset.id) === pending) assetData.delete(asset.id); throw error; });
+    assetData.set(asset.id, pending);
+  }
   return assetData.get(asset.id);
+}
+function forgetAssetURL(id) {
+  const pending = assetData.get(id); assetData.delete(id);
+  // This also releases an image deleted while its data request was pending.
+  pending?.then(url => { if (url.startsWith('blob:')) URL.revokeObjectURL(url); }, () => {});
 }
 async function loadFace(font) {
   if (!fontLoads.has(font.id)) fontLoads.set(font.id, (async () => {
@@ -237,7 +250,7 @@ async function acceptAppearanceConfig(config) {
   }
   const remaining = new Set(managedAssets.map(asset => asset.id));
   for (const [id, promise] of fontLoads) if (/^[a-f0-9]{48}$/.test(id) && !remaining.has(id)) { fontLoads.delete(id); promise.then(face => document.fonts.delete(face)).catch(() => {}); }
-  for (const id of assetData.keys()) if (!remaining.has(id)) assetData.delete(id);
+  for (const id of assetData.keys()) if (!remaining.has(id)) forgetAssetURL(id);
   renderProxyChoices(); renderProxies();
   if ($('#appearance-dialog').open) renderAssets();
 }
@@ -392,7 +405,7 @@ function createAssetCard(asset, isFont) {
   if (!asset.id.startsWith('builtin:')) {
     const actions = node('div', 'asset-actions'), rename = node('button', '', '改名'), del = node('button', 'danger-button', '删除'); rename.type = del.type = 'button';
     rename.onclick = safe(async () => { const name = await ask({ title: '修改名称', input: true, value: card._asset.name }); if (!name?.trim()) return; await flushFontStyleSave(); await post(`/api/assets/${asset.id}`, { name }); await loadProfiles(); });
-    del.onclick = safe(async () => { if (!await ask({ title: `删除「${card._asset.name}」？`, description: '删除导入的本机副本，原始文件不受影响。', confirm: '删除' })) return; await flushFontStyleSave(); await remove(`/api/assets/${asset.id}`); assetData.delete(asset.id); await loadProfiles(); });
+    del.onclick = safe(async () => { if (!await ask({ title: `删除「${card._asset.name}」？`, description: '删除导入的本机副本，原始文件不受影响。', confirm: '删除' })) return; await flushFontStyleSave(); await remove(`/api/assets/${asset.id}`); forgetAssetURL(asset.id); await loadProfiles(); });
     actions.append(rename, del); card.append(actions);
   }
   return card;

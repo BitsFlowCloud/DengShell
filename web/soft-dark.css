@@ -19,9 +19,8 @@
 [data-theme="dark"] body { background: #0f1419; }
 [data-theme="dark"] .terminal-panel { background: #0f161d; }
 
-/* Use a solid dark backdrop without changing the user's saved image settings. */
-[data-theme="dark"] .terminal-panel::before,
-[data-theme="dark"] .terminal-panel.has-background::after { display: none; }
+/* The darker base remains behind the selected image. Background visibility
+   and strength stay controlled by appearance.css and the background manager. */
 
 [data-theme="dark"] .terminal-panel .terminal-meta,
 [data-theme="dark"] .terminal-panel .terminal-command-bar {
@@ -31,7 +30,6 @@
 }
 [data-theme="dark"] .terminal-panel .terminal-meta { border-bottom-color: var(--border); }
 [data-theme="dark"] .terminal-panel .terminal-command-bar { border-top-color: var(--border); }
-[data-theme="dark"] .terminal-connection-state { background: #0f161dcc; }
 [data-theme="dark"] .color-dialog-preview,
 [data-theme="dark"] #diagnostics-output,
 [data-theme="dark"] .ui-color-sample.dark { background: #0f161d; }

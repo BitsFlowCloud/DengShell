@@ -11,7 +11,7 @@ try{
  await page.setViewport({width:1440,height:1000});await page.goto(fixture.url,{waitUntil:'networkidle0'});
  await page.evaluate(()=>{
   document.querySelectorAll('dialog[open]').forEach(d=>d.close());setDrawer(false);pollStats=()=>{};pollNetwork=()=>{};
-  const id='scrollback-qa';profiles.push({id,name:'NQ scrollback test',host:'fixture.invalid',user:'qa',port:22});const state={...makeSessionState({id,profileId:id,home:'/'}),localOnly:true};sessions.set(id,state);createTerminal(state);state.connectionView.remove();state.localOnly=false;state.ready=true;state.term.options.disableStdin=false;window.qaFrames=[];state.ws={readyState:WebSocket.OPEN,send(data){qaFrames.push(JSON.parse(data))},close(){}};activate(id);
+  const id='scrollback-qa';profiles.push({id,name:'NQ scrollback test',host:'fixture.invalid',user:'qa',port:22});const state={...makeSessionState({id,profileId:id,home:'/'}),localOnly:true};sessions.set(id,state);createTerminal(state);state.localOnly=false;state.ready=true;state.term.options.disableStdin=false;window.qaFrames=[];state.ws={readyState:WebSocket.OPEN,send(data){qaFrames.push(JSON.parse(data))},close(){}};activate(id);
   window.qaWrite=text=>new Promise(r=>state.term.write(text,r));
   window.qaRead=()=>{const b=state.term.buffer.active;return{base:b.baseY,view:b.viewportY,first:b.getLine(b.viewportY)?.translateToString(true),length:b.length,type:b.type}};
  });await pause(150);

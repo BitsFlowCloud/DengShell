@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { webcrypto } from 'node:crypto';
 
 const appSource = readFileSync(new URL('../web/app.js', import.meta.url), 'utf8');
 const toolsSource = readFileSync(new URL('../web/workspace-tools.js', import.meta.url), 'utf8');
@@ -12,7 +13,8 @@ async function connectCase({ keyId = 'shared', keyPath = '/fixture/external-key'
   const context = {
     profiles: [profile], managedKeys: [{ id: 'shared', encrypted: true, hasPassphrase: false }],
     sessions: new Map(), connecting: new Set(), connectionAttempts: new Map(), credentials: new Map(),
-    nextSessionOrder: 0, activeID: null, AbortController, window: {},
+    nextSessionOrder: 0, activeID: null, AbortController, crypto: webcrypto, window: {},
+    connectionProfile: id => id === profile.id ? profile : undefined,
     makeSessionState: info => ({ ...info, host: { dataset: {} }, openTerminalSocket() {} }),
     current: () => null, createTerminal() {}, activate() {}, setDrawer() {}, renderTabs() {}, renderConnections() {},
     showConnectionForm(profile) { forms.push(profile.id); },

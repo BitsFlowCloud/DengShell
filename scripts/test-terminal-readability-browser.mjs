@@ -17,7 +17,7 @@ try {
  await page.evaluate(async()=>{
   await chooseAppearance({onboardingCompleted:true,startupAnimation:false,uiScale:1});
   document.querySelectorAll('dialog[open]').forEach(d=>d.close());setDrawer(false);pollStats=()=>{};pollNetwork=()=>{};
-  const id='ansi-colors-qa';profiles.push({id,name:'ANSI 配色验证',host:'fixture.invalid',user:'qa',port:22});const s={...makeSessionState({id,profileId:id,home:'/'}),localOnly:true};sessions.set(id,s);createTerminal(s);s.connectionView.remove();activate(id);s.fit.fit=()=>{};
+  const id='ansi-colors-qa';profiles.push({id,name:'ANSI 配色验证',host:'fixture.invalid',user:'qa',port:22});const s={...makeSessionState({id,profileId:id,home:'/'}),localOnly:true};sessions.set(id,s);createTerminal(s);activate(id);s.fit.fit=()=>{};
   window.qaWrite=text=>new Promise(r=>s.term.write(text,r));
   window.qaCell=(x,y)=>{const c=s.term.buffer.normal.getLine(y)?.getCell(x);return c?{text:c.getChars(),width:c.getWidth(),fg:c.isFgRGB()?[(c.getFgColor()>>16)&255,(c.getFgColor()>>8)&255,c.getFgColor()&255]:null,bg:c.isBgRGB()?[(c.getBgColor()>>16)&255,(c.getBgColor()>>8)&255,c.getBgColor()&255]:null,underline:!!c.isUnderline()}:null};
   window.qaDOM=()=>{
@@ -51,7 +51,16 @@ try {
   await page.evaluate(theme=>CloudShellTheme.set(theme),theme);
   for(const backgroundId of ['builtin:none','builtin:paperfolds'])for(const opacity of backgroundId==='builtin:none'?[0]:[0,.42,1]){
    await page.evaluate(async settings=>{await chooseAppearance(settings);await qaRender()},{backgroundId,backgroundOpacity:opacity});
-   const rendered=await page.evaluate(()=>({dom:qaDOM(),option:current().term.options.minimumContrastRatio,raw:qaCell(0,2)}));
+   const rendered=await page.evaluate(()=>{
+    const panel=document.querySelector('.terminal-panel'),image=getComputedStyle(panel,'::before'),shade=getComputedStyle(panel,'::after');
+    return{dom:qaDOM(),option:current().term.options.minimumContrastRatio,raw:qaCell(0,2),background:{display:image.display,image:image.backgroundImage,opacity:Number(image.opacity),shadeDisplay:shade.display,shadeOpacity:Number(shade.opacity)}};
+   });
+   if(backgroundId==='builtin:none')assert.equal(rendered.background.display,'none');
+   else{
+    assert.notEqual(rendered.background.display,'none',`${theme}: selected image is hidden`);
+    assert.notEqual(rendered.background.image,'none');assert.equal(rendered.background.opacity,opacity);
+    assert.notEqual(rendered.background.shadeDisplay,'none');assert(Math.abs(rendered.background.shadeOpacity-opacity*.35)<.0001);
+   }
    assert.equal(rendered.option,1);assert.deepEqual(rendered.raw.fg,[0,0,255]);
    for(let row=0;row<foregrounds.length;row++)assert.deepEqual(rendered.dom.rows[row][0].fg,foregrounds[row],`${theme}/${backgroundId}/${opacity}/row ${row}`);
    for(const row of [0,1,2])assert.deepEqual(rendered.dom.rows[row][0].bg,[0,0,0],'background must persist across newlines');

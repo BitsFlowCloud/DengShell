@@ -148,17 +148,17 @@ async function connectProfile(profileID, force, { background = false, refreshHis
   if (connecting.has(profileID)) return null;
   const profile = connectionProfile(profileID); if (!profile) return;
   if (profile.auth === 'key' && !profile.keyId && !profile.keyPath) {
-    toast(`「${profile.name}」未找到私钥，请重新配置密钥。`);
+    toast(`🔑  「${profile.name}」未找到私钥，请重新配置密钥。`);
     if (!background) showConnectionForm(profile);
     return null;
   }
   const matches = [...sessions.values()].filter(s => s.profileId === profileID);
   const existing = matches.find(s => s.id === activeID) || matches.find(s => s.connected) || matches[0];
-  if (existing?.detaching || existing?.handoffProvisional || existing?.ownershipUncertain) { toast('此 SSH 正在交接窗口，请稍后再试'); return null; }
+  if (existing?.detaching || existing?.handoffProvisional || existing?.ownershipUncertain) { toast('⏳  此 SSH 正在交接窗口，请稍后再试'); return null; }
   if (existing?.connected && !force) { if (!background) { activate(existing.id); setDrawer(false); } return existing; }
   const tabOrder = existing?.tabOrder ?? nextSessionOrder++;
   const state = makeSessionState({ id: `pending:${profileID}:${crypto.randomUUID()}`, profileId: profileID, home: '/' });
-  Object.assign(state, { tabOrder, connected: false, localOnly: true, pendingConnection: true, connectionMessage: '正在连接…', connectionAbort: new AbortController() });
+  Object.assign(state, { tabOrder, connected: false, localOnly: true, pendingConnection: true, announceConnectionReady: true, connectionAbort: new AbortController() });
   const alive = () => !state.closed && sessions.get(state.id) === state;
   connecting.add(profileID); connectionAttempts.set(profileID, state);
   // Removing an old session is independent of every other selected profile.
@@ -169,21 +169,22 @@ async function connectProfile(profileID, force, { background = false, refreshHis
     if (!background || !current()) activate(state.id); else renderTabs();
     if (!background) setDrawer(false);
     renderConnections();
-    let secret = credentials.get(profileID) || '';
-    // Managed key credentials are resolved by Go first. Another window may
-    // have saved its passphrase since this window last loaded the key list.
-    if (!secret && !profile.hasSecret && (profile.auth === 'password' || (profile.auth === 'key' && !profile.keyId))) {
-      showConnectionProgress(state, '等待输入凭据…');
-      secret = await ask({ title: profile.auth === 'key' ? `私钥口令 · ${profile.name}` : `连接 ${profile.name}`, description: profile.auth === 'key' ? '如果私钥没有加密，可直接确定。' : `${profile.user}@${profile.host}:${profile.port}`, input: true, secret: true, confirm: '连接', signal: state.connectionAbort.signal });
-      if (!alive()) return null;
-      if (secret === null) { showConnectionProgress(state, '已取消连接', true); return null; }
-      if (profile.auth === 'password' && !secret) throw new Error('请输入 SSH 密码');
-    }
     await previousClose;
     if (!alive()) return null;
     await restoreReconnectTerminal(state);
     if (!alive()) return null;
-    showConnectionProgress(state, '正在连接…');
+    showConnectionProgress(state, '🔗  连接主机...');
+    let secret = credentials.get(profileID) || '';
+    // Managed key credentials are resolved by Go first. Another window may
+    // have saved its passphrase since this window last loaded the key list.
+    if (!secret && !profile.hasSecret && (profile.auth === 'password' || (profile.auth === 'key' && !profile.keyId))) {
+      showConnectionProgress(state, '🔑  等待输入凭据...');
+      secret = await ask({ title: profile.auth === 'key' ? `私钥口令 · ${profile.name}` : `连接 ${profile.name}`, description: profile.auth === 'key' ? '如果私钥没有加密，可直接确定。' : `${profile.user}@${profile.host}:${profile.port}`, input: true, secret: true, confirm: '连接', signal: state.connectionAbort.signal });
+      if (!alive()) return null;
+      if (secret === null) { showConnectionProgress(state, '🚫  已取消连接', true); return null; }
+      if (profile.auth === 'password' && !secret) throw new Error('请输入 SSH 密码');
+    }
+    showConnectionProgress(state, '🔗  连接主机...');
     const requestConnection = async () => {
       let hostKeyApproval;
       for (let confirmations = 0; ; confirmations++) {
@@ -192,12 +193,12 @@ async function connectProfile(profileID, force, { background = false, refreshHis
           if (!alive()) return null;
           if (!['ssh_host_key_unknown', 'ssh_host_key_changed'].includes(error.code) || !error.hostKey || confirmations >= 2) throw error;
           const key = error.hostKey, changed = error.code === 'ssh_host_key_changed';
-          showConnectionProgress(state, '等待核实服务器指纹…');
+          showConnectionProgress(state, '🛡️  等待核实服务器指纹...');
           const accepted = await ask({ title: changed ? `服务器指纹已变化 · ${profile.name}` : `首次连接 · ${profile.name}`, description: `${key.host}\n算法：${key.algorithm}\n${changed ? `原指纹：${key.previousFingerprint}\n` : ''}新指纹：${key.fingerprint}\n\n${changed ? '服务器重装、密钥更换或连接被冒充都可能导致此变化。' : ''}请通过服务器控制台或可信管理员核对指纹；确认一致后才继续发送登录凭据。`, confirm: '已核实，信任并连接', signal: state.connectionAbort.signal });
           if (!alive()) return null;
-          if (!accepted) { showConnectionProgress(state, '已取消连接', true); return null; }
+          if (!accepted) { showConnectionProgress(state, '🚫  已取消连接', true); return null; }
           hostKeyApproval = { host: key.host, fingerprint: key.fingerprint, previousFingerprint: key.previousFingerprint };
-          showConnectionProgress(state, '正在连接…');
+          showConnectionProgress(state, '🔗  连接主机...');
         }
       }
     };
@@ -208,12 +209,12 @@ async function connectProfile(profileID, force, { background = false, refreshHis
       credentials.delete(profileID);
       const needsKeyPassphrase = profile.auth === 'key' && ['ssh_key_passphrase_required', 'ssh_key_passphrase_invalid'].includes(error.code);
       if (!needsKeyPassphrase && !(profile.auth === 'password' && error.code === 'ssh_authentication_failed')) throw error;
-      showConnectionProgress(state, '等待重新输入凭据…');
+      showConnectionProgress(state, '🔑  等待重新输入凭据...');
       secret = await ask({ title: `${needsKeyPassphrase ? (error.code === 'ssh_key_passphrase_required' ? '私钥口令' : '重新输入私钥口令') : '重新输入 SSH 密码'} · ${profile.name}`, description: error.message + '\n本次输入会替代缓存凭据，仅保存在本次运行中。', input: true, secret: true, confirm: '连接', signal: state.connectionAbort.signal });
       if (!alive()) return null;
-      if (secret === null) { showConnectionProgress(state, '已取消连接', true); return null; }
+      if (secret === null) { showConnectionProgress(state, '🚫  已取消连接', true); return null; }
       if (profile.auth === 'password' && !secret) throw new Error('请输入 SSH 密码');
-      showConnectionProgress(state, '正在连接…');
+      showConnectionProgress(state, '🔗  连接主机...');
       info = await requestConnection();
     }
     if (!info) return null;
@@ -224,20 +225,19 @@ async function connectProfile(profileID, force, { background = false, refreshHis
     sessions.delete(pendingID);
     Object.assign(state, info, { cwd: info.home, connected: true, localOnly: false, pendingConnection: false });
     sessions.set(state.id, state); state.host.dataset.session = state.id;
-    state.connectionView?.remove(); state.connectionView = null;
     state.openTerminalSocket();
     // Each tab becomes usable independently, preserving order and the user's current focus.
     if (selected) activate(state.id); else renderTabs();
     if (secret) credentials.set(profileID, secret);
-    window.DengCommandHistory?.refresh(profileID).catch(error => toast('命令历史刷新失败：' + error.message));
+    window.DengCommandHistory?.refresh(profileID).catch(error => toast('⚠️  命令历史刷新失败：' + error.message));
     if (current() === state) { pollStats(); pollLatency(); }
     // A slow or failed SFTP listing must not block any other SSH connection.
-    navigate(info.home, state).catch(error => { if (!state.closed) toast(`${profile.name} 已连接，目录读取失败：${error.message}`); });
+    navigate(info.home, state).catch(error => { if (!state.closed) toast(`⚠️  ${profile.name} 已连接，目录读取失败：${error.message}`); });
     if (refreshHistory) safe(refreshServerManagerHistory)();
     return state;
   } catch (error) {
     if (alive()) {
-      showConnectionProgress(state, error.message || String(error), true); toast(`${profile.name}：${error.message || error}`);
+      showConnectionProgress(state, '❌  连接主机失败：' + (error.message || String(error)), true); toast(`❌  ${profile.name}：${error.message || error}`);
       if (!background && ['ssh_key_missing', 'ssh_key_unavailable', 'ssh_private_key_invalid', 'ssh_proxy_missing'].includes(error.code)) showConnectionForm(profile);
     }
     return null;
@@ -275,17 +275,17 @@ async function restoreReconnectTerminal(state) {
   const screen = state.reconnectScreen;
   if (!screen || state.closed) return;
   state.term.resize(screen.cols, screen.rows);
-  await writeTerminalAndWait(state, screen.text + '\x1b[0m\r\n\x1b[38;5;245m── 重新连接 · 以上为上一会话记录 ──\x1b[0m\r\n');
+  await writeTerminalAndWait(state, screen.text + '\x1b[0m\r\n\x1b[38;5;245m🔄  ── 重新连接 · 以上为上一会话记录 ──\x1b[0m\r\n');
   state.reconnectScreen = null;
   if (current() === state && !state.closed) fitActive();
 }
 function showConnectionProgress(state, message, failed = false) {
+  if (state.closed) return;
+  const changed = state.connectionMessage !== message || state.connectionFailed !== failed;
   state.connectionMessage = message; state.connectionFailed = failed;
-  if (state.connectionView) {
-    state.connectionView.classList.toggle('failed', failed);
-    state.connectionView.querySelector('.connection-progress-message').textContent = message;
-    state.connectionView.querySelector('small').textContent = failed ? '可点击重新连接重试，其他 SSH 不受影响。' : '此连接独立进行，可随时切换其他标签。';
-  }
+  // These messages are local text, not remote terminal instructions. Keep
+  // errors readable without allowing control bytes to erase earlier output.
+  if (changed) state.term.writeln(String(message).replace(/\r\n?/g, '\n').replace(/[\x00-\x09\x0b-\x1f\x7f-\x9f]/g, '').replace(/\n/g, '\r\n'));
   if (current() === state) renderSessionInfo();
 }
 function makeSessionState(info) { return { ...info, connected: true, ready: false, cwd: info.home, entries: [], folders: new Map(), expanded: new Set(), history: getCommandHistory(info.profileId), historyIndex: getCommandHistory(info.profileId).length, navGeneration: 0, stats: null, chart: [], latency: null, follow: false, ws: null }; }
@@ -312,12 +312,7 @@ function createTerminal(state) {
   // Improve readability through the backdrop, never by recoloring its cells.
   const terminal = new Terminal({ cols: state.restoration?.cols || 100, rows: state.restoration?.rows || 30, fontSize: terminalFont, fontFamily: terminalFontFamily, fontWeight: boldForFont() ? '700' : '400', fontWeightBold: '700', lineHeight: 1.25, cursorBlink: !matchMedia('(prefers-reduced-motion: reduce)').matches, scrollback: 10000, allowTransparency: true, minimumContrastRatio: 1, theme: terminalTheme() });
   const fit = new FitAddon.FitAddon(); terminal.loadAddon(fit); const serialize = new SerializeAddon.SerializeAddon(); terminal.loadAddon(serialize); state.serialize = serialize; terminal.open(host); state.term = terminal; state.fit = fit;
-  if (state.localOnly) {
-    terminal.options.disableStdin = true;
-    const view = node('div', 'terminal-connection-state'); view.setAttribute('role', 'status');
-    view.append(node('strong', '', profileFor(state)?.name || 'SSH'), node('span', 'connection-progress-message', state.connectionMessage), node('small', '', '此连接独立进行，可随时切换其他标签。'));
-    host.append(view); state.connectionView = view;
-  }
+  if (state.localOnly) terminal.options.disableStdin = true;
   installTerminalFontMetrics(state);
   installTerminalMouseCoordinates(state);
   installTerminalScrollback(state);
@@ -347,11 +342,16 @@ function createTerminal(state) {
     if (event.data instanceof ArrayBuffer) { terminal.write(new Uint8Array(event.data), () => sendMessage(state, { type: 'ack' })); return; }
     const message = JSON.parse(event.data);
     if (window.DengSessionWindows.handleMessage(state, message)) return;
-    if (message.type === 'ready') { acceptShellIntegration(state, message.integration); state.ready = true; state.handoffProvisional = false; state.ownershipUncertain = false; terminal.options.disableStdin = !!state.detaching || !state.connected; state.restoring = false; state.restoration = null; if (activeID === state.id) renderSessionInfo(); if (activeID === state.id) { fitActive(); terminal.focus(); } }
-    else if (message.message) terminal.writeln(`\r\n\x1b[38;5;245m${message.message.replaceAll('\x1b', '')}\x1b[0m`);
+    if (message.type === 'ready') {
+      // The relay sends ready only after the remote shell starts, before its
+      // first output. Window handoffs must not add text to a running shell.
+      if (state.announceConnectionReady) { state.announceConnectionReady = false; showConnectionProgress(state, '✅  连接主机成功！'); }
+      acceptShellIntegration(state, message.integration); state.ready = true; state.handoffProvisional = false; state.ownershipUncertain = false; terminal.options.disableStdin = !!state.detaching || !state.connected; state.restoring = false; state.restoration = null; if (activeID === state.id) renderSessionInfo(); if (activeID === state.id) { fitActive(); terminal.focus(); }
+    }
+    else if (message.message) terminal.writeln(`\r\n\x1b[38;5;245m${message.type === 'error' ? '❌' : message.type === 'exit' ? '🔌' : 'ℹ️'}  ${message.message.replaceAll('\x1b', '')}\x1b[0m`);
   };
   ws.onclose = () => { if (state.ownershipUncertain && !state.detaching) dropSessionView(state.id); else if (!state.detaching) markSessionDisconnected(state); };
-  ws.onerror = () => toast('终端连接失败，请重新连接');
+  ws.onerror = () => toast('❌  终端连接失败，请重新连接');
   };
   state.openTerminalSocket = openSocket;
   if (state.localOnly) return;
@@ -375,7 +375,7 @@ function markSessionDisconnected(state) {
   if (state.closed || !state.connected) return;
   state.connected = false; state.ready = false; state.navGeneration++; state.navAbort?.abort();
   state.term.options.disableStdin = true;
-  state.term.writeln('\r\n\x1b[38;5;245m连接已断开，终端内容已保留。点击重新连接可建立新会话。\x1b[0m');
+  state.term.writeln('\r\n\x1b[38;5;245m🔌  连接已断开，终端内容已保留。点击重新连接可建立新会话。\x1b[0m');
   showDisconnectDiagnostic(state);
   renderTabs();
   if (activeID === state.id) { renderSessionInfo(); renderFiles(); }
@@ -402,8 +402,8 @@ async function showDisconnectDiagnostic(state) {
   state.disconnectDiagnostic = result;
   const clean = value => String(value || '').replace(/[\x00-\x1f\x7f-\x9f]/g, ' ');
   const label = `断开诊断码 ${result.code}${result.traceId ? ' / ' + clean(result.traceId) : ''}`;
-  state.term.writeln(`\r\n\x1b[38;5;214m[${label}]\x1b[0m ${clean(result.message)}`);
-  if (result.logPath) state.term.writeln(`诊断日志：${clean(result.logPath)}${result.logWriteFailed ? '（文件写入失败，请保留本页诊断码）' : ''}`);
+  state.term.writeln(`\r\n\x1b[38;5;214m${['DS-100', 'DS-101'].includes(result.code) ? 'ℹ️' : '⚠️'}  [${label}]\x1b[0m ${clean(result.message)}`);
+  if (result.logPath) state.term.writeln(`📄  诊断日志：${clean(result.logPath)}${result.logWriteFailed ? '（文件写入失败，请保留本页诊断码）' : ''}`);
   if (current() === state) {
     $('#terminal-state').textContent = `已断开 · ${result.code}`;
     $('#terminal-state').title = label + ' · ' + clean(result.message);

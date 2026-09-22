@@ -37,7 +37,7 @@ script = r'''(async () => {
     pollStats = () => {}; pollNetwork = () => {};
     const id='webkit-mouse'; profiles.push({id,name:'WebKit mouse',host:'fixture.invalid',user:'qa',port:22});
     const state={...makeSessionState({id,profileId:id,home:'/'}),localOnly:true};
-    sessions.set(id,state); createTerminal(state); state.connectionView.remove(); state.localOnly=false;
+    sessions.set(id,state); createTerminal(state);  state.localOnly=false;
     state.ready=true; state.term.options.disableStdin=false; window.qaFrames=[];
     state.ws={readyState:WebSocket.OPEN,send(data){qaFrames.push(JSON.parse(data));},close(){}};
     activate(id);
