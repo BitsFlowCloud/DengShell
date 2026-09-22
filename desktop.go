@@ -296,7 +296,7 @@ func (d *Desktop) SetTheme(theme string) {
 		setPlatformSystemTheme()
 		runtime.WindowSetSystemDefaultTheme(d.ctx)
 		if platformSystemTheme() == "dark" {
-			runtime.WindowSetBackgroundColour(d.ctx, 0, 0, 0, 255)
+			runtime.WindowSetBackgroundColour(d.ctx, 13, 16, 19, 255)
 		} else {
 			runtime.WindowSetBackgroundColour(d.ctx, 240, 243, 247, 255)
 		}
@@ -306,7 +306,7 @@ func (d *Desktop) SetTheme(theme string) {
 	case "dark":
 		setPlatformTheme(true)
 		runtime.WindowSetDarkTheme(d.ctx)
-		runtime.WindowSetBackgroundColour(d.ctx, 0, 0, 0, 255)
+		runtime.WindowSetBackgroundColour(d.ctx, 13, 16, 19, 255)
 	case "light":
 		setPlatformTheme(false)
 		runtime.WindowSetLightTheme(d.ctx)

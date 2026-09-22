@@ -29,7 +29,7 @@ const ApplicationPackageVersion = "0.2.0"
 
 // Increase this integer for every published build, including packaging-only
 // releases. It also lets older clients identify repackaged releases.
-const ApplicationBuild uint64 = 20260923077
+const ApplicationBuild uint64 = 20260923078
 
 const UpdateManifestURL = "https://ds.free-vps.org/up.deb.json"
 const updateTimeout = 3 * time.Second
