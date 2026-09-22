@@ -8,13 +8,17 @@ function serverGroupColorText(color) {
 function saveServerExplorer() {
   save('dengshell.server-manager', { treeWidth: serverManager.treeWidth, includeChildren: serverManager.includeChildren, selectedGroup: serverManager.selectedGroup });
 }
-function chooseServerFolder(id) {
+function chooseServerFolder(id, { toggle = false } = {}) {
   if (id && !serverManager.nodes.some(group => group.id === id)) return;
+  if (toggle && id && id === serverManager.selectedGroup && !$('#connection-search').value.trim() && serverManager.nodes.some(group => group.parentId === id)) {
+    toggleServerGroup(id); return;
+  }
   serverManager.selectedGroup = id; serverManager.focusedProfile = ''; clearServerSelection();
   $('#connection-search').value = '';
   const byID = new Map(serverManager.nodes.map(group => [group.id, group])), seen = new Set();
   // Selecting a folder reveals its children and its ancestor path. Preserve
-  // every other folder's collapsed state; only the caret toggles it closed.
+  // every other folder's collapsed state. Explicit navigation always reveals
+  // the destination; activating the current row can toggle its children.
   for (let g = byID.get(id); g && !seen.has(g.id); g = byID.get(g.parentId)) { seen.add(g.id); serverManager.collapsed.delete(g.id); }
   persistGroupCollapse(); saveServerExplorer(); renderConnections(); $('#connection-groups').scrollTop = 0;
 }
@@ -58,7 +62,10 @@ function renderServerExplorer(tree, query) {
     if (children.length) {
       caret.type = 'button'; caret.dataset.groupAction = 'toggle'; caret.append(icon('chevron')); caret.setAttribute('aria-expanded', String(expanded)); caret.setAttribute('aria-label', `${expanded ? '折叠' : '展开'}分组 ${group.name}`); caret.onclick = () => toggleServerGroup(group.id);
     }
-    const select = serverManagerButton('', () => chooseServerFolder(group.id), 'server-folder-select'); select.dataset.groupAction = 'select'; select.title = all ? '显示所有分组的连接' : tree.paths.get(group.id); select.setAttribute('aria-current', String(group.id === serverManager.selectedGroup));
+    const select = serverManagerButton('', () => {
+      chooseServerFolder(group.id, { toggle: true });
+      [...folders.querySelectorAll('[data-group-id]')].find(row => row.dataset.groupId === group.id)?.querySelector('[data-group-action="select"]')?.focus({ preventScroll: true });
+    }, 'server-folder-select'); select.dataset.groupAction = 'select'; select.title = all ? '显示所有分组的连接' : tree.paths.get(group.id); select.setAttribute('aria-current', String(group.id === serverManager.selectedGroup));
     select.append(serverGroupIcon(group.emoji), node('strong', 'server-folder-name', group.name));
     select.append(node('span', 'server-folder-count', String(total)));
     select.setAttribute('aria-label', `${all ? '' : `${depth + 1}级目录，`}${group.name}，${total}个连接`);

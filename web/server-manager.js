@@ -166,7 +166,8 @@ function renderServerProfile(profile, tree, mode = 'servers', history = null) {
   const text = node('span', 'connection-card-text'); text.append(node('strong', '', profile.name), node('small', '', connecting.has(profile.id) ? '正在连接…' : `${profile.user}@${profile.host}:${profile.port}${profile.auth === 'key' && !profile.keyId && !profile.keyPath ? ' · 待配置私钥' : ''}`));
   if (profile.notes?.trim()) {
     const note = node('span', 'server-card-notes');
-    note.append(node('span', 'server-card-notes-label', '备注'), node('span', 'server-card-notes-text', window.DengProfileNotes.preview(profile.notes)));
+    note.setAttribute('aria-label', '服务器备注');
+    note.append(node('span', 'server-card-notes-text', window.DengProfileNotes.preview(profile.notes)));
     note.title = profile.notes; text.append(note);
   }
   button.append(glyph, text);

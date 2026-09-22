@@ -84,17 +84,17 @@ try {
   await page.waitForNetworkIdle({idleTime:200});
   checks.push('Quick-save uses identical limits; reopening clears prior server draft');
   const visual = await page.evaluate(()=>{
-    profiles[0].notes='测试'.repeat(80);profiles[1].notes='';renderConnections();return profiles[0].id;
+    chooseServerFolder('');profiles[0].notes='测试'.repeat(80);profiles[1].notes='';renderConnections();return profiles[0].id;
   });
   for (const theme of ['light','dark']) {
     await page.evaluate(t=>CloudShellTheme.set(t),theme);
     await page.waitForFunction(t=>document.documentElement.dataset.theme===t,{},theme);
     const metrics=await page.$$eval('.server-profile-row',es=>es.map(e=>{
       const b=e.querySelector('.server-card-notes'),t=e.querySelector('.server-card-notes-text'),label=e.querySelector('.server-card-notes-label');
-      return {hasNote:!!b,label:label?.textContent,titleAbove:label&&t&&label.getBoundingClientRect().bottom<=t.getBoundingClientRect().top,lines:t?.textContent.split('\n'),overflow:e.scrollWidth>e.clientWidth+1,height:t?.getBoundingClientRect().height,border:b?getComputedStyle(b).borderTopWidth:null,clamp:t?getComputedStyle(t).webkitLineClamp:null};
+      return {hasNote:!!b,hasLabel:!!label,boxHeight:b?.getBoundingClientRect().height,lines:t?.textContent.split('\n'),overflow:e.scrollWidth>e.clientWidth+1,height:t?.getBoundingClientRect().height,border:b?getComputedStyle(b).borderTopWidth:null,clamp:t?getComputedStyle(t).webkitLineClamp:null};
     }));
     assert.equal(metrics.filter(m=>m.hasNote).length,1);
-    assert(metrics.every(m=>!m.overflow));assert(metrics.filter(m=>m.hasNote).every(m=>m.height<=51.5&&m.border==='1px'&&m.clamp==='3'&&m.label==='备注'&&m.titleAbove&&m.lines.length===3&&m.lines.every(l=>Array.from(l).reduce((n,c)=>n+(c.codePointAt(0)<=127?1:2),0)<=40)));
+    assert(metrics.every(m=>!m.overflow));assert(metrics.filter(m=>m.hasNote).every(m=>m.height<=51.5&&m.border==='1px'&&m.clamp==='3'&&!m.hasLabel&&m.boxHeight<=m.height+12.5&&m.lines.length===3&&m.lines.every(l=>Array.from(l).reduce((n,c)=>n+(c.codePointAt(0)<=127?1:2),0)<=40)));
     await page.screenshot({path:stage+`/notes-box-${theme}.png`});
   }
   await page.setViewport({width:750,height:660,deviceScaleFactor:1});
@@ -102,7 +102,7 @@ try {
   const narrow=await page.$eval('.server-card-notes-text',e=>({height:e.getBoundingClientRect().height,overflow:e.scrollWidth>e.clientWidth+1,images:e.querySelectorAll('img').length}));
   assert(narrow.height<=51.5&&!narrow.overflow&&narrow.images===0,JSON.stringify(narrow));
   assert.equal(await page.evaluate(()=>window.notesInjected),undefined);
-  checks.push('Light/dark framed notes; separate title; long legacy preview wraps at 40 width units; three visual lines even in narrow windows; empty notes add no box; safe text');
+  checks.push('Light/dark framed notes; body only, without a redundant heading; long legacy preview wraps at 40 width units; three visual lines even in narrow windows; empty notes add no box; safe text');
   assert.deepEqual(errors,[]);
   fs.writeFileSync(stage+'/browser-results.json',JSON.stringify({passed:true,checks,errors},null,2));
   console.log('PASS',checks);
