@@ -308,7 +308,7 @@ class DesktopSocket {
 
 function createTerminal(state) {
   const host = node('div', 'terminal-session'); host.dataset.session = state.id; host.hidden = true; $('#terminal-output').append(host); state.host = host;
-  const terminal = new Terminal({ cols: state.restoration?.cols || 100, rows: state.restoration?.rows || 30, fontSize: terminalFont, fontFamily: terminalFontFamily, fontWeight: boldForFont() ? '700' : '400', fontWeightBold: '700', lineHeight: 1.25, cursorBlink: !matchMedia('(prefers-reduced-motion: reduce)').matches, scrollback: 10000, allowTransparency: true, theme: terminalTheme() });
+  const terminal = new Terminal({ cols: state.restoration?.cols || 100, rows: state.restoration?.rows || 30, fontSize: terminalFont, fontFamily: terminalFontFamily, fontWeight: boldForFont() ? '700' : '400', fontWeightBold: '700', lineHeight: 1.25, cursorBlink: !matchMedia('(prefers-reduced-motion: reduce)').matches, scrollback: 10000, allowTransparency: true, minimumContrastRatio: 4.5, theme: terminalTheme() });
   const fit = new FitAddon.FitAddon(); terminal.loadAddon(fit); const serialize = new SerializeAddon.SerializeAddon(); terminal.loadAddon(serialize); state.serialize = serialize; terminal.open(host); state.term = terminal; state.fit = fit;
   if (state.localOnly) {
     terminal.options.disableStdin = true;
