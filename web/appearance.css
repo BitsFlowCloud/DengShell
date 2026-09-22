@@ -14,7 +14,7 @@ body { transform-origin:0 0; }
 .frameless .titlebar { padding-right:7px; }
 .terminal-panel { isolation:isolate; }
 .terminal-panel::before { content:""; position:absolute; inset:0; z-index:0; background-image:var(--terminal-background); background-size:cover; background-position:center; background-color:transparent; background-blend-mode:normal; opacity:var(--background-opacity); filter:brightness(.6); pointer-events:none; }
-/* Keep image highlights behind the text; match terminalContrastBackground(). */
+/* Dim the backdrop without changing the terminal's ANSI foreground/background. */
 .terminal-panel.has-background::after { content:""; position:absolute; inset:0; z-index:0; background:rgb(13 24 32); opacity:calc(var(--background-opacity) * .35); pointer-events:none; }
 .terminal-panel > * { position:relative; z-index:1; }
 .terminal-output,.terminal-session,dialog textarea { font-family:var(--terminal-family,monospace); }

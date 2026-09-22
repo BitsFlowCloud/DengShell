@@ -23,27 +23,13 @@ const validFontColor = color => typeof color === 'string' && /^#[\da-f]{6}$/i.te
 const colorForFont = (id = appearance.fontId) => validFontColor(appearance.fontColors?.[id]) ? appearance.fontColors[id].toLowerCase() : terminalDefaultColor;
 const boldForFont = (id = appearance.fontId) => appearance.fontBold?.[id] === true;
 function normalizeTerminalFontSize(value) { const number=Number(value); return Number.isFinite(number) ? Math.max(8,Math.min(40,Math.round(number*2)/2)) : 14; }
-function terminalContrastBackground() {
-  // xterm cannot sample a CSS image behind its transparent canvas/DOM. Supply
-  // a conservative RGB reference while keeping alpha zero. These are the
-  // lightest gradient colors in style.css/theme.css; image blending matches
-  // the brightness(.6) and opacity-scaled 35% shade in appearance.css. Even a white image
-  // stays dark enough for the renderer to choose readable light foregrounds.
-  let rgb = document.documentElement.dataset.theme === 'dark' ? [24,42,55] : [39,63,80];
-  if (document.querySelector('.terminal-panel')?.classList.contains('has-background')) {
-    const opacity = Math.max(0, Math.min(1, Number(appearance.backgroundOpacity) || 0));
-    const shade = .35 * opacity;
-    rgb = rgb.map((channel, i) => Math.ceil((channel * (1 - opacity) + 255 * .6 * opacity) * (1 - shade) + [13,24,32][i] * shade));
-  }
-  return '#' + rgb.map(channel => channel.toString(16).padStart(2, '0')).join('') + '00';
-}
 function terminalTheme() {
-  return { background: terminalContrastBackground(), foreground: colorForFont(), cursor: colorForFont(), selectionBackground: '#7195aa66', black: '#233846', red: '#df9c96', green: '#a4c9b4', yellow: '#d7c29f', blue: '#8fb5d1', magenta: '#baafd0', cyan: '#96c8ce', white: '#d3e0e8', brightBlack: '#7d99ab', brightRed: '#efb5ae', brightGreen: '#b8dbbf', brightYellow: '#e8d7b5', brightBlue: '#b1d0e6', brightMagenta: '#d3c7e4', brightCyan: '#b7dfe2', brightWhite: '#edf5f9' };
+  return { background: '#00000000', foreground: colorForFont(), cursor: colorForFont(), selectionBackground: '#7195aa66', black: '#233846', red: '#df9c96', green: '#a4c9b4', yellow: '#d7c29f', blue: '#8fb5d1', magenta: '#baafd0', cyan: '#96c8ce', white: '#d3e0e8', brightBlack: '#7d99ab', brightRed: '#efb5ae', brightGreen: '#b8dbbf', brightYellow: '#e8d7b5', brightBlue: '#b1d0e6', brightMagenta: '#d3c7e4', brightCyan: '#b7dfe2', brightWhite: '#edf5f9' };
 }
 function applyTerminalAppearanceColors() {
-  const color = colorForFont(), background = terminalContrastBackground();
+  const color = colorForFont();
   document.documentElement.style.setProperty('--terminal-foreground', color);
-  for (const state of sessions.values()) state.term.options.theme = { ...state.term.options.theme, foreground: color, cursor: color, background };
+  for (const state of sessions.values()) state.term.options.theme = { ...state.term.options.theme, foreground: color, cursor: color, background: '#00000000' };
   const preview = document.getElementById('font-preview-text');
   if (preview) preview.style.color = color;
 }
@@ -223,7 +209,6 @@ async function applyAppearance() {
     const url = background.id === 'builtin:none' ? '' : await assetURL(background);
     if (generation !== mediaGeneration) return;
     document.documentElement.style.setProperty('--terminal-background', url ? `url(${JSON.stringify(url)})` : 'none'); activeBackgroundID = background.id; $('.terminal-panel').classList.toggle('has-background', !!url);
-    applyTerminalAppearanceColors();
   }
   if (generation !== mediaGeneration) return;
   renderAppearanceControls(); clampAppearancePalette(); requestAnimationFrame(fitActive);
@@ -585,7 +570,6 @@ function reflectWindowState(state) {
 }
 async function initializeWindowControls() { if (native()?.WindowState) reflectWindowState(await native().WindowState()); }
 function initializeAppearance() {
-  window.addEventListener('cloudshell:theme', applyTerminalAppearanceColors);
   window.DengUIAppearance?.initialize();
   initializeAppearancePalette();
   $('#terminal-size').replaceChildren(...Array.from({ length: 65 }, (_, i) => { const value=8+i/2,option = node('option', '', `${value} px`); option.value = value; return option; }));
@@ -617,7 +601,7 @@ function initializeAppearance() {
       await loadProfiles(); await chooseAppearance(kind === 'font' ? { fontId: asset.id } : { backgroundId: asset.id }); toast('已导入并应用');
     } finally { button.disabled = false; }
   });
-  $('#background-opacity').oninput = event => { appearance.backgroundOpacity = Number(event.target.value) / 100; document.documentElement.style.setProperty('--background-opacity', appearance.backgroundOpacity); applyTerminalAppearanceColors(); renderAppearanceControls(); };
+  $('#background-opacity').oninput = event => { appearance.backgroundOpacity = Number(event.target.value) / 100; document.documentElement.style.setProperty('--background-opacity', appearance.backgroundOpacity); renderAppearanceControls(); };
   $('#background-opacity').onchange = safe(() => persistAppearance({}));
   $('#terminal-size').onchange = safe(event => chooseAppearance({ terminalFontSize: Number(event.target.value) }));
   $('#ui-scale').onchange = safe(event => chooseAppearance({ uiScale: Number(event.target.value) }));
