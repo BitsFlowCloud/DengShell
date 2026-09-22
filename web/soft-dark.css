@@ -1,4 +1,4 @@
-/* Lighter near-black trial: between the first soft-dark trial and the original theme.
+/* Near-black dark palette, with separated panel and terminal surfaces.
    Keep light mode, saved artwork and ANSI colors intact. */
 :root[data-theme="dark"] {
   --surface: #181f26;
@@ -19,7 +19,7 @@
 [data-theme="dark"] body { background: #0f1419; }
 [data-theme="dark"] .terminal-panel { background: #0f161d; }
 
-/* Hide the saved image only while this trial's dark theme is active. */
+/* Use a solid dark backdrop without changing the user's saved image settings. */
 [data-theme="dark"] .terminal-panel::before,
 [data-theme="dark"] .terminal-panel.has-background::after { display: none; }
 
