@@ -3,13 +3,13 @@ on:
   workflow_dispatch:
     inputs:
       release:
-        description: Draft or published release tag to validate
+        description: Release tag to validate; latest selects the current public release
         required: true
-        default: v0.02
+        default: latest
       legacy_release:
-        description: Older release for an actual upgrade check
+        description: Previous release for upgrade validation; latest uses the current public release
         required: true
-        default: v0.01-r50
+        default: latest
 env:
   GOMAXPROCS: '4'
   GOFLAGS: '-p=4'
@@ -48,18 +48,23 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          QA_RELEASE: ${{ inputs.release || 'v0.02' }}
-          QA_LEGACY: ${{ inputs.legacy_release || 'v0.01-r50' }}
+          QA_RELEASE: ${{ inputs.release || 'latest' }}
+          QA_LEGACY: ${{ inputs.legacy_release || 'latest' }}
         run: |
           New-Item -ItemType Directory -Force qa-artifacts,qa-legacy | Out-Null
+          if ($env:QA_RELEASE -eq 'latest' -or $env:QA_LEGACY -eq 'latest') {
+            $publishedRelease = gh api "repos/$env:GITHUB_REPOSITORY/releases/latest" --jq '.tag_name'
+            if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($publishedRelease)) { throw 'Unable to resolve the current published release' }
+            if ($env:QA_RELEASE -eq 'latest') { $env:QA_RELEASE = $publishedRelease.Trim() }
+            if ($env:QA_LEGACY -eq 'latest') { $env:QA_LEGACY = $publishedRelease.Trim() }
+          }
+          "QA_LEGACY=$env:QA_LEGACY" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           gh release download $env:QA_RELEASE --pattern DengShell-Setup-x64.exe --pattern DengShell-windows-x64.zip --dir qa-artifacts
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           gh release download $env:QA_LEGACY --pattern DengShell-windows-x64.zip --dir qa-legacy
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Native launch, installer and restart after update
         shell: pwsh
-        env:
-          QA_LEGACY: ${{ inputs.legacy_release || 'v0.01-r50' }}
         run: ./scripts/test-windows-release.ps1 -Artifacts qa-artifacts -LegacyZip qa-legacy/DengShell-windows-x64.zip -Output qa-results -LegacyRelease $env:QA_LEGACY
       - name: Retain validation evidence
         if: always()
