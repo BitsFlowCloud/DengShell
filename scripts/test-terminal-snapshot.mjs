@@ -6,8 +6,8 @@ import {join,dirname,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {tmpdir} from 'node:os';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
-const assets=new Map([['/xterm.js','web/vendor/xterm.js'],['/serialize.js','web/vendor/addon-serialize.js'],['/snapshot.js','web/terminal-snapshot.js'],['/app.js','web/app.js']]);
-const server=createServer(async(req,res)=>{try{if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end('<script src="/xterm.js"></script><script src="/serialize.js"></script><script src="/snapshot.js"></script>');return}const file=assets.get(req.url);if(!file){res.writeHead(404).end();return}res.setHeader('Content-Type','text/javascript');res.end(await readFile(join(root,file)))}catch(error){res.writeHead(500).end(String(error))}});
+const assets=new Map([['/xterm.js','web/vendor/xterm.js'],['/serialize.js','web/vendor/addon-serialize.js'],['/snapshot.js','web/terminal-snapshot.js'],['/integration.js','web/terminal-integration.js'],['/app.js','web/app.js']]);
+const server=createServer(async(req,res)=>{try{if(req.url==='/'){res.setHeader('Content-Type','text/html');res.end('<script src="/xterm.js"></script><script src="/serialize.js"></script><script src="/snapshot.js"></script><script src="/integration.js"></script>');return}const file=assets.get(req.url);if(!file){res.writeHead(404).end();return}res.setHeader('Content-Type','text/javascript');res.end(await readFile(join(root,file)))}catch(error){res.writeHead(500).end(String(error))}});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const directory=await mkdtemp(join(process.env.TMPDIR||tmpdir(),'dengshell-vt-snapshot-'));
 const child=spawn(process.env.CHROME_BINARY||'google-chrome',['--headless=new','--no-sandbox','--disable-dev-shm-usage','--disable-background-networking','--disable-gpu','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--user-data-dir='+directory,'http://127.0.0.1:'+server.address().port],{stdio:'ignore'});
@@ -18,11 +18,11 @@ try{
  let counter=0;const jobs=new Map();ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.id&&jobs.has(m.id)){const p=jobs.get(m.id);jobs.delete(m.id);m.error?p.reject(m.error):p.resolve(m.result)}};
  const cdp=(method,params={})=>new Promise((resolve,reject)=>{const id=++counter;jobs.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}))});
  const evaluate=async expression=>{const r=await cdp('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value};
- for(let i=0;i<100;i++){if(await evaluate('!!window.DengTerminalSnapshot && !!window.SerializeAddon'))break;await pause(50)}
+ for(let i=0;i<100;i++){if(await evaluate('!!window.DengTerminalSnapshot && !!window.SerializeAddon && typeof installTerminalScrollback==="function"'))break;await pause(50)}
  const result=await evaluate(`(async()=>{
  const results=[];const check=(name,ok)=>{if(!ok)throw Error(name);results.push(name)};
  const write=(t,s)=>new Promise(resolve=>t.write(s,resolve));
- function make(cols=20,rows=8){const term=new Terminal({cols,rows,scrollback:10000,allowProposedApi:true});const element=document.createElement('div');element.style.cssText='width:800px;height:400px';document.body.append(element);term.open(element);const addon=new SerializeAddon.SerializeAddon();term.loadAddon(addon);return {term,addon}}
+ function make(cols=20,rows=8){const term=new Terminal({cols,rows,scrollback:10000,allowProposedApi:true});const element=document.createElement('div');element.style.cssText='width:800px;height:400px';document.body.append(element);term.open(element);installTerminalScrollback({term});const addon=new SerializeAddon.SerializeAddon();term.loadAddon(addon);return {term,addon}}
  function shape(term){return JSON.stringify({state:DengTerminalSnapshot.capture(term),normal:read(term.buffer.normal),alt:read(term.buffer.alternate)})}
  function read(buffer){return Array.from({length:buffer.length},(_,i)=>({text:buffer.getLine(i).translateToString(false),wrapped:buffer.getLine(i).isWrapped}))}
  async function roundtrip(source){const saved=DengTerminalSnapshot.capture(source.term), restored=make(source.term.cols,source.term.rows);let dataEvents=0;restored.term.onData(()=>dataEvents++);await write(restored.term,source.addon.serialize());DengTerminalSnapshot.restore(restored.term,JSON.parse(JSON.stringify(saved)));check('runtime snapshot equality',JSON.stringify(DengTerminalSnapshot.capture(restored.term))===JSON.stringify(saved));check('restore sends no terminal input',dataEvents===0);return restored}
@@ -54,6 +54,29 @@ try{
  check('reconnect keeps colors',Array.from({length:newState.term.cols},(_,i)=>newState.term.buffer.normal.getLine(0).getCell(i)).some(cell=>cell.getChars()==='R'&&cell.getFgColor()===1));
  check('reconnect resets TUI alternate and input modes',newState.term.buffer.active.type==='normal'&&!newState.term.modes.bracketedPasteMode&&newState.term.modes.mouseTrackingMode==='none');
  check('reconnect restoration does not resend old commands',replayedInput===0);
+ const reading=make(40,8);await write(reading.term,Array.from({length:180},(_,i)=>'History '+i+'\\r\\n').join(''));
+ reading.term.scrollToLine(40);await new Promise(r=>setTimeout(r,30));
+ const resumed=await roundtrip(reading);await new Promise(r=>setTimeout(r,30));
+ const readingY=resumed.term.buffer.active.viewportY,readingBase=resumed.term.buffer.active.baseY;
+ check('restored scrollback remains at the captured row',readingY===40);
+ await write(resumed.term,'NQ continues\\r\\n');await new Promise(r=>setTimeout(r,30));
+ check('continuation advances the live screen',resumed.term.buffer.active.baseY>readingBase);
+ check('new output does not pull a restored reader to the bottom',resumed.term.buffer.active.viewportY===readingY&&resumed.term.buffer.active.baseY>readingY);
+ resumed.term.scrollToBottom();await new Promise(r=>setTimeout(r,30));await write(resumed.term,'Follow output again\\r\\n');
+ check('returning to bottom resumes normal output following',resumed.term.buffer.active.viewportY===resumed.term.buffer.active.baseY);
+ const keep=make(40,8);
+ await write(keep.term,Array.from({length:100},(_,i)=>'Retained '+i+'\\r\\n').join(''));keep.term.scrollToLine(30);await new Promise(r=>setTimeout(r,30));
+ const first=keep.term.buffer.active.getLine(30).translateToString(true);
+ await write(keep.term,String.fromCharCode(27)+'[H'+String.fromCharCode(27)+'[2J'+String.fromCharCode(27)+'[3JNext stage\\r\\n');
+ check('NQ clear preserves scrollback and reading position',keep.term.buffer.active.viewportY===30&&keep.term.buffer.active.getLine(30).translateToString(true)===first);
+ const normalBefore=JSON.stringify(read(keep.term.buffer.normal));
+ await write(keep.term,String.fromCharCode(27)+'[?1049h'+String.fromCharCode(27)+'[2JEditor'+String.fromCharCode(27)+'[3J');
+ check('alternate-screen clear keeps normal history independent',keep.term.buffer.active.baseY===0&&JSON.stringify(read(keep.term.buffer.normal))===normalBefore);
+ await write(keep.term,String.fromCharCode(27)+'[?1049l');keep.term.clear();check('explicit clear still removes scrollback',keep.term.buffer.normal.baseY===0);
+ const altReading=make(40,8);await write(altReading.term,Array.from({length:100},(_,i)=>'Normal '+i+'\\r\\n').join(''));altReading.term.scrollToLine(20);await new Promise(r=>setTimeout(r,30));
+ await write(altReading.term,String.fromCharCode(27)+'[?1049hTUI');const altResumed=await roundtrip(altReading);
+ const exitTUI=String.fromCharCode(27)+'[?1049lAfter TUI\\r\\n';await write(altReading.term,exitTUI);await write(altResumed.term,exitTUI);
+ check('restoring an alternate screen preserves the normal reader on exit',altResumed.term.buffer.normal.viewportY===altReading.term.buffer.normal.viewportY);
  const closing=make(),closingState={term:closing.term};
  const drained=reconnect.writeTerminalAndWait(closingState,'queued');closingState.closed=true;for(const done of closingState.terminalWriteWaiters)done();closing.term.dispose();
  check('closing a tab releases a pending renderer write',await drained===false);

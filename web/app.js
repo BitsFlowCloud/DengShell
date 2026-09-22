@@ -318,6 +318,7 @@ function createTerminal(state) {
   }
   installTerminalFontMetrics(state);
   installTerminalMouseCoordinates(state);
+  installTerminalScrollback(state);
   bindTerminalContext(state);
   bindShellIntegration(state);
   if (state.restoration?.clientState?.shellIntegration) state.shellIntegration = { ...state.restoration.clientState.shellIntegration };

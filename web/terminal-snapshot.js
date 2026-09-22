@@ -73,7 +73,14 @@
     for(let i=0;i<4;i++)core._charsetService.setgCharset(i,charsets[i]||undefined);
     core._charsetService.setgLevel(s.glevel);core._charsetService.charset=currentCharset||undefined;
     applyAttrs(core._inputHandler._curAttrData,s.attrs);
-    term.refresh(0,term.rows-1);core._viewport?.syncScrollArea?.();
+    // Restoring ydisp alone leaves xterm in follow-output mode. Synchronize
+    // both its user-scroll flag and the xterm 6 viewport before output resumes.
+    const active = buffers.active;
+    // The normal buffer owns scrollback, including while a TUI is active.
+    core._bufferService.isUserScrolling = buffers.normal.ydisp < buffers.normal.ybase;
+    term.scrollToLine(active.ydisp);
+    core._viewport?.queueSync?.(active.ydisp);
+    term.refresh(0,term.rows-1);
   }
   window.DengTerminalSnapshot={capture,restore};
 })();

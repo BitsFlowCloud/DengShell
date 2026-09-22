@@ -1,5 +1,33 @@
 'use strict';
 
+// Keep cleared normal-screen output available for reading, as SSH clients do.
+// NQ's test stages call ncurses clear (ED2 + ED3). Full-screen applications keep
+// their ordinary alternate-buffer and selective-erasure behavior. The local
+// Clear Terminal action still explicitly clears the buffer through term.clear().
+function installTerminalScrollback(state) {
+  const term = state.term, handlers = [];
+  term.loadAddon({
+    activate() {
+      handlers.push(term.parser.registerCsiHandler({ final: 'J' }, params => {
+        const normal = term.buffer.active.type === 'normal';
+        if (normal && params[0] === 3) return true;
+        if (params[0] === 2) {
+          const buffer = term._core?._bufferService?.buffer;
+          // xterm's built-in ED2 preservation must scroll the entire viewport,
+          // not a TUI's partial scrolling region.
+          term.options.scrollOnEraseInDisplay = !!(normal && buffer && buffer.scrollTop === 0 && buffer.scrollBottom === term.rows - 1);
+        }
+        return false;
+      }));
+      handlers.push(term.parser.registerCsiHandler({ prefix: '?', final: 'J' }, () => {
+        term.options.scrollOnEraseInDisplay = false;
+        return false;
+      }));
+    },
+    dispose() { handlers.forEach(handler => handler.dispose()); }
+  });
+}
+
 // xterm 6 expects unscaled CSS pixels for selection, mouse reports and drag
 // scrolling. Measure the actual coordinate scale (rather than OS DPI or the
 // requested UI scale), since Chromium and WebKit handle CSS zoom differently.
