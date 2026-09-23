@@ -636,11 +636,13 @@ function renderMonitor(stats) {
   meter('#memory-meter', stats?.memoryTotal ? stats.memoryUsed / stats.memoryTotal * 100 : 0, stats ? `${prettySize(stats.memoryUsed)} / ${prettySize(stats.memoryTotal)}` : '—', !!stats);
   meter('#swap-meter', stats?.swapTotal ? stats.swapUsed / stats.swapTotal * 100 : 0, stats ? `${prettySize(stats.swapUsed)} / ${prettySize(stats.swapTotal)}` : '—', !!stats);
   renderProcesses(stats);
-  const disks = stats?.disks || []; const root = disks.find(disk => disk.path === '/') || disks[0];
-  $('#disk-used').textContent = root ? prettySize(root.used) : '—';
-  $('#disk-available').textContent = root ? prettySize(root.available) : '—';
-  $('#disk-total').textContent = root ? prettySize(root.total) : '—';
-  $('.disk-summary').title = root ? `分区 ${root.path} · 可用空间为文件系统报告值` : '分区容量';
+  // The backend filters virtual volumes and deduplicates filesystem aliases.
+  const disks = stats?.disks || [];
+  const diskSpace = disks.reduce((sum, disk) => ({ used: sum.used + disk.used, available: sum.available + disk.available, total: sum.total + disk.total }), { used: 0, available: 0, total: 0 });
+  $('#disk-used').textContent = disks.length ? prettySize(diskSpace.used) : '—';
+  $('#disk-available').textContent = disks.length ? prettySize(diskSpace.available) : '—';
+  $('#disk-total').textContent = disks.length ? prettySize(diskSpace.total) : '—';
+  $('.disk-summary').title = disks.length ? `文件系统合计（${disks.length} 个）：${disks.slice(0, 12).map(disk => disk.path).join('、')}${disks.length > 12 ? '…' : ''}\n可用空间为文件系统报告值；不含 SWAP、未挂载空间和重复挂载` : '尚无文件系统容量数据';
   $('#disk-read').textContent = stats?.sampleReady ? prettySize(stats.diskRead) + '/s' : '—'; $('#disk-write').textContent = stats?.sampleReady ? prettySize(stats.diskWrite) + '/s' : '—';
   renderNetwork(stats);
   renderServerAddresses(stats);

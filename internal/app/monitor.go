@@ -54,12 +54,23 @@ BEGIN {
         if (!model && line ~ /^(model name|Hardware)[ \t]*:/) { print line; model = 1 }
     }
     close("/proc/cpuinfo")
+    print "\n__CS_MOUNTS__"
+    while ((getline line < "/proc/self/mountinfo") > 0) {
+        count = split(line, fields, " ")
+        for (i = 7; i + 3 <= count; i++) {
+            if (fields[i] == "-") {
+                print fields[3], fields[4], fields[5], fields[i+1], fields[i+2]
+                break
+            }
+        }
+    }
+    close("/proc/self/mountinfo")
 }' 2>/dev/null
 printf '\n__CS_LINK__\n'; ip -o link show 2>/dev/null
 printf '\n__CS_ADDR__\n'; ip -o addr show 2>/dev/null
 printf '\n__CS_ROUTES__\n'; ip -4 route show default 2>/dev/null; ip -6 route show default 2>/dev/null
 printf '\n__CS_CONNECTION__\n'; printf '%s\n' "$SSH_CONNECTION"
-printf '\n__CS_DF__\n'; df -Pk 2>/dev/null
+printf '\n__CS_DF__\n'; df -Pkl 2>/dev/null
 `
 
 const monitorMinimumInterval = 5 * time.Second
@@ -237,23 +248,7 @@ func parseStats(data []byte, at time.Time) (rawStats, error) {
 			r.write += number(fields[9]) * 512
 		}
 	}
-	seen := map[string]bool{}
-	for _, line := range sections["__CS_DF__"] {
-		f := strings.Fields(line)
-		if len(f) < 6 || f[0] == "Filesystem" {
-			continue
-		}
-		mount := strings.Join(f[5:], " ")
-		if !strings.HasPrefix(mount, "/") || seen[mount] || strings.HasPrefix(mount, "/snap/") || strings.Contains(mount, "/docker/overlay") || strings.Contains(mount, "/containers/storage/overlay") {
-			continue
-		}
-		total := number(f[1]) * 1024
-		if total == 0 {
-			continue
-		}
-		seen[mount] = true
-		r.Disks = append(r.Disks, Disk{mount, total, number(f[2]) * 1024, number(f[3]) * 1024})
-	}
+	r.Disks = parseMonitorDisks(sections["__CS_DF__"], sections["__CS_MOUNTS__"])
 	parseProcessStats(&r, sections["__CS_PROCESS__"])
 	return r, nil
 }
