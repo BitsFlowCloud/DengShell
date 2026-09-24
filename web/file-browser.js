@@ -19,7 +19,7 @@ window.DengFileBrowser = (() => {
   }
 
   async function readDirectory(state, path, force = false) {
-    if (!state?.connected) return;
+    if (!state?.connected || state.sftpAvailable === false) return;
     const tree = treeFor(state);
     if (tree.pending.has(path)) {
       if (force) tree.invalidated.add(path);
@@ -46,7 +46,7 @@ window.DengFileBrowser = (() => {
   }
 
   function loadVisible(state) {
-    if (!state?.connected) return;
+    if (!state?.connected || state.sftpAvailable === false) return;
     const tree = treeFor(state);
     if (!tree.folders.has(rootPath) && !tree.pending.has(rootPath) && !tree.errors.has(rootPath)) void readDirectory(state, rootPath);
   }
@@ -74,6 +74,7 @@ window.DengFileBrowser = (() => {
       delete container.dataset.session;
       return;
     }
+    if (state.sftpAvailable === false) { container.replaceChildren(node('div', 'tree-placeholder', 'SFTP 文件服务不可用')); delete container.dataset.session; return; }
     const tree = treeFor(state);
     loadVisible(state);
     const sameSession = container.dataset.session === state.id;

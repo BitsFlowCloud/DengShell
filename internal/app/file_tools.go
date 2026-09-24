@@ -161,7 +161,7 @@ func (a *App) registerFileToolsHTTP(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/sessions/{id}/archive", a.archiveHTTP)
 }
 func (a *App) readTextHTTP(w http.ResponseWriter, r *http.Request) {
-	s, e := a.session(r.PathValue("id"))
+	s, e := a.fileSession(r.PathValue("id"))
 	if e != nil {
 		writeError(w, 400, e)
 		return
@@ -190,7 +190,7 @@ func (a *App) readTextHTTP(w http.ResponseWriter, r *http.Request) {
 	respond(w, textDocument{target, text, name, digestText(data), len(data), historyError}, op.err(e))
 }
 func (a *App) saveTextHTTP(w http.ResponseWriter, r *http.Request) {
-	s, e := a.session(r.PathValue("id"))
+	s, e := a.fileSession(r.PathValue("id"))
 	if e != nil {
 		writeError(w, 400, e)
 		return
@@ -272,7 +272,7 @@ func writeRemoteText(op *sftpOperation, s *Session, target string, data []byte, 
 	return s.files.PosixRename(temporary, target)
 }
 func (a *App) permissionsHTTP(w http.ResponseWriter, r *http.Request) {
-	s, e := a.session(r.PathValue("id"))
+	s, e := a.fileSession(r.PathValue("id"))
 	if e != nil {
 		writeError(w, 400, e)
 		return
@@ -453,7 +453,7 @@ func archiveRemote(ctx context.Context, c *sftp.Client, target string, out io.Wr
 	return gErr
 }
 func (a *App) archiveHTTP(w http.ResponseWriter, r *http.Request) {
-	s, e := a.session(r.PathValue("id"))
+	s, e := a.fileSession(r.PathValue("id"))
 	if e != nil {
 		writeError(w, 400, e)
 		return
@@ -498,7 +498,7 @@ func archiveName(target string) string {
 	return n + ".tar.gz"
 }
 func (a *App) DownloadArchiveTo(sessionID, remote, local string) (e error) {
-	s, e := a.session(sessionID)
+	s, e := a.fileSession(sessionID)
 	if e != nil {
 		return e
 	}
@@ -526,7 +526,7 @@ func (a *App) DownloadArchiveTo(sessionID, remote, local string) (e error) {
 	return replaceConfigFile(f.Name(), local)
 }
 func (a *App) PrepareExternalFile(sessionID, remote string) (local string, err error) {
-	s, err := a.session(sessionID)
+	s, err := a.fileSession(sessionID)
 	if err != nil {
 		return "", err
 	}

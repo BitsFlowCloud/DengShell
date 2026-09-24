@@ -114,7 +114,7 @@ func (s *Store) dropDirectoryFavoritesLocked(ids map[string]bool) {
 func (a *App) registerDirectoryFavoritesHTTP(mux *http.ServeMux) {
 	for _, method := range []string{"GET", "POST", "DELETE"} {
 		mux.HandleFunc(method+" /api/sessions/{id}/directory-favorites", func(w http.ResponseWriter, r *http.Request) {
-			s, err := a.session(r.PathValue("id"))
+			s, err := a.fileSession(r.PathValue("id"))
 			if err != nil {
 				writeError(w, 400, err)
 				return

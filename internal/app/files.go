@@ -35,7 +35,7 @@ func remotePath(value string) (string, error) {
 	return path.Clean(value), nil
 }
 func (a *App) listFiles(w http.ResponseWriter, r *http.Request) {
-	s, err := a.session(r.PathValue("id"))
+	s, err := a.fileSession(r.PathValue("id"))
 	if err != nil {
 		writeError(w, 400, err)
 		return
@@ -92,7 +92,7 @@ func (a *App) listFiles(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"path": dir, "entries": result, "historyError": historyError})
 }
 func (a *App) fileAction(w http.ResponseWriter, r *http.Request) {
-	s, err := a.session(r.PathValue("id"))
+	s, err := a.fileSession(r.PathValue("id"))
 	if err != nil {
 		writeError(w, 400, err)
 		return
@@ -148,7 +148,7 @@ func (a *App) fileAction(w http.ResponseWriter, r *http.Request) {
 	respond(w, map[string]bool{"ok": true}, op.err(err))
 }
 func (a *App) download(w http.ResponseWriter, r *http.Request) {
-	s, err := a.session(r.PathValue("id"))
+	s, err := a.fileSession(r.PathValue("id"))
 	if err != nil {
 		writeError(w, 400, err)
 		return
@@ -180,7 +180,7 @@ func (a *App) download(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r.WithContext(op.ctx), path.Base(target), info.ModTime(), sftpProgressReadSeeker{f, op})
 }
 func (a *App) DownloadTo(sessionID, remote, local string) (err error) {
-	s, err := a.session(sessionID)
+	s, err := a.fileSession(sessionID)
 	if err != nil {
 		return err
 	}
@@ -351,7 +351,7 @@ func (a *App) copyUpload(ctx context.Context, s *Session, t *Transfer, input io.
 	return err
 }
 func (a *App) uploadHTTP(w http.ResponseWriter, r *http.Request) {
-	s, err := a.session(r.PathValue("id"))
+	s, err := a.fileSession(r.PathValue("id"))
 	if err != nil {
 		writeError(w, 400, err)
 		return
@@ -378,7 +378,7 @@ func (a *App) uploadHTTP(w http.ResponseWriter, r *http.Request) {
 	respond(w, map[string]string{"id": t.ID}, err)
 }
 func (a *App) uploadLocal(w http.ResponseWriter, r *http.Request) {
-	s, err := a.session(r.PathValue("id"))
+	s, err := a.fileSession(r.PathValue("id"))
 	if err != nil {
 		writeError(w, 400, err)
 		return
@@ -568,7 +568,7 @@ func (a *App) retryTransfer(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, errors.New("此任务不能重试"))
 		return
 	}
-	s, err := a.session(sessionID)
+	s, err := a.fileSession(sessionID)
 	if err != nil {
 		writeError(w, 400, err)
 		return

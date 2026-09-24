@@ -134,3 +134,16 @@ dialog textarea::placeholder { color: var(--text-faint, #9fadb8); }
 #quick-save-dialog .checkbox-label { display:flex; flex-direction:row; align-items:center; }
 #quick-save-dialog input[type=checkbox] { width:16px; }
 #quick-save-error { color:var(--danger); }
+
+/* Parameter entry replaces the command list without moving the splitter. */
+.command-parameters-open :is(.command-list,#commands-empty) { display:none; }
+.command-composer-compact { margin-bottom:0; }
+.command-composer-compact .command-parameter-fields { grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),240px)); }
+.command-composer-compact .command-parameter-fields input { box-sizing:border-box; height:32px; padding:5px 9px; font-family:inherit; font-size:12px; line-height:1.5; }
+
+.command-composer-compact .command-parameter-fields { grid-column:1; }
+.command-composer-compact .command-composer-footer { grid-column:2; align-self:end; justify-content:flex-end; }
+@media(max-width:650px) {
+  .command-composer-compact .command-parameter-fields,
+  .command-composer-compact .command-composer-footer { grid-column:1; }
+}

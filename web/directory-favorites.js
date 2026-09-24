@@ -1,7 +1,7 @@
 'use strict';
 window.DengDirectoryFavorites = (() => {
   let panel, button, owner, entries = [], generation = 0, busy = false, saved = true, opened = false;
-  const valid = state => state && state === current() && state.connected && !state.closed && sessions.get(state.id) === state;
+  const valid = state => state && state === current() && state.connected && state.sftpAvailable !== false && !state.closed && sessions.get(state.id) === state;
   const endpoint = state => `/api/sessions/${encodeURIComponent(state.id)}/directory-favorites`;
   const active = (state, token) => opened && token === generation && valid(state);
   function close() {

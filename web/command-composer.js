@@ -42,7 +42,7 @@ window.DengCommandComposer = (() => {
   let previousHeight = null, expandedHeight = null;
   const drafts = new Map();
   function collapse() {
-    panel.hidden = true; $('#toggle-command-composer').setAttribute('aria-expanded', 'false');
+    panel.hidden = true; $('#commands-view').classList.remove('command-parameters-open'); $('#toggle-command-composer').setAttribute('aria-expanded', 'false');
     const style = document.documentElement.style;
     if (expandedHeight !== null && style.getPropertyValue('--files-height') === expandedHeight) {
       if (previousHeight) style.setProperty('--files-height', previousHeight); else style.removeProperty('--files-height');
@@ -81,7 +81,7 @@ window.DengCommandComposer = (() => {
     target.value = options.some(s => s.id === id) ? id : ''; window.DengSelect?.refresh(target); render();
   }
   function open(command = null, body = null, execute = false) {
-    compact = execute; panel.classList.toggle('command-composer-compact', compact);
+    compact = execute; $('#commands-view').classList.toggle('command-parameters-open', compact); panel.classList.toggle('command-composer-compact', compact);
     const key = command?.id || 'scratch';
     const source = command ? JSON.stringify([command.body, command.appendCR]) : '';
     if (!drafts.has(key) || body !== null || command && drafts.get(key).source !== source) drafts.set(key, { source, body: body ?? command?.body ?? '', values: {}, appendCR: command?.appendCR === true, targetID: current()?.id || '' });
@@ -97,7 +97,7 @@ window.DengCommandComposer = (() => {
     const workspace = $('#files-panel').parentElement;
     const currentHeight = $('#files-panel').getBoundingClientRect().height / effectiveScale;
     const desired = Math.min(compact ? 330 : 600, workspace.getBoundingClientRect().height / effectiveScale - 190);
-    if (desired > currentHeight) {
+    if (!compact && desired > currentHeight) {
       if (expandedHeight === null) previousHeight = document.documentElement.style.getPropertyValue('--files-height');
       expandedHeight = `${desired}px`; document.documentElement.style.setProperty('--files-height', expandedHeight);
     }

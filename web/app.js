@@ -232,7 +232,7 @@ async function connectProfile(profileID, force, { background = false, refreshHis
     window.DengCommandHistory?.refresh(profileID).catch(error => toast('⚠️  命令历史刷新失败：' + error.message));
     if (current() === state) { pollStats(); pollLatency(); }
     // A slow or failed SFTP listing must not block any other SSH connection.
-    navigate(info.home, state).catch(error => { if (!state.closed) toast(`⚠️  ${profile.name} 已连接，目录读取失败：${error.message}`); });
+    if (state.sftpAvailable !== false) navigate(info.home, state).catch(error => { if (!state.closed) toast(`⚠️  ${profile.name} 已连接，目录读取失败：${error.message}`); });
     if (refreshHistory) safe(refreshServerManagerHistory)();
     return state;
   } catch (error) {
@@ -345,7 +345,7 @@ function createTerminal(state) {
     if (message.type === 'ready') {
       // The relay sends ready only after the remote shell starts, before its
       // first output. Window handoffs must not add text to a running shell.
-      if (state.announceConnectionReady) { state.announceConnectionReady = false; showConnectionProgress(state, '✅  连接主机成功！'); }
+      if (state.announceConnectionReady) { state.announceConnectionReady = false; showConnectionProgress(state, '✅  连接主机成功！'); if (state.sftpAvailable === false) showConnectionProgress(state, 'ℹ️  SFTP 文件服务不可用，SSH 终端可正常使用。'); }
       acceptShellIntegration(state, message.integration); state.ready = true; state.handoffProvisional = false; state.ownershipUncertain = false; terminal.options.disableStdin = !!state.detaching || !state.connected; state.restoring = false; state.restoration = null; if (activeID === state.id) renderSessionInfo(); if (activeID === state.id) { fitActive(); terminal.focus(); }
     }
     else if (message.message) terminal.writeln(`\r\n\x1b[38;5;245m${message.type === 'error' ? '❌' : message.type === 'exit' ? '🔌' : 'ℹ️'}  ${message.message.replaceAll('\x1b', '')}\x1b[0m`);
@@ -479,7 +479,7 @@ function renderSessionInfo() {
   $('#terminal-meta-host').textContent = profile ? `${profile.user}@${profile.name}` : 'SSH 终端'; $('#terminal-state').textContent = state?.handoffProvisional ? '正在接收标签…' : state?.pendingConnection ? '正在连接…' : state?.connectionFailed ? '连接未完成' : state?.connected ? '已连接' : state?.disconnectDiagnostic ? `已断开 · ${state.disconnectDiagnostic.code}` : '待连接';
   $('#terminal-state').title = state?.disconnectDiagnostic?.message || '';
   $('#command-history').disabled = false; $('#command-input').disabled = !!state && !state.connected; $('#command-input').placeholder = state ? '输入命令并回车发送 · ↑↓ 历史' : '本机：输入 ssh 用户@主机 或 ping 主机'; window.DengQuickConnect?.reflect(); $('#command-input').value = ''; resizeCommandInput(); $('#reconnect').disabled = !state || !!(state.pendingConnection || state.disconnecting || state.detaching || state.handoffProvisional || state.ownershipUncertain); $('#disconnect').disabled = !state?.connected || !!(state.disconnecting || state.detaching || state.handoffProvisional || state.ownershipUncertain);
-  $('#follow-terminal').checked = !!state?.follow; $('#follow-terminal').disabled = !state?.ready;
+  $('#follow-terminal').checked = !!state?.follow; $('#follow-terminal').disabled = !state?.ready || state.sftpAvailable === false;
   renderMonitor(state?.connected ? state.stats : null); renderLatency(); renderCommands(); window.DengCommonApps?.render(); window.DengProcessView?.reflect(); updateStatus();
 }
 $('#command-form').onsubmit = event => { event.preventDefault(); const state = current(); const input = $('#command-input'); if (!state && input.value.trim()) { const command = input.value; input.value = ''; safe(() => window.DengQuickConnect.run(command))(); return; } if (!state?.ready || !input.value) return; pasteTerminalText(state, input.value, { execute: true }); input.value = ''; resizeCommandInput(); };
@@ -502,9 +502,11 @@ $('#follow-terminal').onchange = safe(async event => {
   if (state.terminalDirectory && state.terminalDirectory !== state.cwd) await navigate(state.terminalDirectory, state);
 });
 
+function filesUsable(state = current()) { return !!state?.connected && state.sftpAvailable !== false; }
+
 // SFTP browser. Only successful requests replace the current path and entries.
 async function navigate(path, state = current()) {
-  if (!state?.connected) return;
+  if (!filesUsable(state)) return;
   path = normalizePath(path, state.cwd);
   const generation = ++state.navGeneration; state.navAbort?.abort(); state.navAbort = new AbortController();
   if (activeID === state.id) $('#file-status-count').textContent = '读取目录…';
@@ -521,9 +523,10 @@ function renderFiles() {
   window.DengDirectoryFavorites?.reflect();
   const state = current(); const filter = $('#file-filter').value.toLowerCase();
   const entries = (state?.entries || []).filter(e => e.name.toLowerCase().includes(filter)).slice().sort((a, b) => compareFileEntries(a, b, fileSortKey, ascending));
-  $('#path-input').value = state?.cwd || ''; $('#path-input').disabled = !state?.connected; $('#drop-path').textContent = state?.cwd || '—';
+  $('#path-input').value = state?.cwd || ''; $('#path-input').disabled = !filesUsable(state); $('#drop-path').textContent = state?.cwd || '—';
   $('#file-status-count').textContent = state ? `${entries.length} 个项目${filter ? ' · 已筛选' : ''}` : '尚未连接'; $('#file-empty').hidden = !!entries.length; $('#file-empty').textContent = state ? '此目录暂无匹配文件' : '连接后浏览远程文件';
-  for (const id of ['parent-directory', 'refresh-files', 'mkdir', 'choose-files']) $(`#${id}`).disabled = !state?.connected;
+  for (const id of ['parent-directory', 'refresh-files', 'mkdir', 'choose-files']) $(`#${id}`).disabled = !filesUsable(state);
+  if (state?.sftpAvailable === false) { $('#file-status-count').textContent = 'SFTP 不可用'; $('#file-empty').textContent = '当前服务器的 SFTP 文件服务不可用，SSH 终端可正常使用。'; }
   $('#parent-directory').disabled ||= state?.cwd === '/';
   $('#file-list').replaceChildren(...entries.map(entry => {
     const row = node('tr', selectedName === entry.name ? 'selected' : ''); row.tabIndex = 0; row.dataset.fileName = entry.name; row.setAttribute('aria-label', entry.name);
@@ -536,7 +539,7 @@ function renderFiles() {
   })); renderTree(); updateFileActions();
 }
 function selectedEntry() { return current()?.entries.find(e => e.name === selectedName); }
-function updateFileActions() { const entry = selectedEntry(); $('#download-file').disabled = !current()?.connected || !entry || entry.kind === 'folder'; $('#rename-file').disabled = !current()?.connected || !entry; $('#delete-file').disabled = !current()?.connected || !entry; }
+function updateFileActions() { const entry = selectedEntry(); $('#download-file').disabled = !filesUsable() || !entry || entry.kind === 'folder'; $('#rename-file').disabled = !filesUsable() || !entry; $('#delete-file').disabled = !filesUsable() || !entry; }
 function renderTree() { window.DengFileBrowser.render(current()); }
 $('#path-form').onsubmit = safe(async event => { event.preventDefault(); await navigate($('#path-input').value); });
 $('#parent-directory').onclick = safe(() => navigate(parentPath(current().cwd)));
@@ -743,6 +746,7 @@ $('#upload-folder-option').onclick = safe(async () => { $('#upload-menu').hidden
 for (const id of ['file-picker', 'folder-picker']) $(`#${id}`).onchange = event => { queueFiles([...event.target.files].map(file => ({ file, relativePath: file.webkitRelativePath || file.name }))); event.target.value = ''; };
 let activeUploads = 0;
 function queueFiles(items, state = current(), destination = state?.cwd) {
+  if (state?.sftpAvailable === false) return toast('当前连接的 SFTP 文件服务不可用');
   if (!state?.connected) return toast('请先连接服务器');
   if (!items.length) return toast('没有可上传的文件');
   for (const { file, relativePath } of items) { const id = crypto.randomUUID(); localTasks.set(id, { id, sessionId: state.id, name: file.name, target: normalizePath(relativePath, destination), total: file.size, done: 0, status: 'queued', file }); }

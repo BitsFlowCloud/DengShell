@@ -27,6 +27,7 @@ type Session struct {
 	ProfileID           string `json:"profileId"`
 	Home                string `json:"home"`
 	Fingerprint         string `json:"fingerprint"`
+	SFTPAvailable       bool   `json:"sftpAvailable"`
 	connectionHost      string // immutable successful connection target; never resolved again
 	connectionPeer      string // public direct TCP peer; empty for explicit proxies
 	fileWriteIdentity   string // immutable verified server identity for text-save locks
@@ -277,16 +278,15 @@ func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret 
 			s.Close()
 		}
 	}()
-	files, err := s.openFileClient()
-	if err != nil {
-		return nil, fmt.Errorf("SSH 已连接，但 SFTP 不可用：%w", err)
+	// File service is optional: rescue/install environments often expose only
+	// a shell. A stalled subsystem must not consume the transport deadline.
+	fileCtx, cancelFiles := context.WithTimeout(dialCtx, 5*time.Second)
+	files, home, fileErr := s.initializeFileClient(fileCtx)
+	cancelFiles()
+	s.Home = "/"
+	if fileErr == nil {
+		s.files, s.Home, s.SFTPAvailable = files, home, true
 	}
-	s.files = files
-	home, err := files.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("读取远程目录：%w", err)
-	}
-	s.Home = home
 	finishPreparation()
 	if err := sessionCtx.Err(); err != nil {
 		return nil, err

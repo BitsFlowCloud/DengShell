@@ -80,6 +80,51 @@ try {
     assert.equal(await page.evaluate(() => current().term.buffer.active.viewportY), points.before);
   });
   await page.evaluate(() => { appearance.uiScale = 1; applyUIScale(); window.qaCommand = { id: 'qa-param', name: '参数命令', body: 'echo [p#1 内容]', appendCR: true }; });
+  for (const theme of ['dark', 'light']) {
+    for (const width of [1600, 900]) {
+      await page.setViewport({ width, height: 1000, deviceScaleFactor: 1 });
+      await page.evaluate(theme => { document.documentElement.dataset.theme = theme; document.documentElement.style.setProperty('--files-height', '240px'); showPane('commands'); }, theme);
+      await pause(100);
+      const before = await page.$eval('#files-panel', e => e.getBoundingClientRect().height);
+      await page.evaluate(() => DengCommandComposer.run(qaCommand));
+      await pause(100);
+      await check(`Stable compact parameters: ${theme} ${width}`, async () => {
+        assert(Math.abs(await page.$eval('#files-panel', e => e.getBoundingClientRect().height) - before) < 1);
+        assert.equal(await page.$eval('#command-list', e => getComputedStyle(e).display), 'none');
+        const size = await page.$eval('[data-parameter="1"]', e => ({ height: e.getBoundingClientRect().height, width: e.getBoundingClientRect().width }));
+        assert(size.height <= 33 && size.width <= 241, JSON.stringify(size));
+        if (width === 1600) assert(await page.evaluate(() => $('#composer-send').getBoundingClientRect().bottom <= $('#files-panel').getBoundingClientRect().bottom), 'send button clipped');
+        await page.type('[data-parameter="1"]', 'hello'); await page.click('#composer-send');
+        assert.notEqual(await page.$eval('#command-list', e => getComputedStyle(e).display), 'none');
+        assert(Math.abs(await page.$eval('#files-panel', e => e.getBoundingClientRect().height) - before) < 1);
+      });
+      await page.evaluate(() => DengCommandComposer.run(qaCommand));
+      await page.screenshot({path: stage + `/evidence/parameters-${theme}-${width}.png`});
+      await page.click('#command-composer .text-button');
+      await page.evaluate(() => DengCommandComposer.open({ ...qaCommand, id: 'clear', body: 'echo hi' }));
+      await page.click('#command-composer .text-button');
+    }
+  }
+  await page.setViewport({ width: 1600, height: 1100, deviceScaleFactor: 1 });
+  await page.evaluate(() => { qaCommand.id = 'qa-reusable'; });
+  await check('SSH-only disables files, retains command sending and restores other tabs', async () => {
+    const requests = [];
+    const capture = req => { if (/\/files\?|\/upload/.test(req.url())) requests.push(req.url()); };
+    page.on('request', capture);
+    await page.evaluate(async () => {
+      current().sftpAvailable = false; renderSessionInfo(); renderFiles();
+      await navigate('/'); queueFiles([{file: new File(['x'],'fixture.txt'),relativePath:'fixture.txt'}]);
+    });
+    await pause(120);
+    for (const id of ['path-input','choose-files','refresh-files','mkdir','directory-favorites-button','path-history-button','follow-terminal']) assert(await page.$eval('#'+id,e=>e.disabled), id);
+    assert.match(await page.$eval('#file-empty',e=>e.textContent), /SFTP/);
+    assert.deepEqual(requests, []);
+    const frames = await page.evaluate(() => { qaFrames=[]; DengCommandComposer.run({id:'shell-only', name:'only SSH', body:'pwd', appendCR:true}); return qaFrames; });
+    assert(frames.some(f=>f.type==='input'));
+    await page.evaluate(() => { current().sftpAvailable = true; renderSessionInfo(); renderFiles(); });
+    assert.equal(await page.$eval('#choose-files',e=>e.disabled), false);
+    page.off('request',capture);
+  });
   await check('Parameter command collapses and restores height after sending, retains reusable draft', async () => {
     const before = await page.evaluate(() => document.documentElement.style.getPropertyValue('--files-height'));
     await page.evaluate(() => DengCommandComposer.run(qaCommand));

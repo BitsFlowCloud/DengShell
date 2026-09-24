@@ -1,10 +1,10 @@
 'use strict';
 window.DengPathHistory = (() => {
   let dialog, owner, entries = [], request = 0, busy = false, saved = true;
-  const valid = state => state && state === current() && state.connected && !state.closed && sessions.get(state.id) === state;
+  const valid = state => state && state === current() && state.connected && state.sftpAvailable !== false && !state.closed && sessions.get(state.id) === state;
   const endpointFor = state => `/api/sessions/${encodeURIComponent(state.id)}/path-history`;
   function reflect() {
-    const button = $('#path-history-button'); if (button) button.disabled = !current()?.connected;
+    const button = $('#path-history-button'); if (button) button.disabled = !valid(current());
     if (dialog?.open && !valid(owner)) dialog.close();
   }
   function highlight(container, value, query) {
