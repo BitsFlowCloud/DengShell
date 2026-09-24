@@ -76,4 +76,4 @@ func (d *Desktop) DownloadArchive(sessionID, remote string) (string, error) {
 	}
 	return destination, nil
 }
-func (d *Desktop) OpenAbout() { runtime.BrowserOpenURL(d.ctx, "https://ds.free-vps.org") }
+func (d *Desktop) OpenAbout() { runtime.BrowserOpenURL(d.ctx, "https://dengshell.com") }

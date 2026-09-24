@@ -40,7 +40,9 @@ def build(stage, output):
         # makensis uses libc tmpfile(), which ignores TMPDIR on Linux. A private
         # mount keeps its mmap scratch on disk without touching the system /tmp.
         prefix = []
-        if shutil.which('bwrap'):
+        # Binding a private /tmp would hide a source or staging tree located
+        # there; use the normal temporary directory for this release workspace.
+        if shutil.which('bwrap') and not any(p.is_relative_to(Path('/tmp')) for p in (ROOT, stage, output)):
             scratch = temp / 'nsis-tmp'; scratch.mkdir()
             prefix = ['bwrap','--bind','/','/','--bind',str(scratch),'/tmp',
                       '--dev-bind','/dev','/dev','--die-with-parent','--']

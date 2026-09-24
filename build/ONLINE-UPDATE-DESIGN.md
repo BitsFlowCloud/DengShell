@@ -1,6 +1,6 @@
 # DengShell 在线更新协议（R40）
 
-启动检查固定来源 `https://ds.free-vps.org`，用户确认后下载、校验、安装并重启。更新会关闭 SSH 会话，安装前应保存编辑内容。配置、密钥、自定义字体和背景沿用原数据目录。
+新客户端启动检查固定来源 `https://dengshell.com`，用户确认后下载、校验、安装并重启。已发布的旧客户端仍访问 `https://ds.free-vps.org`；两个域名应映射同一网站目录，且旧域名的更新路径不能跨域跳转。更新会关闭 SSH 会话，安装前应保存编辑内容。配置、密钥、自定义字体和背景沿用原数据目录。
 
 ## 发布文件
 
@@ -14,7 +14,7 @@ Arch 从 R28 开始支持；旧版须先手动安装一次 R28 或更新版。�
 
 JSON 使用 schema 2，最大 64 KiB。身份包含 product、platform、version 和递增的 build；还包含安装包 size、sha256、包内程序 executableSHA256、notes 以及 signingKeyID、issuedAt、expiresAt、signature。由 `scripts/package-release.py` 生成真实文件大小与哈希，再调用发行签名工具。完整签名协议和密钥管理见 [SIGNED-UPDATES.md](SIGNED-UPDATES.md)。Arch 通过已有 platform 字段区分包类型，未改变旧 Windows/DEB 的签名字节协议。
 
-每次发布都递增 `internal/app/updates.go` 中的 ApplicationBuild。描述必须与程序构建号一致；已运行版本和安装收据记录的构建高水位均禁止回退。当前 R40 为 20260914040。每个包最大 1 GiB。
+每次发布都递增 `internal/app/updates.go` 中的 ApplicationBuild。描述必须与程序构建号一致；已运行版本和安装收据记录的构建高水位均禁止回退。每个包最大 1 GiB。
 
 ## 下载与信任
 

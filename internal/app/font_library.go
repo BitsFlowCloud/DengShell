@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-const fontLibraryOrigin = "https://ds.free-vps.org"
+const fontLibraryOrigin = "https://dengshell.com"
 
 // The reviewed catalog is part of the application, so a compromised website
 // cannot substitute font files, license notices, destinations or checksums.

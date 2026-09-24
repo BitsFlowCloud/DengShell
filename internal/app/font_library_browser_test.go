@@ -25,7 +25,7 @@ func TestFontLibraryBrowserFixture(t *testing.T) {
 	}
 	defer a.Close()
 	a.fontLibrary.client = &http.Client{Transport: fontTransport(func(r *http.Request) (*http.Response, error) {
-		if r.URL.Host != "ds.free-vps.org" || !strings.HasPrefix(r.URL.Path, "/fonts/") {
+		if r.URL.Host != "dengshell.com" || !strings.HasPrefix(r.URL.Path, "/fonts/") {
 			return nil, os.ErrPermission
 		}
 		if _, err := os.Stat(filepath.Join(root, "offline")); err == nil {

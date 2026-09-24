@@ -1,5 +1,11 @@
 # DengShell v0.02
 
+## 2026-09-25 官网与更新地址迁移 · 构建 20260925087
+
+- 新安装的客户端使用 `https://dengshell.com` 检查和下载更新，关于页面及在线字体库也改用新域名。
+- 保留旧域名的原更新路径，已安装的 Windows、DEB 和 pacman 客户端可升级到本次版本；升级后转用新域名。RPM、通用 Linux 包和 macOS 仍需手动下载安装。
+- 版本显示保持 v0.02，升级保留原有配置、密钥、自定义字体和背景。
+
 ## 2026-09-25 SSH 兼容与命令面板优化 · 构建 20260925086
 
 - 修复 SSH 已连接但因服务器未提供 SFTP 而无法进入终端的问题。SFTP 初始化失败或超时后保留 SSH，文件区域显示状态并停用不可用操作；适用于安装、救援和精简系统。
@@ -84,4 +90,4 @@ Windows、Debian/Ubuntu 和 R28 起的 Arch pacman 客户端可通过现有更�
 
 RPM、通用 Linux 包和 macOS 当前需要手动更新。macOS 最低版本为 13，仍为未公证的临时签名预览版。Linux 使用 GTK3/WebKitGTK 4.1，基线为 glibc 2.35。
 
-[官网下载](https://ds.free-vps.org/) · [同步说明](https://github.com/BitsFlowCloud/DengShell/blob/v0.02/docs/sync.md)
+[官网下载](https://dengshell.com/) · [同步说明](https://github.com/BitsFlowCloud/DengShell/blob/v0.02/docs/sync.md)

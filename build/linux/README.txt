@@ -69,7 +69,7 @@ https://packages.debian.org/bookworm/libwebkit2gtk-4.1-0
 https://packages.fedoraproject.org/pkgs/webkitgtk/webkit2gtk4.1/
 https://archlinux.org/packages/extra/x86_64/webkit2gtk-4.1/
 
-官网 https://ds.free-vps.org · 应用代码MIT开源，第三方许可证见 data/licenses（本文件位于data/docs时为../licenses）。详细功能见程序顶部说明书按钮。
+官网 https://dengshell.com · 应用代码MIT开源，第三方许可证见 data/licenses（本文件位于data/docs时为../licenses）。详细功能见程序顶部说明书按钮。
 
 Arch Linux / 兼容 pacman 的 x86-64 桌面：
   sudo pacman -U ./DengShell-linux-x64.pkg.tar.zst

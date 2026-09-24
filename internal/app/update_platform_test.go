@@ -61,12 +61,12 @@ func TestArchUpdateSignatureBindsPackageFamily(t *testing.T) {
 		if got.Status != tc.want {
 			t.Fatalf("%+v: %+v", tc, got)
 		}
-		if got.Status == "available" && (got.Package.Format != "pacman" || got.Package.URL != "https://ds.free-vps.org/up.pkg.tar.zst") {
+		if got.Status == "available" && (got.Package.Format != "pacman" || got.Package.URL != "https://dengshell.com/up.pkg.tar.zst") {
 			t.Fatalf("wrong Arch offer: %+v", got)
 		}
 	}
 	manifest, artifact := updateAddress(ArchUpdatePlatform)
-	if manifest != "https://ds.free-vps.org/up.pkg.tar.zst.json" || artifact != "https://ds.free-vps.org/up.pkg.tar.zst" {
+	if manifest != "https://dengshell.com/up.pkg.tar.zst.json" || artifact != "https://dengshell.com/up.pkg.tar.zst" {
 		t.Fatal("Arch address changed")
 	}
 	if updatePackageFormat("linux-amd64") != "deb" || updatePackageFormat("windows-amd64") != "exe" {

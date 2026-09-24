@@ -29,9 +29,9 @@ const ApplicationPackageVersion = "0.2.0"
 
 // Increase this integer for every published build, including packaging-only
 // releases. It also lets older clients identify repackaged releases.
-const ApplicationBuild uint64 = 20260925086
+const ApplicationBuild uint64 = 20260925087
 
-const UpdateManifestURL = "https://ds.free-vps.org/up.deb.json"
+const UpdateManifestURL = "https://dengshell.com/up.deb.json"
 const updateTimeout = 3 * time.Second
 const maximumUpdateSize int64 = 1 << 30
 
@@ -89,13 +89,13 @@ type startupUpdate struct {
 
 func updateAddress(platform string) (string, string) {
 	if platform == "windows-amd64" {
-		return "https://ds.free-vps.org/up.exe.json", "https://ds.free-vps.org/up.exe"
+		return "https://dengshell.com/up.exe.json", "https://dengshell.com/up.exe"
 	}
 	if platform == ArchUpdatePlatform {
-		return "https://ds.free-vps.org/up.pkg.tar.zst.json", "https://ds.free-vps.org/up.pkg.tar.zst"
+		return "https://dengshell.com/up.pkg.tar.zst.json", "https://dengshell.com/up.pkg.tar.zst"
 	}
 	if platform == "linux-amd64" {
-		return UpdateManifestURL, "https://ds.free-vps.org/up.deb"
+		return UpdateManifestURL, "https://dengshell.com/up.deb"
 	}
 	return "", ""
 }
@@ -108,7 +108,7 @@ var updateTransport = func() *http.Transport {
 
 func updateClient(timeout time.Duration) *http.Client {
 	return &http.Client{Transport: updateTransport, Timeout: timeout, CheckRedirect: func(req *http.Request, via []*http.Request) error {
-		if len(via) > 2 || req.URL.Scheme != "https" || req.URL.Host != "ds.free-vps.org" || req.URL.User != nil {
+		if len(via) > 2 || req.URL.Scheme != "https" || req.URL.Host != "dengshell.com" || req.URL.User != nil {
 			return errors.New("更新地址跳转无效")
 		}
 		return nil

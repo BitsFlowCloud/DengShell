@@ -73,7 +73,7 @@ Section "DengShell" SEC_MAIN
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell" "Publisher" "DengShell contributors"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell" "DisplayIcon" "$INSTDIR\DengShell.exe"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell" "UninstallString" '"$INSTDIR\data\support\Uninstall.exe"'
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell" "URLInfoAbout" "https://ds.free-vps.org"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell" "URLInfoAbout" "https://dengshell.com"
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell" "EstimatedSize" ${ESTIMATED_SIZE}
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell" "NoModify" 1
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\DengShell" "NoRepair" 1
