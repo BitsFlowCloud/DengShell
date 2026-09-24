@@ -177,3 +177,45 @@ func TestOptionalSFTPKeepsSSHUsable(t *testing.T) {
 		})
 	}
 }
+
+func TestSameProfileIndependentSSHConnections(t *testing.T) {
+	for _, mode := range []string{"available", "reject"} {
+		t.Run(mode, func(t *testing.T) {
+			a, host, port := optionalSFTPFixture(t, mode)
+			p, err := a.store.Save(Profile{Name: "shared profile", Host: host, Port: port, User: "fixture", Auth: "password", Secret: "fixture"}, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			first, err := a.Connect(context.Background(), p.ID, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			second, err := a.Connect(context.Background(), p.ID, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if first.ID == second.ID || first.client == second.client {
+				t.Fatal("SSH transport reused")
+			}
+			hs := httptest.NewServer(a.Handler(fstest.MapFS{}))
+			defer hs.Close()
+			a.baseURL = hs.URL
+			address := func(s *Session) string {
+				return "ws" + strings.TrimPrefix(hs.URL, "http") + "/api/sessions/" + s.ID + "/terminal?token=" + url.QueryEscape(a.Token())
+			}
+			one, two := dialRelayTest(t, address(first)), dialRelayTest(t, address(second))
+			one.command(t, "FIRST_TERMINAL", "FIRST_TERMINAL")
+			two.command(t, "SECOND_TERMINAL", "SECOND_TERMINAL")
+			a.disconnect(first.ID)
+			if _, err := a.session(second.ID); err != nil {
+				t.Fatal("closing sibling disconnected second", err)
+			}
+			two.command(t, "SURVIVED_SIBLING_CLOSE", "SURVIVED_SIBLING_CLOSE")
+			if mode == "available" {
+				if _, err := second.files.ReadDir("/"); err != nil {
+					t.Fatal("sibling close affected SFTP", err)
+				}
+			}
+		})
+	}
+}

@@ -75,7 +75,7 @@ window.DengCommandComposer = (() => {
     const id = activeDraft.targetID, options = [...sessions.values()].filter(s => !s.closed && !s.localOnly);
     const placeholder = node('option', '', id && !options.some(s => s.id === id) ? '原连接已关闭，请重新选择' : '请选择发送目标'); placeholder.value = '';
     target.replaceChildren(placeholder, ...options.map(s => {
-      const p = profileFor(s), option = node('option', '', `${p?.name || '服务器'} · ${p?.user || ''}@${p?.host || ''}:${p?.port || 22}${usable(s) ? '' : ' · 不可发送'}`);
+      const p = profileFor(s), option = node('option', '', `${sessionDisplayName(s)} · ${p?.user || ''}@${p?.host || ''}:${p?.port || 22}${usable(s) ? '' : ' · 不可发送'}`);
       option.value = s.id; return option;
     }));
     target.value = options.some(s => s.id === id) ? id : ''; window.DengSelect?.refresh(target); render();

@@ -15,7 +15,7 @@ function renderCommands() {
     return button;
   }));
   const state = current(), profile = profileFor(state);
-  $('#command-target').textContent = state?.ready ? `当前：${profile?.name || '当前会话'}` : '连接后可发送命令';
+  $('#command-target').textContent = state?.ready ? `当前：${sessionDisplayName(state)}` : '连接后可发送命令';
   const visible = commands.filter(command => !commandGroup || command.group === commandGroup);
   $('#commands-empty').hidden = visible.length > 0;
   $('#commands-empty').textContent = commandGroup ? `「${commandGroup}」还没有命令，点击「新建命令」添加。` : '把常用命令收在这里；右键可新建分组，点击「新建命令」开始。';

@@ -137,30 +137,45 @@ async function loadProfiles() {
   window.DengShellHelp?.acceptConfig(config);
 }
 
-async function connect(profileID, force = false, options = {}) {
-  // Concurrent callers share only the request for this profile, never another PTY.
-  if (connectionRequests.has(profileID)) return connectionRequests.get(profileID);
-  const request = connectProfile(profileID, force, options);
-  connectionRequests.set(profileID, request);
-  try { return await request; } finally { if (connectionRequests.get(profileID) === request) connectionRequests.delete(profileID); }
+function sessionDisplayName(state) {
+  const name = profileFor(state)?.name || '服务器';
+  if (!state) return name;
+  const peers = [...sessions.values()].filter(s => s.profileId === state.profileId).sort((a, b) => (a.tabOrder ?? 0) - (b.tabOrder ?? 0));
+  return peers.length > 1 ? `${name} · 会话 ${peers.indexOf(state) + 1}` : name;
 }
-async function connectProfile(profileID, force, { background = false, refreshHistory = true } = {}) {
-  if (connecting.has(profileID)) return null;
+function releaseConnectionAttempt(state) {
+  const key = state.connectionRequestKey;
+  if (connectionAttempts.get(key) !== state) return;
+  connectionAttempts.delete(key); connectionRequests.delete(key);
+  if (![...connectionAttempts.values()].some(s => s.profileId === state.profileId)) connecting.delete(state.profileId);
+}
+async function connect(profileID, force = false, options = {}) {
+  const matches = [...sessions.values()].filter(s => s.profileId === profileID);
+  const previous = force ? (options.sessionId ? sessions.get(options.sessionId) : matches.find(s => s.id === activeID) || matches[0]) : null;
+  if (force && (!previous || previous.profileId !== profileID || previous.closed)) return null;
+  // Coalesce repeat clicks for the same action, not independent reconnects.
+  const requestKey = force ? `reconnect:${previous.id}` : `new:${profileID}`;
+  if (connectionRequests.has(requestKey)) return connectionRequests.get(requestKey);
+  const request = connectProfile(profileID, { ...options, previous, requestKey });
+  connectionRequests.set(requestKey, request);
+  try { return await request; } finally { if (connectionRequests.get(requestKey) === request) connectionRequests.delete(requestKey); }
+}
+async function connectProfile(profileID, { background = false, refreshHistory = true, previous = null, requestKey } = {}) {
   const profile = connectionProfile(profileID); if (!profile) return;
   if (profile.auth === 'key' && !profile.keyId && !profile.keyPath) {
     toast(`🔑  「${profile.name}」未找到私钥，请重新配置密钥。`);
     if (!background) showConnectionForm(profile);
     return null;
   }
-  const matches = [...sessions.values()].filter(s => s.profileId === profileID);
-  const existing = matches.find(s => s.id === activeID) || matches.find(s => s.connected) || matches[0];
+  // An ordinary open always starts a new SSH session. Reconnect replaces only
+  // its explicitly captured source, never another tab with the same profile.
+  const existing = previous;
   if (existing?.detaching || existing?.handoffProvisional || existing?.ownershipUncertain) { toast('⏳  此 SSH 正在交接窗口，请稍后再试'); return null; }
-  if (existing?.connected && !force) { if (!background) { activate(existing.id); setDrawer(false); } return existing; }
   const tabOrder = existing?.tabOrder ?? nextSessionOrder++;
   const state = makeSessionState({ id: `pending:${profileID}:${crypto.randomUUID()}`, profileId: profileID, home: '/' });
-  Object.assign(state, { tabOrder, connected: false, localOnly: true, pendingConnection: true, announceConnectionReady: true, connectionAbort: new AbortController() });
+  Object.assign(state, { connectionRequestKey: requestKey, tabOrder, connected: false, localOnly: true, pendingConnection: true, announceConnectionReady: true, connectionAbort: new AbortController() });
   const alive = () => !state.closed && sessions.get(state.id) === state;
-  connecting.add(profileID); connectionAttempts.set(profileID, state);
+  connecting.add(profileID); connectionAttempts.set(requestKey, state);
   // Removing an old session is independent of every other selected profile.
   const previousClose = existing ? preserveReconnectTerminal(existing, state) : Promise.resolve();
   sessions.set(state.id, state);
@@ -242,7 +257,7 @@ async function connectProfile(profileID, force, { background = false, refreshHis
     }
     return null;
   } finally {
-    if (connectionAttempts.get(profileID) === state) { connectionAttempts.delete(profileID); connecting.delete(profileID); }
+    releaseConnectionAttempt(state);
     if (alive() && state.localOnly) { state.pendingConnection = false; renderTabs(); if (current() === state) renderSessionInfo(); }
     renderConnections(); updateStatus();
   }
@@ -427,9 +442,7 @@ function dropSessionView(id, expected = null) {
   for (const done of state.terminalWriteWaiters || []) done();
   if (state.localOnly) {
     state.connectionAbort?.abort();
-    if (connectionAttempts.get(state.profileId) === state) {
-      connectionAttempts.delete(state.profileId); connecting.delete(state.profileId); connectionRequests.delete(state.profileId);
-    }
+    releaseConnectionAttempt(state);
   }
   window.DengProcessView?.drop(id);
   state.navAbort?.abort(); state.ws?.close(); state.term?.dispose(); state.host?.remove(); sessions.delete(id);
@@ -452,7 +465,7 @@ function renderTabs() {
     tab.dataset.connecting = String(!!state.pendingConnection);
     tab.dataset.failed = String(!!state.connectionFailed);
     const label = node('span', 'session-tab-text');
-    label.append(node('span', 'session-tab-label', profile?.name || '已删除配置'));
+    label.append(node('span', 'session-tab-label', profile ? sessionDisplayName(state) : '已删除配置'));
     const button = node('button'); button.type = 'button'; button.append(node('span', `status-dot ${state.connected ? 'green' : 'blue'}`), label); button.onclick = () => activate(state.id); button.setAttribute('role', 'tab'); button.setAttribute('aria-selected', String(selected)); button.setAttribute('aria-current', selected ? 'page' : 'false'); button.title = profile ? `${profile.name} · ${profile.user}@${profile.host}:${profile.port}` : '已删除配置';
     if (selected && state.connected) { label.append(node('span', 'session-current-badge', '当前连接')); tab.classList.add('current-session'); }
     button.setAttribute('aria-busy', String(!!state.pendingConnection));
@@ -476,7 +489,7 @@ function updateStatus() { $('#connection-button').setAttribute('aria-label', '�
 function renderSessionInfo() {
   const state = current(), profile = profileFor(state);
   $('#welcome-state').hidden = !!state;
-  $('#terminal-meta-host').textContent = profile ? `${profile.user}@${profile.name}` : 'SSH 终端'; $('#terminal-state').textContent = state?.handoffProvisional ? '正在接收标签…' : state?.pendingConnection ? '正在连接…' : state?.connectionFailed ? '连接未完成' : state?.connected ? '已连接' : state?.disconnectDiagnostic ? `已断开 · ${state.disconnectDiagnostic.code}` : '待连接';
+  $('#terminal-meta-host').textContent = profile ? `${profile.user}@${sessionDisplayName(state)}` : 'SSH 终端'; $('#terminal-state').textContent = state?.handoffProvisional ? '正在接收标签…' : state?.pendingConnection ? '正在连接…' : state?.connectionFailed ? '连接未完成' : state?.connected ? '已连接' : state?.disconnectDiagnostic ? `已断开 · ${state.disconnectDiagnostic.code}` : '待连接';
   $('#terminal-state').title = state?.disconnectDiagnostic?.message || '';
   $('#command-history').disabled = false; $('#command-input').disabled = !!state && !state.connected; $('#command-input').placeholder = state ? '输入命令并回车发送 · ↑↓ 历史' : '本机：输入 ssh 用户@主机 或 ping 主机'; window.DengQuickConnect?.reflect(); $('#command-input').value = ''; resizeCommandInput(); $('#reconnect').disabled = !state || !!(state.pendingConnection || state.disconnecting || state.detaching || state.handoffProvisional || state.ownershipUncertain); $('#disconnect').disabled = !state?.connected || !!(state.disconnecting || state.detaching || state.handoffProvisional || state.ownershipUncertain);
   $('#follow-terminal').checked = !!state?.follow; $('#follow-terminal').disabled = !state?.ready || state.sftpAvailable === false;
@@ -484,7 +497,7 @@ function renderSessionInfo() {
 }
 $('#command-form').onsubmit = event => { event.preventDefault(); const state = current(); const input = $('#command-input'); if (!state && input.value.trim()) { const command = input.value; input.value = ''; safe(() => window.DengQuickConnect.run(command))(); return; } if (!state?.ready || !input.value) return; pasteTerminalText(state, input.value, { execute: true }); input.value = ''; resizeCommandInput(); };
 $('#command-input').onkeydown = event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); $('#command-form').requestSubmit(); return; } const state = current(); if (!state || !['ArrowUp', 'ArrowDown'].includes(event.key)) return; event.preventDefault(); state.historyIndex = Math.max(0, Math.min(state.history.length, state.historyIndex + (event.key === 'ArrowUp' ? -1 : 1))); event.target.value = state.history[state.historyIndex] || ''; resizeCommandInput(); };
-$('#reconnect').onclick = safe(() => current() && connect(current().profileId, true));
+$('#reconnect').onclick = safe(() => { const state = current(); return state && connect(state.profileId, true, { sessionId: state.id }); });
 $('#disconnect').onclick = safe(() => disconnectSession());
 $('#clear-terminal').onclick = () => { current()?.term.clear(); current()?.term.focus(); };
 let terminalFont = normalizeTerminalFontSize(appearance.terminalFontSize);

@@ -124,6 +124,7 @@
   const button=node('button','','拆分为独立窗口');button.type='button';button.setAttribute('role','menuitem');button.append(icon('popout'));
   const dismiss=e=>{if(!menu.contains(e.target))close()};
   const close=()=>{menu.remove();document.removeEventListener('pointerdown',dismiss);if(menuCleanup===close)menuCleanup=null};menuCleanup=close;
+  const another=node('button','','新建同服务器会话');another.type='button';another.setAttribute('role','menuitem');another.onclick=safe(()=>{close();return connect(state.profileId)});menu.append(another);
   button.onclick=safe(()=>{close();return detach(state)});menu.append(button);
   const caption=node('div','merge-window-caption','合并到窗口'),loading=node('div','merge-window-empty','正在查找其他窗口…');menu.append(caption,loading);document.documentElement.append(menu);
   window.DengWindowTransfers.targets().then(targets=>{

@@ -122,7 +122,7 @@ function reflectServerExplorerDetails() {
 function openServerProfileMenu(profile, actions, anchor) {
   closeServerGroupMenu(); const menu = $('#server-group-menu'); serverManager.menuProfile = profile.id;
   const buttons = [];
-  if (!profile.deletedAt) buttons.push(serverManagerButton('连接', () => { closeServerGroupMenu(); return connect(profile.id); }));
+  if (!profile.deletedAt) buttons.push(serverManagerButton([...sessions.values()].some(s => s.profileId === profile.id && s.connected) ? '新建 SSH 会话' : '连接', () => { closeServerGroupMenu(); return connect(profile.id); }));
   if (profile.notes) buttons.push(serverManagerButton('查看备注', () => window.DengProfileNotes.open(profile)));
   for (const button of actions.children) buttons.push(button);
   if (!profile.deletedAt) buttons.push(serverManagerButton('定位所属分组', () => { closeServerGroupMenu(); serverManager.tab = 'servers'; chooseServerFolder(profile.groupId); serverManager.selectedProfiles.add(profile.id); reflectServerSelection(); const row = [...$('#server-folder-list').querySelectorAll('[data-group-id]')].find(row => row.dataset.groupId === profile.groupId); row?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }));
