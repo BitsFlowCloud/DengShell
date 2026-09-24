@@ -146,6 +146,26 @@ func TestCancelledChannelOpenAllowsCooperativePeerToFinish(t *testing.T) {
 			if s.ctx.Err() != nil {
 				t.Fatal("ordinary channel-open RTT caused terminal disconnection")
 			}
+			// Cancellation returns promptly while its channel may still be closing.
+			// Wait for that bounded fixture cleanup, as production sampling retries
+			// on the next tick, before asserting transport reuse.
+			runner := &s.networkCollector
+			if method == "core" {
+				runner = &s.commandCollector
+			}
+			awaitNetworkCondition(t, time.Second, func() bool {
+				runner.mu.Lock()
+				defer runner.mu.Unlock()
+				if runner.job == nil {
+					return true
+				}
+				select {
+				case <-runner.job.done:
+					return true
+				default:
+					return false
+				}
+			})
 			ctx2, cancel2 := context.WithTimeout(context.Background(), time.Second)
 			defer cancel2()
 			data, err := read(ctx2, networkMonitorCommand)
