@@ -152,7 +152,7 @@ func TestSyncLockCancelsHistoryRequest(t *testing.T) {
 	r.Header.Set("X-CloudShell-Token", a.Token())
 	w := httptest.NewRecorder()
 	done := make(chan struct{})
-	go func() { defer close(done); a.Handler(os.DirFS("../../web")).ServeHTTP(w, r) }()
+	go func() { defer close(done); a.Handler(os.DirFS("../../mobile/assets/web")).ServeHTTP(w, r) }()
 	<-b.started
 	if _, e := a.LockNow(); e != nil {
 		cancel()

@@ -152,7 +152,7 @@ func TestFontBoldAndColorsPersistAndAreIndependentCopies(t *testing.T) {
 }
 
 func TestDeletingCustomFontCleansStyleAndRollbackPreservesIt(t *testing.T) {
-	font, err := os.ReadFile(filepath.Join("..", "..", "web", "assets", "fonts", "jetbrains-mono.woff2"))
+	font, err := os.ReadFile(filepath.Join("..", "..", "mobile", "assets", "web", "assets", "fonts", "jetbrains-mono.woff2"))
 	if err != nil {
 		t.Fatal(err)
 	}

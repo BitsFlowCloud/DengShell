@@ -17,7 +17,7 @@ func TestUIFontRestartBoundaryAndDeletion(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer a.Close()
-	font, err := os.ReadFile(filepath.Join("..", "..", "web", "assets", "fonts", "jetbrains-mono.woff2"))
+	font, err := os.ReadFile(filepath.Join("..", "..", "mobile", "assets", "web", "assets", "fonts", "jetbrains-mono.woff2"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestUIFontImportKindsAreSeparate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	font, err := os.ReadFile(filepath.Join("..", "..", "web", "assets", "fonts", "jetbrains-mono.woff2"))
+	font, err := os.ReadFile(filepath.Join("..", "..", "mobile", "assets", "web", "assets", "fonts", "jetbrains-mono.woff2"))
 	if err != nil {
 		t.Fatal(err)
 	}

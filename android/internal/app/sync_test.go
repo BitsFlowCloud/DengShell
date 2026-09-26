@@ -344,7 +344,7 @@ func TestSyncManagedPrivateKeysAndHistoryRestore(t *testing.T) {
 		t.Fatal(e)
 	}
 	syncCycle(t, a)
-	handler := a.Handler(os.DirFS("../../web"))
+	handler := a.Handler(os.DirFS("../../mobile/assets/web"))
 	body, _ := json.Marshal(map[string]string{"id": old})
 	r := httptest.NewRequest("POST", "/api/sync/restore", bytes.NewReader(body))
 	r.Header.Set("X-CloudShell-Token", a.Token())

@@ -270,7 +270,7 @@ func TestAssetHTTPUsesAuthenticatedJSONBridge(t *testing.T) {
 
 func TestCustomFontImportAndFallback(t *testing.T) {
 	// The distributed font is also a realistic browser/native import fixture.
-	font, err := os.ReadFile(filepath.Join("..", "..", "web", "assets", "fonts", "jetbrains-mono.woff2"))
+	font, err := os.ReadFile(filepath.Join("..", "..", "mobile", "assets", "web", "assets", "fonts", "jetbrains-mono.woff2"))
 	if err != nil {
 		t.Fatal(err)
 	}

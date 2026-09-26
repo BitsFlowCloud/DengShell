@@ -49,7 +49,7 @@ func TestFontLibraryBrowserFixture(t *testing.T) {
 		}
 		return &http.Response{StatusCode: 200, Body: file, ContentLength: info.Size(), Header: make(http.Header), Request: r}, nil
 	})}
-	handler := a.Handler(os.DirFS(filepath.Join("..", "..", "web")))
+	handler := a.Handler(os.DirFS(filepath.Join("..", "..", "mobile", "assets", "web")))
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/updates/check" {
 			writeJSON(w, map[string]string{"status": "none"})

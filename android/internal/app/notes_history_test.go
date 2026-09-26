@@ -171,7 +171,7 @@ func TestNotesHistoryBrowserFixture(t *testing.T) {
 		}
 		fixtures = append(fixtures, fixtureSession{s.ID, p.ID, remote, file, dir})
 	}
-	handler := a.Handler(os.DirFS(filepath.Join("..", "..", "web")))
+	handler := a.Handler(os.DirFS(filepath.Join("..", "..", "mobile", "assets", "web")))
 	server := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/updates/check" {
 			writeJSON(w, map[string]string{"status": "none"})

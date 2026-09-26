@@ -360,7 +360,7 @@ func TestPortableFolderMoveRetainsImportedResourcesAndAllPreferences(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	fontBytes, err := os.ReadFile(filepath.Join("..", "..", "web", "assets", "fonts", "jetbrains-mono.woff2"))
+	fontBytes, err := os.ReadFile(filepath.Join("..", "..", "mobile", "assets", "web", "assets", "fonts", "jetbrains-mono.woff2"))
 	if err != nil {
 		t.Fatal(err)
 	}

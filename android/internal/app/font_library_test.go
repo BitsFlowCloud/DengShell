@@ -22,7 +22,7 @@ type fontTransport func(*http.Request) (*http.Response, error)
 func (f fontTransport) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 func fontFixture(t *testing.T) []byte {
 	t.Helper()
-	data, err := os.ReadFile(filepath.Join("..", "..", "web", "assets", "fonts", "jetbrains-mono.woff2"))
+	data, err := os.ReadFile(filepath.Join("..", "..", "mobile", "assets", "web", "assets", "fonts", "jetbrains-mono.woff2"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestFontLibraryCatalogAndBundle(t *testing.T) {
 		t.Fatal(counts, builtins)
 	}
 	for _, kind := range []string{"fonts", "ui-fonts"} {
-		data, err := os.ReadFile(filepath.Join("..", "..", "web", "assets", kind, "catalog.json"))
+		data, err := os.ReadFile(filepath.Join("..", "..", "mobile", "assets", "web", "assets", kind, "catalog.json"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -77,7 +77,7 @@ func TestFontLibraryCatalogAndBundle(t *testing.T) {
 			t.Fatal(kind, len(bundle.Fonts))
 		}
 		for _, font := range bundle.Fonts {
-			raw, err := os.ReadFile(filepath.Join("..", "..", "web", font.File))
+			raw, err := os.ReadFile(filepath.Join("..", "..", "mobile", "assets", "web", font.File))
 			if err != nil {
 				t.Fatal(err)
 			}

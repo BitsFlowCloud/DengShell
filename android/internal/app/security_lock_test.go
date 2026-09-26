@@ -234,7 +234,7 @@ func TestSecurityLockHTTPAndTamperFailure(t *testing.T) {
 	a := lockTestApp(t)
 	enableTestPassword(t, a, 0)
 	a.LockNow()
-	handler := a.Handler(os.DirFS("../../web"))
+	handler := a.Handler(os.DirFS("../../mobile/assets/web"))
 	request := func(method, path string, body string, token bool) *httptest.ResponseRecorder {
 		r := httptest.NewRequest(method, path, strings.NewReader(body))
 		if token {
