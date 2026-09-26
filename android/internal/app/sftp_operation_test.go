@@ -100,6 +100,7 @@ func TestUploadContentsArePrivateBeforeAcknowledgement(t *testing.T) {
 	gate := make(chan struct{})
 	link.mu.Lock()
 	link.ackGate = gate
+	link.writeReady = make(chan struct{}, 1)
 	link.mu.Unlock()
 	target := filepath.Join(root, "private.conf")
 	if err := os.WriteFile(target, []byte("old"), 0600); err != nil {
@@ -118,7 +119,13 @@ func TestUploadContentsArePrivateBeforeAcknowledgement(t *testing.T) {
 			t.Error(err)
 		}
 	}()
-	waitUploadPending(t, link, 1)
+	// Pending requests can still be in transit. Inspect after the server
+	// completed its write while its ACK is held behind the gate.
+	select {
+	case <-link.writeReady:
+	case <-time.After(3 * time.Second):
+		t.Fatal("server did not finish the gated write")
+	}
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		t.Fatal(err)

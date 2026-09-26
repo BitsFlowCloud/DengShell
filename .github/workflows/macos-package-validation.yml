@@ -1,0 +1,65 @@
+name: macOS package validation
+on:
+  workflow_dispatch:
+    inputs:
+      build_run:
+        description: Successful macOS build job run containing DengShell-macos-universal
+        required: true
+permissions:
+  contents: read
+  actions: read
+env:
+  GOMAXPROCS: '4'
+  GOFLAGS: '-p=4'
+jobs:
+  validate:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: amd64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: '1.27.1'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: DengShell-macos-universal
+          path: macos-artifact
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.build_run }}
+      - name: Check exact package hashes and source build
+        run: |
+          (cd macos-artifact && shasum -a 256 --check SHA256SUMS.txt)
+          ditto -x -k macos-artifact/DengShell-macos-universal.zip macos-unpacked
+          python3 - <<'PY'
+          import pathlib,plistlib,re,struct
+          root=pathlib.Path('.');app=root/'macos-unpacked/DengShell.app'
+          build=re.search(r'const ApplicationBuild uint64 = (\d+)',(root/'internal/app/updates.go').read_text()).group(1)
+          assert plistlib.loads((app/'Contents/Info.plist').read_bytes())['DengShellBuild']==build
+          data=(app/'Contents/MacOS/DengShell').read_bytes();magic,count=struct.unpack_from('>II',data);assert magic==0xcafebabe and count==2
+          assets=[p for d in [root/'web',root/'internal/app/shell_integration'] for p in d.rglob('*') if p.is_file() and not any(n.startswith(('.','_')) for n in p.relative_to(d).parts)]
+          for i in range(count):
+              cpu,sub,offset,size,align=struct.unpack_from('>IIIII',data,8+i*20)
+              for p in assets:assert p.read_bytes() in data[offset:offset+size],str(p)
+          print('Same universal binary and embedded assets verified against source',build)
+          PY
+      - name: Full backend, native platform and upload synchronization regression
+        run: |
+          go test -buildvcs=false -timeout 12m ./...
+          go test -buildvcs=false -tags desktop,production -timeout 5m .
+          go test -buildvcs=false -run '^TestUploadContentsArePrivateBeforeAcknowledgement$' -count=30 ./internal/app
+      - name: Launch verified universal package
+        run: python3 scripts/test-macos-app.py macos-unpacked/DengShell.app --output macos-artifact/native-${{ matrix.arch }}.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: macos-package-${{ matrix.arch }}
+          path: macos-artifact/native-${{ matrix.arch }}.*
+          retention-days: 14

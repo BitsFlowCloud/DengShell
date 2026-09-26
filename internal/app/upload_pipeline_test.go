@@ -24,17 +24,18 @@ import (
 // is delayed independently (not serialized sleeps, which would test bandwidth
 // throttling instead of RTT). All files live in t.TempDir().
 type uploadTestLink struct {
-	mu        sync.Mutex
-	writes    map[uint32]bool
-	pending   int
-	maximum   int
-	acked     int
-	failNext  bool
-	delay     time.Duration
-	ackGate   <-chan struct{}
-	handles   map[string]bool
-	closeGate <-chan struct{}
-	closes    map[uint32]bool
+	mu         sync.Mutex
+	writes     map[uint32]bool
+	pending    int
+	maximum    int
+	acked      int
+	failNext   bool
+	delay      time.Duration
+	ackGate    <-chan struct{}
+	writeReady chan struct{} // signals server write completion before withholding the ACK
+	handles    map[string]bool
+	closeGate  <-chan struct{}
+	closes     map[uint32]bool
 }
 
 func (l *uploadTestLink) request(frame []byte) {
@@ -128,12 +129,19 @@ func uploadSFTPFixture(t *testing.T, delay time.Duration) (*App, *Session, strin
 			}
 			link.mu.Lock()
 			gate := link.ackGate
+			writeReady := link.writeReady
 			isWriteACK := len(frame) >= 9 && frame[4] == 101 && link.writes[binary.BigEndian.Uint32(frame[5:9])]
 			isCloseACK := len(frame) >= 9 && frame[4] == 101 && link.closes[binary.BigEndian.Uint32(frame[5:9])]
 			if isCloseACK {
 				gate = link.closeGate
 			}
 			link.mu.Unlock()
+			if isWriteACK && writeReady != nil {
+				select {
+				case writeReady <- struct{}{}:
+				default:
+				}
+			}
 			if gate != nil && (isWriteACK || isCloseACK) {
 				held.Go(func() {
 					select {
