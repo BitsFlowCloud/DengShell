@@ -1,0 +1,97 @@
+/* Readable text on the light workspace's white and pastel surfaces.
+   Keep terminal/preview colors and user-selected chart colors independent. */
+:root[data-theme="light"] {
+  --text: #243b4e;
+  --text-secondary: #344f62;
+  --muted: #486174;
+  --text-faint: #536778;
+  --accent: #315f7d;
+  --danger: #a33d48;
+  --primary-focus: #345a74;
+  color: var(--text);
+}
+
+/* Older workspace widgets still have literal colors instead of text roles. */
+:root[data-theme="light"] :where(.brand, .host-heading strong, .drawer-heading h2,
+  .connection-card-text strong, dialog, dialog h2, .sidebar h2, .file-table td:first-child) {
+  color: var(--text);
+}
+:root[data-theme="light"] :where(.host-details, .specs b, .meter b, .meter em,
+  .disk-summary strong, .disk-row, .disk-row > span:last-child, .disk-io b,
+  .path-form input, .file-search input, .connection-search input,
+  .tree-shortcut, .tree-row, .file-table td, .process-table td, .transfer-info strong,
+  .file-tab, .follow-label, .session-tab, .new-connection, .transfer-retry,
+  .connection-actions button, .group-tool, dialog .checkbox-label) {
+  color: var(--text-secondary);
+}
+:root[data-theme="light"] :where(.app-status, .version, .location, .preview-notice,
+  .specs, .cpu-model, .cpu-model span, .metric > span, .sidebar h2 > span,
+  .chart-caption, .chart-caption span, .chart-heading small,
+  .process-details summary, .process-details summary span, .process-table th,
+  .disk-summary strong small, .disk-summary > div > span, .disk-table-head, .disk-io,
+  .session-bar-end, .files-tip, .count-badge, .tree-heading, .file-table th,
+  .file-table th button span, .file-table td:nth-child(4), .file-status,
+  .statusbar, .statusbar-end, .eyebrow, .drawer-note, .group-empty,
+  .connection-card-text small, .empty-state, .connection-group h3,
+  .transfer-empty, .transfer-empty strong, .transfer-info small, .transfer-size, dialog p) {
+  color: var(--muted);
+}
+:root[data-theme="light"] :where(.text-button, .brand > .icon-button,
+  .host-heading .icon-button, .sidebar h2 svg, .connection-button, .add-session,
+  .tab-close, .file-toolbar .icon-button, .upload-button, .tree-chevron,
+  .drawer-heading .icon-button, .connection-search, .file-search, .server-icon,
+  .connection-group h3 svg, .titlebar .window-controls button) {
+  color: var(--text-secondary);
+}
+:root[data-theme="light"] :where(.file-tab.active, .session-tab.active,
+  .tree-shortcut.selected, .tree-row.selected, .disk-percent,
+  .connection-card.selected .server-icon) { color: var(--accent); }
+:root[data-theme="light"] :where(dialog input, dialog textarea, .connection-search input,
+  .file-search input, .path-form input)::placeholder { color: var(--text-faint); opacity: 1; }
+:root[data-theme="light"] .file-table td:first-child { color: var(--text); }
+:root[data-theme="light"] :is(.file-table td:nth-child(4), .disk-row > span:last-child) { color: var(--text-secondary); }
+:root[data-theme="light"] .titlebar .window-controls button { color: var(--text-secondary); }
+
+:root[data-theme="light"] .server-manager-tabs button span { opacity: 1; }
+/* A failed sample is identified by its message, with readable cached values. */
+:root[data-theme="light"] .system-section.stale { opacity: 1; }
+:root[data-theme="light"] .system-section.stale #monitor-state { color: var(--danger); }
+
+/* Small status text keeps its meaning without relying on pale lettering. */
+:root[data-theme="light"] :is(.pill, .history-execute, .session-current-badge,
+  .server-selection-open, .transfer-state.done, .icmp-heading b, .icmp-values b) { color: #35684e; }
+:root[data-theme="light"] :is(.pill.offline, .transfer-state.cancelled) { color: var(--muted); }
+:root[data-theme="light"] :is(.transfer-notice, .transfer-state) { color: #75551e; }
+:root[data-theme="light"] :is(.app-status.failed, #connection-button.failed,
+  .transfer-state.failed, .danger-button, .file-context-menu button.file-context-danger,
+  #startup-update-error, #chart-style-error, .icmp-values .has-loss,
+  #ping-status .ping-detail .has-loss) { color: var(--danger); }
+:root[data-theme="light"] .disk-readout.read { color: #286075; }
+:root[data-theme="light"] .disk-readout.write { color: #79521e; }
+:root[data-theme="light"] .latency-heading > b { color: #315f7d; }
+:root[data-theme="light"] .drop-overlay { color: #315f7d; }
+:root[data-theme="light"] .drop-overlay :is(span, b) { color: var(--text-secondary); }
+:root[data-theme="light"] :is(.splash-powered-label, .splash-settings-hint) { color: var(--muted); }
+
+/* White button labels need a deeper fill, including hover and keyboard focus. */
+:root[data-theme="light"] .primary-button { color: #fff; background: #3e6884; }
+:root[data-theme="light"] .primary-button:is(:hover, :focus-visible) { color: #fff; background: var(--primary-focus); }
+:root[data-theme="light"] #reset-layout { color: #326655; }
+:root[data-theme="light"] #theme-toggle { color: #77551e; }
+:root[data-theme="light"] #manage-fonts { color: #6d4d75; }
+:root[data-theme="light"] #settings-button { color: #445b85; }
+:root[data-theme="light"] .titlebar .help-pill { color: #30636c; }
+:root[data-theme="light"] .titlebar .window-controls .window-close { color: #884553; }
+:root[data-theme="light"] .titlebar .window-controls .window-close:is(:hover, :focus-visible) { color: #fff; background: #a33d48; }
+
+/* Shared color families for saved commands and built-in tools. The tool pill's
+   tint stays separate so increasing text contrast does not darken its surface. */
+:root[data-theme="light"] [data-color="blue"] { --pill-fg: #315f7d; }
+:root[data-theme="light"] [data-color="green"] { --pill-fg: #35684e; }
+:root[data-theme="light"] [data-color="purple"] { --pill-fg: #665180; }
+:root[data-theme="light"] [data-color="teal"] { --pill-fg: #2f6770; }
+:root[data-theme="light"] [data-color="amber"] { --pill-fg: #785720; }
+:root[data-theme="light"] [data-color="rose"] { --pill-fg: #84485c; }
+:root[data-theme="light"] .common-app-pill { color: var(--pill-fg, #315f7d); }
+:root[data-theme="light"] .swap-actions .swap-action { color: #315f7d; }
+:root[data-theme="light"] .swap-actions .swap-action[data-swap-action="remove"] { color: #84485c; }

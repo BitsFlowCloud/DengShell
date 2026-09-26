@@ -1,0 +1,13 @@
+.gradle/
+.cache/
+.android-user/
+.avd/
+local.properties
+DengShellCore.aar
+DengShellCore-sources.jar
+app/build/
+build/
+release/
+previews/
+*.keystore
+*.jks

@@ -1,0 +1,11 @@
+<resources>
+    <style name="DengShellTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#147F73</item>
+        <item name="android:statusBarColor">#F8FBFA</item>
+        <item name="android:navigationBarColor">#F8FBFA</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowBackground">#EEF3F5</item>
+    </style>
+</resources>

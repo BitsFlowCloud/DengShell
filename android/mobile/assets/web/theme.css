@@ -1,0 +1,137 @@
+/* Focus uses a quiet change of surface instead of a rectangular outline. */
+:root { --focus-surface: #e8f0f5; --focus-input: #f1f5f8; --primary-focus: #648ba7; }
+/* Light grows gently across the room; switching off settles into the dark palette. */
+::view-transition { pointer-events:none; }
+::view-transition-group(root) { animation-duration:var(--light-switch-duration,820ms); }
+::view-transition-old(root),::view-transition-new(root) { mix-blend-mode:normal; animation-duration:var(--light-switch-duration,820ms); animation-timing-function:cubic-bezier(.22,.65,.3,1); animation-fill-mode:both; }
+[data-light-switch="on"]::view-transition-old(root) { animation-name:room-light-old; }
+[data-light-switch="on"]::view-transition-new(root) { animation-name:room-light-on; }
+[data-light-switch="off"]::view-transition-old(root) { animation-name:room-dark-old; }
+[data-light-switch="off"]::view-transition-new(root) { animation-name:room-light-off; }
+@keyframes room-light-old { to { opacity:0; filter:brightness(1.12); } }
+@keyframes room-dark-old { to { opacity:0; filter:brightness(.65) saturate(.85); } }
+@keyframes room-light-on { from { opacity:0; filter:brightness(.8) saturate(.88); } to { opacity:1; filter:brightness(1) saturate(1); } }
+@keyframes room-light-off { from { opacity:0; filter:brightness(1.12); } 65% { filter:brightness(.94); } to { opacity:1; filter:brightness(1); } }
+.theme-transitioning,.theme-transitioning :is(body,button,input,select,textarea,dialog,section,aside,nav,header,summary,th,td,.asset-card,.network-card,.files-panel,.server-group-row) { transition:background-color var(--light-switch-duration) cubic-bezier(.22,.65,.3,1),color var(--light-switch-duration) ease,border-color var(--light-switch-duration) ease,box-shadow var(--light-switch-duration) ease; }
+@media (prefers-reduced-motion:reduce) { ::view-transition-old(root),::view-transition-new(root) { animation:none; } .theme-transitioning,.theme-transitioning * { transition:none!important; } }
+button:focus-visible, summary:focus-visible { background-color: var(--focus-surface); }
+.primary-button:focus-visible { background-color: var(--primary-focus); color: #fff; }
+.terminal-tool:focus-visible, #welcome-connect:focus-visible { background-color: #769bb357; }
+.connection-search:focus-within, .path-form:focus-within, .file-search:focus-within,
+dialog :is(input, select):focus { background-color: var(--focus-input); }
+.file-search { border-radius: 7px; }
+.connection-card.selected { border-color: transparent; }
+.theme-toggle { margin-left: auto; color: #8299ad; }
+.theme-toggle svg { width: 17px; height: 17px; }
+.theme-sun, [data-theme="dark"] .theme-moon { display: none; }
+[data-theme="dark"] .theme-sun { display: block; }
+
+/* The light workspace retains its soft palette. Dark surfaces share these roles. */
+:root[data-theme="dark"] {
+  --surface: #1c2732;
+  --surface-inset: #17222c;
+  --surface-hover: #283a49;
+  --surface-selected: #2c4355;
+  --border: #2e3d4b;
+  --text: #d4dfe8;
+  --text-secondary: #b5c5d2;
+  --muted: #94a8b9;
+  --text-faint: #8297a8;
+  --accent: #a6c7df;
+  --focus-surface: #304657;
+  --focus-input: #202f3c;
+  --primary-focus: #507c99;
+  --shadow: 0 3px 18px #0000001c, 0 1px 3px #00000012;
+  background: #111820;
+  color: var(--text);
+}
+[data-theme="dark"] body { background: radial-gradient(ellipse at 15% 0%, #1c2732, #111820 70%); }
+[data-theme="dark"] :is(.files-panel, .file-table thead, .connections-drawer, dialog, .popup-menu, .session-tab.active) { background: var(--surface); }
+[data-theme="dark"] :is(.brand, .drawer-heading h2, .host-heading strong, .connection-card-text strong, dialog h2) { color: var(--text); }
+[data-theme="dark"] button:hover { color: var(--accent); }
+[data-theme="dark"] :is(.icon-button, .text-button, .connection-button, .tab-close, .tree-toggle, .connection-card, .new-connection, .upload-button, .group-tool):hover,
+[data-theme="dark"] :is(.connection-actions, #file-actions, .popup-menu) button:hover,
+[data-theme="dark"] :is(.tree-shortcut, .tree-row):hover { background: var(--surface-hover); }
+[data-theme="dark"] :is(button, summary):focus-visible { background-color: var(--focus-surface); }
+[data-theme="dark"] :is(.file-tab.active, .connection-card.selected, .tree-shortcut.selected, .tree-row.selected) { background: var(--surface-selected); color: var(--accent); }
+[data-theme="dark"] :is(.meter, .network-card, .path-form, .connection-search, .server-icon, .count-badge, .disk-total-bar, .transfer-progress, .input-with-button button) { background: var(--surface-inset); }
+[data-theme="dark"] .connection-group h3 .group-count { background: var(--surface-inset); }
+[data-theme="dark"] .connection-card.selected .server-icon { background: #344f64; color: var(--accent); }
+[data-theme="dark"] .upload-button { background: #263b4b; }
+[data-theme="dark"] .toolbar-divider { background: var(--border); }
+[data-theme="dark"] :is(.connection-search, .popup-menu, .new-connection, dialog input, dialog select) { border-color: var(--border); }
+[data-theme="dark"] :is(.process-table tbody tr + tr, .disk-row + .disk-row, .transfer-row) { border-color: #263542; }
+
+/* Monitor labels and values remain readable at their compact sizes. */
+[data-theme="dark"] :is(.sidebar h2, .specs b, .meter b, .disk-summary strong, .disk-row, .file-table td, .path-form input, .tree-shortcut, .tree-row, .transfer-info strong, dialog) { color: var(--text-secondary); }
+[data-theme="dark"] :is(.app-status, .brand > .icon-button, .text-button, .host-details, .sidebar h2 svg, .specs, .cpu-model, .cpu-model span, .metric > span, .meter em, .chart-caption, .process-details summary, .process-table td, .disk-row > span:last-child, .disk-io b) { color: var(--muted); }
+[data-theme="dark"] :is(.version, .location, .sidebar h2 > span, .chart-caption span, .chart-heading small, .process-details summary span, .process-table th, .disk-summary strong small, .disk-summary > div > span, .disk-table-head, .disk-io) { color: var(--text-faint); }
+[data-theme="dark"] .meter i { background: #344d61; }
+[data-theme="dark"] .meter i.cpu-fill { background: #36594f; }
+[data-theme="dark"] .meter i.memory-fill { background: #355970; }
+[data-theme="dark"] .meter :is(b, em) { color: #c2d4df; }
+[data-theme="dark"] .disk-percent { color: #a7c8dd; }
+[data-theme="dark"] .disk-total-bar i { background: linear-gradient(90deg, #537e98, #82acc4); }
+[data-theme="dark"] .upload-color { color: #d3b092; }
+[data-theme="dark"] .download-color { color: #9fc6b5; }
+[data-theme="dark"] .latency-heading > b { color: #a2c4db; }
+[data-theme="dark"] .pill { color: #a7cdb9; background: #284338; }
+[data-theme="dark"] .pill.offline { color: var(--muted); background: #293846; }
+[data-theme="dark"] .app-status.failed { color: #d8a195; }
+[data-theme="dark"] .splitter span { background: #5d788647; }
+[data-theme="dark"] .splitter:is(:hover, :focus-visible) span { background: #85a7bd; }
+
+/* A dark terminal in both modes; changing theme leaves the running PTY intact. */
+[data-theme="dark"] .terminal-panel { background: linear-gradient(115deg, #182a37, #13222e 70%, #111e29); box-shadow: var(--shadow); }
+[data-theme="dark"] .terminal-command-bar { background: #0e192366; }
+[data-theme="dark"] :is(.terminal-tool, #welcome-connect):is(:hover, :focus-visible) { background-color: #769bb357; color: #d4e5ee; }
+[data-theme="dark"] :is(.theme-toggle, .connection-button, .add-session, .session-tab.active) { color: var(--accent); }
+[data-theme="dark"] :is(.session-tab, .tab-close, .file-tab, .follow-label, .file-toolbar .icon-button, .upload-button, .connection-search, .drawer-heading .icon-button, .connection-group h3, .connection-actions button, .group-tool, dialog .checkbox-label, .server-icon) { color: var(--muted); }
+[data-theme="dark"] :is(.files-tip, .count-badge, .tree-heading, .tree-chevron, .file-table th, .file-table th button span, .file-table td:nth-child(4), .file-status, .statusbar, .statusbar-end, .status-divider, .eyebrow, .drawer-note, .group-empty, .connection-card-text small, .empty-state, dialog p) { color: var(--text-faint); }
+[data-theme="dark"] :is(.path-form > svg, .file-search svg, .file-name svg, .connection-group h3 svg) { color: var(--muted); stroke: currentColor; }
+[data-theme="dark"] .file-table tbody tr:nth-child(even) { background: #1f2c38; }
+[data-theme="dark"] .file-table tbody tr:hover { background: var(--surface-hover); }
+[data-theme="dark"] .file-table tbody tr.selected { background: var(--surface-selected); }
+[data-theme="dark"] .file-table td:first-child { color: #c8dae7; }
+[data-theme="dark"] :is(.tree-shortcut svg, .tree-link svg, .file-name svg.folder-icon) { color: #c6b28a; fill: #4d4637; }
+[data-theme="dark"] .file-name svg.code-icon { color: #9fc6b5; }
+
+/* Dialogs, native form controls, menus and every transfer state use dark surfaces. */
+[data-theme="dark"] .connections-drawer { box-shadow: 10px 0 40px #00000033; }
+[data-theme="dark"] .drawer-backdrop { background: #050c1355; }
+[data-theme="dark"] dialog { box-shadow: 0 20px 80px #00000066; }
+[data-theme="dark"] dialog::backdrop { background: #050c1388; }
+[data-theme="dark"] dialog :is(input, select) { background: var(--surface-inset); color: var(--text); }
+[data-theme="dark"] .connection-search:focus-within,
+[data-theme="dark"] .path-form:focus-within,
+[data-theme="dark"] .file-search:focus-within,
+[data-theme="dark"] dialog :is(input, select):focus { background: var(--focus-input); }
+[data-theme="dark"] :is(input, textarea)::placeholder { color: var(--text-faint); }
+[data-theme="dark"] .new-connection { color: var(--accent); }
+[data-theme="dark"] .primary-button { background: #416780; color: #eff6fb; }
+[data-theme="dark"] .primary-button:is(:hover, :focus-visible) { background: var(--primary-focus); color: #fff; }
+[data-theme="dark"] .popup-menu { box-shadow: 0 8px 30px #00000033; }
+[data-theme="dark"] .transfer-notice { color: #c6bba4; background: #323028; }
+[data-theme="dark"] :is(.transfer-empty, .transfer-empty strong, .transfer-empty > svg, .transfer-info small, .transfer-size, .transfer-row > svg) { color: var(--muted); }
+[data-theme="dark"] .transfer-state { color: #d0bd96; background: #3a3327; }
+[data-theme="dark"] .transfer-state.done { color: #a3cbb6; background: #284338; }
+[data-theme="dark"] .transfer-state.failed { color: #e0aaa2; background: #452f32; }
+[data-theme="dark"] .transfer-state.cancelled { color: var(--muted); background: #293846; }
+[data-theme="dark"] .transfer-retry { color: var(--accent); }
+[data-theme="dark"] .transfer-progress::-webkit-progress-bar { background: var(--surface-inset); }
+[data-theme="dark"] .transfer-progress::-webkit-progress-value { background: #7faf99; }
+[data-theme="dark"] .transfer-progress::-moz-progress-bar { background: #7faf99; }
+[data-theme="dark"] .drop-overlay { background: #172b3bf5; border-color: #6e96b1; color: #b6d1e3; }
+[data-theme="dark"] .drop-overlay :is(span, b) { color: #a6c2d7; }
+[data-theme="dark"] .toast { background: #2b4356f5; border-color: #58788d66; box-shadow: 0 4px 20px #00000033; }
+
+/* System appearance preference uses the same compact switch as other settings. */
+.system-theme-setting { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:0 2px 8px; padding:10px; border-radius:10px; color:var(--text); background:var(--surface-inset); cursor:pointer; }
+.system-theme-setting > span { display:flex; flex-direction:column; gap:4px; font-size:12px; }
+.system-theme-setting small { max-width:210px; font-size:10px; line-height:1.5; color:var(--muted); }
+.system-theme-setting input { position:relative; flex:none; appearance:none; margin:0; width:32px; height:19px; border:0; border-radius:20px; background:#bac7d180; cursor:pointer; transition:background .18s; }
+.system-theme-setting input::after { content:""; position:absolute; left:3px; top:3px; width:13px; height:13px; border-radius:50%; background:white; transition:transform .18s; }
+.system-theme-setting input:checked { background:#78a99b; }
+.system-theme-setting input:checked::after { transform:translateX(13px); }
+.system-theme-setting input:focus-visible { box-shadow:0 0 0 3px #82aa9e40; }
+@media (prefers-reduced-motion:reduce) { .system-theme-setting input,.system-theme-setting input::after { transition:none; } }

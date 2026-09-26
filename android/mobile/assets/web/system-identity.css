@@ -1,0 +1,52 @@
+/* Keep the remote OS beside the section title; its full name remains in the tooltip. */
+.sidebar .system-identity-heading {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  min-width: 0;
+}
+.sidebar .system-identity-heading > svg { flex: 0 0 15px; }
+.sidebar h2 > #system-os.system-identity {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  width: auto;
+  max-width: none;
+  min-width: 0;
+  margin: 0 0 0 auto;
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+  color: #345265;
+  font-size: 11.5px;
+  font-weight: 550;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+.system-identity-logo {
+  box-sizing: content-box;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  padding: 2px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 5px;
+  box-shadow: 0 0 0 1px #6f8a9b14;
+}
+.system-identity-logo[hidden] { display: none; }
+.system-identity-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar h2 > #system-os.system-identity.is-empty {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted, #859bab);
+}
+[data-theme="dark"] .sidebar h2 > #system-os.system-identity { color: #c8dce8; }
+[data-theme="dark"] .system-identity-logo { box-shadow: 0 0 0 1px #fff1; }
+[data-theme="dark"] .sidebar h2 > #system-os.system-identity.is-empty { color: var(--muted, #94a8b9); }

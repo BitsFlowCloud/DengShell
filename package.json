@@ -9,7 +9,7 @@
     "test:history": "node scripts/test-command-history.mjs",
     "test:prompt": "node scripts/test-prompt-rendering.mjs",
     "test:latency": "node scripts/test-latency-chart.mjs",
-    "test:traffic": "node scripts/test-traffic-chart.mjs",
+    "test:traffic": "node scripts/test-traffic-chart.mjs && node scripts/test-network-refresh.mjs",
     "test:snapshot": "node scripts/test-terminal-snapshot.mjs",
     "test:theme": "node scripts/test-system-theme.mjs",
     "test:system-identity": "node scripts/test-system-identity.mjs",
@@ -21,7 +21,8 @@
     "test:editors": "node scripts/test-file-editor-races.mjs && node scripts/test-text-search.mjs",
     "test:server-explorer": "node scripts/test-server-explorer.mjs",
     "test:font-selection": "node scripts/test-font-selection.mjs",
-    "test:startup-update": "node scripts/test-startup-update.mjs"
+    "test:startup-update": "node scripts/test-startup-update.mjs",
+    "test:terminal-startup": "node scripts/test-terminal-first-files.mjs"
   },
   "dependencies": {
     "@xterm/addon-fit": "0.11.0",

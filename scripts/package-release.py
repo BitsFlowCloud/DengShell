@@ -83,8 +83,8 @@ def package(args):
     sourcefiles=[]
     for pattern in ['.gitattributes','*.go','go.mod','go.sum','package.json','package-lock.json','*.sh','*.ps1','*.syso','README.md','CHANGELOG.md','LICENSE','.gitignore']:
         sourcefiles += list(ROOT.glob(pattern))
-    for folder in ['web','internal','scripts','cmd','.github']:
-        sourcefiles += [p for p in (ROOT/folder).rglob('*') if p.is_file() and '__pycache__' not in p.parts]
+    for folder in ['web','internal','scripts','cmd','.github','android']:
+        sourcefiles += [p for p in (ROOT/folder).rglob('*') if p.is_file() and not any(part in ('__pycache__', '.gradle', '.cache', 'node_modules') for part in p.relative_to(ROOT/folder).parts) and not p.name.endswith(('.aar', '.jar', '.keystore', '.jks')) and p.name != 'local.properties' and not (folder == 'android' and p.is_relative_to(ROOT/'android/app/build'))]
     sourcefiles += [p for p in (ROOT/'docs').rglob('*') if p.is_file()]
     for name in ['dengshell.png','dengshell.svg','dengshell.ico','CONNECTION-CONFIG.md','config.example.json','COMMON-APPS.md',f'RELEASE-{VERSION}.md','ONLINE-UPDATE-DESIGN.md','UPDATER-CONTRACT.md','SIGNED-UPDATES.md','FONT-VALIDATION.md','BACKGROUND-PROMPTS-v0.01.json','windows/app.manifest','windows/README.txt','linux/README.txt','linux/Dockerfile','linux/.dockerignore','linux/COMPATIBILITY.json']:
         sourcefiles.append(ROOT/'build'/name)

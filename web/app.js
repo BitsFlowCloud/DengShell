@@ -245,9 +245,10 @@ async function connectProfile(profileID, { background = false, refreshHistory = 
     if (selected) activate(state.id); else renderTabs();
     if (secret) credentials.set(profileID, secret);
     window.DengCommandHistory?.refresh(profileID).catch(error => toast('⚠️  命令历史刷新失败：' + error.message));
-    if (current() === state) { pollStats(); pollLatency(); }
+    if (current() === state && state.ready) { pollStats(); pollLatency(); }
     // A slow or failed SFTP listing must not block any other SSH connection.
-    if (state.sftpAvailable !== false) navigate(info.home, state).catch(error => { if (!state.closed) toast(`⚠️  ${profile.name} 已连接，目录读取失败：${error.message}`); });
+    if (state.sftpPending) void refreshFileStatus(state, true);
+    else if (state.sftpAvailable !== false) navigate(info.home, state).catch(error => { if (!state.closed) toast(`⚠️  ${profile.name} 已连接，目录读取失败：${error.message}`); });
     if (refreshHistory) safe(refreshServerManagerHistory)();
     return state;
   } catch (error) {
@@ -354,14 +355,21 @@ function createTerminal(state) {
   const ws = native() ? new DesktopSocket(state.id, state.handoffNonce || '') : new WebSocket(socketURL); ws.binaryType = 'arraybuffer'; state.ws = ws;
   ws.onmessage = event => {
     if (state.closed || !state.connected || sessions.get(state.id) !== state) return;
-    if (event.data instanceof ArrayBuffer) { terminal.write(new Uint8Array(event.data), () => sendMessage(state, { type: 'ack' })); return; }
+    if (event.data instanceof ArrayBuffer) {
+      const firstOutput = !state.terminalOutputStarted; state.terminalOutputStarted = true;
+      terminal.write(new Uint8Array(event.data), () => { sendMessage(state, { type: 'ack' }); if (firstOutput && current() === state && state.connected) { pollStats(); pollLatency(); } });
+      return;
+    }
     const message = JSON.parse(event.data);
     if (window.DengSessionWindows.handleMessage(state, message)) return;
     if (message.type === 'ready') {
       // The relay sends ready only after the remote shell starts, before its
       // first output. Window handoffs must not add text to a running shell.
-      if (state.announceConnectionReady) { state.announceConnectionReady = false; showConnectionProgress(state, '✅  连接主机成功！'); if (state.sftpAvailable === false) showConnectionProgress(state, 'ℹ️  SFTP 文件服务不可用，SSH 终端可正常使用。'); }
-      acceptShellIntegration(state, message.integration); state.ready = true; state.handoffProvisional = false; state.ownershipUncertain = false; terminal.options.disableStdin = !!state.detaching || !state.connected; state.restoring = false; state.restoration = null; if (activeID === state.id) renderSessionInfo(); if (activeID === state.id) { fitActive(); terminal.focus(); }
+      if (state.announceConnectionReady) { state.announceConnectionReady = false; showConnectionProgress(state, '✅  连接主机成功！'); if (state.sftpAvailable === false && !state.sftpPending) showConnectionProgress(state, 'ℹ️  SFTP 文件服务不可用，SSH 终端可正常使用。'); }
+      if (state.sftpPending) void refreshFileStatus(state);
+      acceptShellIntegration(state, message.integration); state.ready = true; state.handoffProvisional = false; state.ownershipUncertain = false; terminal.options.disableStdin = !!state.detaching || !state.connected; state.restoring = false; state.restoration = null;
+      if (!state.terminalOutputStarted && !state.terminalBackgroundTimer) state.terminalBackgroundTimer = setTimeout(() => { state.terminalBackgroundTimer = null; if (!state.closed && state.connected && sessions.get(state.id) === state) { state.terminalBackgroundReady = true; if (current() === state) { pollStats(); pollLatency(); } } }, 1000);
+      if (activeID === state.id) renderSessionInfo(); if (activeID === state.id) { fitActive(); terminal.focus(); }
     }
     else if (message.message) terminal.writeln(`\r\n\x1b[38;5;245m${message.type === 'error' ? '❌' : message.type === 'exit' ? '🔌' : 'ℹ️'}  ${message.message.replaceAll('\x1b', '')}\x1b[0m`);
   };
@@ -492,7 +500,7 @@ function renderSessionInfo() {
   $('#terminal-meta-host').textContent = profile ? `${profile.user}@${sessionDisplayName(state)}` : 'SSH 终端'; $('#terminal-state').textContent = state?.handoffProvisional ? '正在接收标签…' : state?.pendingConnection ? '正在连接…' : state?.connectionFailed ? '连接未完成' : state?.connected ? '已连接' : state?.disconnectDiagnostic ? `已断开 · ${state.disconnectDiagnostic.code}` : '待连接';
   $('#terminal-state').title = state?.disconnectDiagnostic?.message || '';
   $('#command-history').disabled = false; $('#command-input').disabled = !!state && !state.connected; $('#command-input').placeholder = state ? '输入命令并回车发送 · ↑↓ 历史' : '本机：输入 ssh 用户@主机 或 ping 主机'; window.DengQuickConnect?.reflect(); $('#command-input').value = ''; resizeCommandInput(); $('#reconnect').disabled = !state || !!(state.pendingConnection || state.disconnecting || state.detaching || state.handoffProvisional || state.ownershipUncertain); $('#disconnect').disabled = !state?.connected || !!(state.disconnecting || state.detaching || state.handoffProvisional || state.ownershipUncertain);
-  $('#follow-terminal').checked = !!state?.follow; $('#follow-terminal').disabled = !state?.ready || state.sftpAvailable === false;
+  $('#follow-terminal').checked = !!state?.follow; $('#follow-terminal').disabled = !state?.ready || !filesUsable(state);
   renderMonitor(state?.connected ? state.stats : null); renderLatency(); renderCommands(); window.DengCommonApps?.render(); window.DengProcessView?.reflect(); updateStatus();
 }
 $('#command-form').onsubmit = event => { event.preventDefault(); const state = current(); const input = $('#command-input'); if (!state && input.value.trim()) { const command = input.value; input.value = ''; safe(() => window.DengQuickConnect.run(command))(); return; } if (!state?.ready || !input.value) return; pasteTerminalText(state, input.value, { execute: true }); input.value = ''; resizeCommandInput(); };
@@ -515,7 +523,31 @@ $('#follow-terminal').onchange = safe(async event => {
   if (state.terminalDirectory && state.terminalDirectory !== state.cwd) await navigate(state.terminalDirectory, state);
 });
 
-function filesUsable(state = current()) { return !!state?.connected && state.sftpAvailable !== false; }
+function filesUsable(state = current()) { return !!state?.connected && !state.sftpPending && state.sftpAvailable !== false; }
+
+// The status request waits independently of the terminal socket. A delayed or
+// absent file subsystem leaves the shell usable and updates this panel later.
+function refreshFileStatus(state, useHome = false) {
+  if (state.fileStatusRequest || !state.connected || state.closed) return state.fileStatusRequest;
+  const alive = () => !state.closed && state.connected && sessions.get(state.id) === state;
+  state.fileStatusRequest = (async () => {
+    try {
+      const info = await api(`/api/sessions/${state.id}/file-status`);
+      if (!alive()) return;
+      Object.assign(state, info);
+      if (info.sftpPending) { setTimeout(() => { if (alive()) void refreshFileStatus(state, useHome); }, 250); return; }
+      if (activeID === state.id) { renderSessionInfo(); renderFiles(); }
+      if (info.sftpAvailable) await navigate(state.follow && state.terminalDirectory ? state.terminalDirectory : (useHome ? info.home : state.cwd), state);
+    } catch (error) {
+      if (!alive()) return;
+      // A status transport error is not proof that the remote SFTP service is
+      // unavailable. Keep the pending display and retry while this tab lives.
+      if (state.sftpPending) setTimeout(() => { if (alive()) void refreshFileStatus(state, useHome); }, 1000);
+      else toast('⚠️  目录读取失败：' + error.message);
+    } finally { state.fileStatusRequest = null; }
+  })();
+  return state.fileStatusRequest;
+}
 
 // SFTP browser. Only successful requests replace the current path and entries.
 async function navigate(path, state = current()) {
@@ -539,7 +571,8 @@ function renderFiles() {
   $('#path-input').value = state?.cwd || ''; $('#path-input').disabled = !filesUsable(state); $('#drop-path').textContent = state?.cwd || '—';
   $('#file-status-count').textContent = state ? `${entries.length} 个项目${filter ? ' · 已筛选' : ''}` : '尚未连接'; $('#file-empty').hidden = !!entries.length; $('#file-empty').textContent = state ? '此目录暂无匹配文件' : '连接后浏览远程文件';
   for (const id of ['parent-directory', 'refresh-files', 'mkdir', 'choose-files']) $(`#${id}`).disabled = !filesUsable(state);
-  if (state?.sftpAvailable === false) { $('#file-status-count').textContent = 'SFTP 不可用'; $('#file-empty').textContent = '当前服务器的 SFTP 文件服务不可用，SSH 终端可正常使用。'; }
+  if (state?.sftpPending) { $('#file-status-count').textContent = '正在连接文件服务…'; $('#file-empty').textContent = '正在加载远程文件，终端可正常使用。'; }
+  else if (state?.sftpAvailable === false) { $('#file-status-count').textContent = 'SFTP 不可用'; $('#file-empty').textContent = '当前服务器的 SFTP 文件服务不可用，SSH 终端可正常使用。'; }
   $('#parent-directory').disabled ||= state?.cwd === '/';
   $('#file-list').replaceChildren(...entries.map(entry => {
     const row = node('tr', selectedName === entry.name ? 'selected' : ''); row.tabIndex = 0; row.dataset.fileName = entry.name; row.setAttribute('aria-label', entry.name);
@@ -612,7 +645,7 @@ function monitorVisible() { return !document.hidden && !window.DengShellWindowHi
 function monitorPollDelay(value, interval) { return Number.isFinite(value) ? Math.max(0, Math.min(interval, value)) + 5 : interval; }
 async function pollNetwork() {
   if(window.DengSecurityLock?.isLocked())return;
-  const state = current(); if (!state?.connected || networkRequests.has(state) || !monitorVisible()) return;
+  const state = current(); if (!state?.connected || (!state.terminalOutputStarted && !state.terminalBackgroundReady) || networkRequests.has(state) || !monitorVisible()) return;
   clearTimeout(networkTimer); networkTimer = 0; networkRequests.add(state); networkPolledSession = state.id;
   let delay = 1000;
   try {
@@ -623,7 +656,10 @@ async function pollNetwork() {
     if (!state.networkStats || Number.isFinite(sampledAt) && (!Number.isFinite(previous) || sampledAt >= previous)) {
       const { history, ...latest } = stats; state.networkStats = latest; state.networkError = stats.sampleError || '';
     }
-    delay = Math.max(100, monitorPollDelay(stats.nextSampleInMilliseconds, 1000));
+    // The next remote deadline is advanced before its SSH result arrives.
+    // Retry only the local cache while that sample is in flight, instead of
+    // missing its completion and showing the previous rate for another second.
+    delay = stats.sampleInProgress ? 100 : Math.max(100, monitorPollDelay(stats.nextSampleInMilliseconds, 1000));
   } catch (error) { if (sessions.get(state.id) === state && state.connected) state.networkError = error.message || String(error); }
   finally {
     networkRequests.delete(state);
@@ -634,7 +670,7 @@ async function pollNetwork() {
   }
 }
 async function pollStats() {
-  const state = current(); if (!state?.connected || statsRequests.has(state) || !monitorVisible()) return;
+  const state = current(); if (!state?.connected || (!state.terminalOutputStarted && !state.terminalBackgroundReady) || statsRequests.has(state) || !monitorVisible()) return;
   if ((!networkTimer && !networkRequests.has(state)) || networkPolledSession !== state.id) pollNetwork();
   clearTimeout(statsTimer); statsTimer = 0; statsRequests.add(state); const includeProcesses = true;
   let delay = 5000;
@@ -670,7 +706,7 @@ function drawCharts(samples) {
 }
 let latencyBusy = false;
 async function pollLatency() {
-  const state = current(); if (!state?.connected || latencyBusy) return;
+  const state = current(); if (!state?.connected || (!state.terminalOutputStarted && !state.terminalBackgroundReady) || latencyBusy) return;
   latencyBusy = true;
   try {
     const sample = await api(`/api/sessions/${state.id}/latency`); if (!sessions.has(state.id)) return;

@@ -1,0 +1,211 @@
+{
+  "version": 2,
+  "fallback": {
+    "id": "builtin:maple-mono-cn",
+    "name": "Maple Mono CN",
+    "family": "Deng CJK",
+    "upstream": "Maple Mono CN",
+    "description": "圆润等宽 · 中英混排",
+    "version": "v7.9",
+    "file": "assets/fonts/maple-mono-cn.woff2",
+    "license": "assets/fonts/licenses/maple-mono-cn.txt",
+    "licenseName": "SIL Open Font License 1.1",
+    "source": "https://github.com/subframe7536/maple-font/releases/download/v7.9/MapleMono-CN.zip",
+    "sourceFile": "MapleMono-CN-Regular.ttf",
+    "sourceSha256": "e6338c3dca9a3bed3fb81f43c8bb8feca3b6ad54829f5a3229527d030a321dbd",
+    "archiveSha256": "cb1e79b2c23dff772ae351784ef2b84454a61b3920e9b20bd5db4bf207e4472d",
+    "sha256": "878c92099ed723d22f4bd1dbb2fb03ba452296f025662f4d12cd3463f9807743",
+    "bytes": 5337732,
+    "unicodeMappings": 22138,
+    "subsetInputSha256": "8c4b7a81826bf14334c7169463a1b38eef2874418b6046097b3963f6363ef2f6",
+    "subsetLanguages": [
+      "en",
+      "zh-Hans",
+      "zh-Hant"
+    ],
+    "derivativeFamily": "Deng UI Maple",
+    "preservedOriginalForCompatibility": false,
+    "kind": "builtin",
+    "boldStyle": "synthetic",
+    "cellWidthEm": 0.6,
+    "asciiGlyphCount": 95
+  },
+  "fonts": [
+    {
+      "id": "jetbrains-mono",
+      "name": "JetBrains Mono",
+      "family": "Deng JetBrains Mono",
+      "file": "assets/fonts/jetbrains-mono.woff2",
+      "kind": "builtin",
+      "license": "assets/fonts/licenses/jetbrains-mono.txt",
+      "licenseName": "SIL Open Font License 1.1",
+      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/jetbrainsmono/JetBrainsMono[wght].ttf",
+      "sourceSha256": "48715a42ec242c21e9f02692891e147d022299a52e48d5e413e1a942193ffeda",
+      "sha256": "5946fe5a26632e0dc322265ddb4db4fd98258bf9df7a30e8f8547f15bfadcea8",
+      "bytes": 60676,
+      "axes": {
+        "wght": {
+          "min": 100.0,
+          "default": 400.0,
+          "max": 800.0
+        }
+      },
+      "fallback": "Deng CJK",
+      "weightRange": "100 800",
+      "boldStyle": "variable",
+      "cellWidthEm": 0.6,
+      "asciiGlyphCount": 95,
+      "unicodeMappings": 854,
+      "subsetInputSha256": "7b7f3419196f675a973d30cb70078749120caddea86c8547ebf54a8db2ca13af",
+      "subsetLanguages": [
+        "en",
+        "zh-Hans",
+        "zh-Hant"
+      ],
+      "derivativeFamily": "Deng JetBrains Mono",
+      "preservedOriginalForCompatibility": false
+    },
+    {
+      "id": "fira-code",
+      "name": "Fira Code",
+      "family": "Deng Fira Code",
+      "file": "assets/fonts/fira-code.woff2",
+      "kind": "builtin",
+      "license": "assets/fonts/licenses/fira-code.txt",
+      "licenseName": "SIL Open Font License 1.1",
+      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/firacode/FiraCode[wght].ttf",
+      "sourceSha256": "9335b082b3c7850d98a64b584f3417f65355f3471278bb5eeb8c6c0e8657aeeb",
+      "sha256": "9a0a9fc5a9963d90870252eccbe43aa8df6909d038d4ba0b2a8752d40664e66b",
+      "bytes": 106220,
+      "axes": {
+        "wght": {
+          "min": 300.0,
+          "default": 300.0,
+          "max": 700.0
+        }
+      },
+      "fallback": "Deng CJK",
+      "weightRange": "300 700",
+      "boldStyle": "variable",
+      "cellWidthEm": 0.6,
+      "asciiGlyphCount": 95,
+      "unicodeMappings": 1551,
+      "subsetInputSha256": "9a0a9fc5a9963d90870252eccbe43aa8df6909d038d4ba0b2a8752d40664e66b",
+      "subsetLanguages": [
+        "en",
+        "zh-Hans",
+        "zh-Hant"
+      ],
+      "derivativeFamily": "Fira Code Light",
+      "preservedOriginalForCompatibility": true
+    },
+    {
+      "id": "source-code-pro",
+      "name": "Source Code Pro",
+      "family": "Deng Source Code Pro",
+      "file": "assets/fonts/source-code-pro.woff2",
+      "kind": "builtin",
+      "license": "assets/fonts/licenses/source-code-pro.txt",
+      "licenseName": "SIL Open Font License 1.1",
+      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/sourcecodepro/SourceCodePro[wght].ttf",
+      "sourceSha256": "b400fc584e10aff25d0e775ce181b4fc1c5ea1b5dc37b81aeb2084375b945790",
+      "sha256": "9871f38ad8417d70893f8a63e3aa31ab68e7aa218d3a4f2e8438b2fa1323fe3b",
+      "bytes": 73924,
+      "axes": {
+        "wght": {
+          "min": 200.0,
+          "default": 200.0,
+          "max": 900.0
+        }
+      },
+      "fallback": "Deng CJK",
+      "weightRange": "200 900",
+      "boldStyle": "variable",
+      "cellWidthEm": 0.6,
+      "asciiGlyphCount": 95,
+      "unicodeMappings": 1138,
+      "subsetInputSha256": "d5354036d08c4a7cea27a1e02bd3c1bc2fbfdd8c85818a35ee890068eb4a4217",
+      "subsetLanguages": [
+        "en",
+        "zh-Hans",
+        "zh-Hant"
+      ],
+      "derivativeFamily": "Deng Source Code Pro",
+      "preservedOriginalForCompatibility": false
+    },
+    {
+      "id": "ibm-plex-mono",
+      "name": "IBM Plex Mono",
+      "family": "Deng IBM Plex Mono",
+      "file": "assets/fonts/ibm-plex-mono.woff2",
+      "kind": "builtin",
+      "license": "assets/fonts/licenses/ibm-plex-mono.txt",
+      "licenseName": "SIL Open Font License 1.1",
+      "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/ibmplexmono/IBMPlexMono-Regular.ttf",
+      "sourceSha256": "6a3412f058c7d8dfd9170c41e85ade48e5156ecb89356110ca57a0a27734af46",
+      "sha256": "1689f1921b2df5674041b66c8687e879e722084f87c6f3c7c4fadf1382623d3a",
+      "bytes": 29836,
+      "fallback": "Deng CJK",
+      "bold": {
+        "file": "assets/fonts/ibm-plex-mono-bold.woff2",
+        "license": "assets/fonts/licenses/ibm-plex-mono-bold.txt",
+        "source": "https://raw.githubusercontent.com/google/fonts/809e4d8b8d7e9364a914909bb777679606c178b8/ofl/ibmplexmono/IBMPlexMono-Bold.ttf",
+        "sourceSha256": "ac27abd6450a64dd94467580a02fe6235156d5b92f2926ebbc8e7489df64e0be",
+        "sha256": "f67ec709d249a5fd95f9b308d0af5cef5c5604670b9cdf872f2bc418ddb4a047",
+        "bytes": 30504,
+        "weight": "700",
+        "unicodeMappings": 761,
+        "subsetInputSha256": "9f9e5597981645d576b209a25021c5221e8644a4580581f44e8b4ef954d95d03",
+        "subsetLanguages": [
+          "en",
+          "zh-Hans",
+          "zh-Hant"
+        ],
+        "derivativeFamily": "Deng IBM Plex Mono Bold",
+        "preservedOriginalForCompatibility": false
+      },
+      "boldStyle": "separate",
+      "cellWidthEm": 0.6,
+      "asciiGlyphCount": 95,
+      "unicodeMappings": 761,
+      "subsetInputSha256": "13b16cd770a73f60304510221c3e7186d396ba6ca5d64c52b5c6fb983d0e900a",
+      "subsetLanguages": [
+        "en",
+        "zh-Hans",
+        "zh-Hant"
+      ],
+      "derivativeFamily": "Deng IBM Plex Mono",
+      "preservedOriginalForCompatibility": false
+    },
+    {
+      "id": "maple-mono-cn",
+      "name": "Maple Mono CN",
+      "family": "Deng CJK",
+      "upstream": "Maple Mono CN",
+      "description": "圆润等宽 · 中英混排",
+      "version": "v7.9",
+      "file": "assets/fonts/maple-mono-cn.woff2",
+      "license": "assets/fonts/licenses/maple-mono-cn.txt",
+      "licenseName": "SIL Open Font License 1.1",
+      "source": "https://github.com/subframe7536/maple-font/releases/download/v7.9/MapleMono-CN.zip",
+      "sourceFile": "MapleMono-CN-Regular.ttf",
+      "sourceSha256": "e6338c3dca9a3bed3fb81f43c8bb8feca3b6ad54829f5a3229527d030a321dbd",
+      "archiveSha256": "cb1e79b2c23dff772ae351784ef2b84454a61b3920e9b20bd5db4bf207e4472d",
+      "sha256": "878c92099ed723d22f4bd1dbb2fb03ba452296f025662f4d12cd3463f9807743",
+      "bytes": 5337732,
+      "unicodeMappings": 22138,
+      "subsetInputSha256": "8c4b7a81826bf14334c7169463a1b38eef2874418b6046097b3963f6363ef2f6",
+      "subsetLanguages": [
+        "en",
+        "zh-Hans",
+        "zh-Hant"
+      ],
+      "derivativeFamily": "Deng UI Maple",
+      "preservedOriginalForCompatibility": false,
+      "kind": "builtin",
+      "boldStyle": "synthetic",
+      "cellWidthEm": 0.6,
+      "asciiGlyphCount": 95
+    }
+  ]
+}

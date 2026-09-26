@@ -223,6 +223,7 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 	})
 	mux.HandleFunc("GET /api/sessions/{id}/disconnect-diagnostic", a.sshDisconnectDiagnosticHTTP)
 	mux.HandleFunc("GET /api/sessions/{id}/terminal", a.terminal)
+	mux.HandleFunc("GET /api/sessions/{id}/file-status", a.fileStatus)
 	mux.HandleFunc("GET /api/sessions/{id}/files", a.listFiles)
 	mux.HandleFunc("POST /api/sessions/{id}/file-action", a.fileAction)
 	mux.HandleFunc("GET /api/sessions/{id}/download", a.download)

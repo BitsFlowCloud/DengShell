@@ -1,0 +1,156 @@
+/* Android portrait and landscape layouts, based on the approved mobile preview. */
+:root { --mobile-teal:#147f73; --mobile-ink:#17323c; --mobile-surface:#ffffff; }
+body.dengshell-android { background:#eef3f5; color:var(--mobile-ink); width:100%; height:100dvh; overflow:hidden; }
+.dengshell-android button { -webkit-tap-highlight-color:transparent; }
+.dengshell-android :is(button,input,textarea,select,summary):focus-visible { outline:2px solid var(--mobile-teal); outline-offset:2px; }
+.dengshell-android .titlebar { display:flex!important; align-items:center; flex:none; height:54px!important; min-height:54px!important; padding:0 12px!important; gap:0; background:var(--mobile-surface); border-bottom:1px solid #d7e2e6; z-index:4; }
+.dengshell-android .titlebar .brand { display:flex!important; flex:1; width:auto!important; min-width:0; gap:8px; margin:0!important; align-self:center; }
+.dengshell-android .titlebar .brand > #settings-button { width:34px; height:34px; }
+.dengshell-android .titlebar .brand-logo { width:28px; height:28px; }
+.dengshell-android .mobile-brand-title { display:flex; flex-direction:column; min-width:0; flex:1; line-height:1.15; }
+.dengshell-android .mobile-brand-title strong { font-size:15px; color:#17323c; font-weight:650; }
+.dengshell-android .mobile-brand-title small { font-size:10px; color:#728b95; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dengshell-android .titlebar .brand > :is(#theme-toggle,#security-lock-button,#sync-button,#connection-button) { display:none!important; }
+.dengshell-android .mobile-header-button { height:38px; width:38px; display:grid; place-items:center; border:0; border-radius:9px; color:#4f717e; }
+.dengshell-android .mobile-header-button svg { width:20px; height:20px; }
+.dengshell-android .session-bar { flex:none; width:auto; max-width:38%; height:40px; padding:0; }
+.dengshell-android .session-tabs { height:38px; }
+.dengshell-android .session-tab { min-width:82px; max-width:130px; font-size:10px; }
+.dengshell-android .session-bar > :is(#add-session,#toggle-monitor,.window-controls) { display:none!important; }
+.dengshell-android #mobile-navigation { position:fixed; z-index:7; left:0; right:0; bottom:0; height:66px; display:flex; align-items:stretch; justify-content:space-around; background:#fff; border-top:1px solid #d7e2e6; padding:3px 4px max(3px,env(safe-area-inset-bottom)); }
+.dengshell-android #mobile-navigation button { min-width:0; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border:0; border-radius:11px; color:#708590; font-size:10px; line-height:1.1; }
+.dengshell-android #mobile-navigation button[aria-current=page] { color:var(--mobile-teal); background:#e3f2eb; font-weight:600; }
+.dengshell-android #mobile-navigation button:not([aria-current=page]):hover { color:#708590!important; background:transparent!important; }
+.dengshell-android #mobile-navigation svg { width:19px; height:19px; }
+.dengshell-android #mobile-context { display:none; }
+.dengshell-android .app-shell { display:block!important; flex:1; min-height:0; min-width:0; padding:0 0 66px!important; }
+.dengshell-android #sidebar-splitter,.dengshell-android #files-splitter { display:none!important; }
+.dengshell-android .main-panel { display:flex; min-height:0; height:100%; }
+.dengshell-android .workspace { display:flex!important; flex:1; min-height:0; min-width:0; }
+.dengshell-android .statusbar { display:none!important; }
+.dengshell-android .sidebar { display:none!important; padding:12px; overflow-y:auto; height:100%; gap:10px; }
+.dengshell-android .sidebar > * { width:100%; }
+.dengshell-android .sidebar .host-card,.dengshell-android .sidebar .system-section,.dengshell-android .sidebar .disk-section { border:1px solid #d7e2e6; box-shadow:none; border-radius:12px; }
+.dengshell-android .icmp-card { display:none!important; }
+.dengshell-android .network-grid { grid-template-columns:minmax(0,1fr)!important; }
+.dengshell-android #diagnostics-local { display:none!important; }
+.dengshell-android[data-mobile-view=monitor] .sidebar { display:flex!important; }
+.dengshell-android[data-mobile-view=monitor] .main-panel { display:none!important; }
+.dengshell-android .terminal-panel { flex:1; width:100%; min-width:0; min-height:0; border-radius:0!important; box-shadow:none!important; background:#14232e!important; }
+.dengshell-android[data-mobile-view=files] .terminal-panel,
+.dengshell-android[data-mobile-view=more] .terminal-panel { display:none!important; }
+.dengshell-android .terminal-meta { height:37px; min-height:37px; padding:0 12px!important; font-size:11px!important; color:#c9dedb; border-bottom:1px solid #28414c; }
+.dengshell-android .terminal-meta .terminal-encoding,.dengshell-android .terminal-meta #detach-terminal { display:none!important; }
+.dengshell-android .terminal-meta #toggle-sftp { display:none!important; }
+.dengshell-android .terminal-output { flex:1; min-height:0; overflow:clip!important; }
+.dengshell-android .terminal-session { inset:4px 6px 6px!important; }
+/* xterm hides its keyboard textarea far to the left. Focusing it can make
+   Android WebView scroll the clipped terminal output horizontally. */
+.dengshell-android .xterm .xterm-helper-textarea { left:0!important; }
+.dengshell-android #mobile-keybar { display:flex; flex:none; overflow-x:auto; gap:5px; padding:5px 8px; scrollbar-width:none; background:#1a2d38; border-top:1px solid #29414d; }
+.dengshell-android #mobile-keybar button { flex:none; min-width:36px; min-height:29px; border:1px solid #405764; border-radius:6px; color:#cbdcda; font-size:11px; padding:3px 6px; background:#243a45; }
+.dengshell-android #mobile-keybar button:active { background:#3c625e; }
+.dengshell-android .terminal-command-bar { flex:none; min-height:46px; margin:0!important; padding:5px 8px!important; gap:5px!important; border-radius:0!important; background:#1a2d38!important; }
+.dengshell-android .terminal-command-bar > svg { display:none; }
+.dengshell-android .terminal-command-bar form { flex:1; min-height:36px; height:auto; min-width:0; }
+.dengshell-android #command-input { width:100%; min-height:34px; max-height:70px; padding:8px; color:#e7f3f1; border:1px solid #405764; border-radius:8px; background:#243a45; font-size:14px!important; }
+.dengshell-android .terminal-command-bar :is(#font-down,#font-up,#clear-terminal,#command-history,#disconnect,#reconnect) { display:none!important; }
+.dengshell-android #mobile-command-submit { width:38px; height:36px; display:grid; place-items:center; flex:none; border-radius:8px; color:#fff; background:#147f73; }
+.dengshell-android #mobile-command-submit svg { width:18px; height:18px; }
+.dengshell-android #files-panel { flex:1; display:none; width:100%; min-width:0; min-height:0; border-radius:0!important; box-shadow:none!important; }
+.dengshell-android[data-mobile-view=files] #files-panel { display:flex!important; }
+.dengshell-android .file-tabs { overflow-x:auto; gap:2px; flex:none; height:46px; min-height:46px; padding:5px 7px!important; scrollbar-width:none; border-bottom:1px solid #d7e2e6; }
+.dengshell-android .file-tabs .file-tab { flex:none; min-height:34px; font-size:12px; white-space:nowrap; padding:6px 9px; }
+.dengshell-android .file-tabs .file-tab.active { background:#e3f2eb; color:#147f73; }
+.dengshell-android .file-tabs :is(.follow-label,.files-tip) { display:none!important; }
+.dengshell-android .file-toolbar { min-height:48px; height:auto; padding:5px 7px; gap:3px; flex-wrap:wrap; }
+.dengshell-android .file-toolbar .path-form { min-width:100px; flex:1; }
+.dengshell-android .file-toolbar :is(.file-search,.toolbar-divider) { display:none!important; }
+.dengshell-android .file-content { min-height:0; overflow:auto; grid-template-columns:minmax(0,1fr)!important; padding:0 6px; }
+.dengshell-android .file-content > .directory-tree { display:none!important; }
+.dengshell-android .file-content > .file-table-wrap { padding-left:0; }
+.dengshell-android .file-table { font-size:11px; }
+.dengshell-android .file-table th:nth-child(n+3),.dengshell-android .file-table td:nth-child(n+3) { display:none!important; }
+.dengshell-android #mobile-more-panel { display:none; height:100%; overflow:auto; padding:20px 16px 30px; background:#eef3f5; }
+.dengshell-android[data-mobile-view=more] :is(.main-panel,.sidebar) { display:none!important; }
+.dengshell-android[data-mobile-view=more] #mobile-more-panel { display:block; }
+.dengshell-android #mobile-more-panel h1 { font-size:22px; margin:0 0 3px; color:#17323c; }
+.dengshell-android #mobile-more-panel p { font-size:12px; color:#718792; margin:0 0 18px; }
+.dengshell-android .mobile-tool-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+.dengshell-android .mobile-tool-grid button { min-height:64px; display:flex; align-items:center; gap:8px; background:#fff; border:1px solid #d7e2e6; border-radius:12px; padding:10px; text-align:left; color:#24414b; font-size:12px; }
+.dengshell-android .mobile-tool-grid button svg:first-child { color:#147f73; }
+.dengshell-android .mobile-tool-grid button span { flex:1; }
+.dengshell-android .mobile-tool-grid button svg:last-child { width:13px; color:#93a8af; }
+.dengshell-android #drawer-backdrop { inset:54px 0 66px!important; z-index:6!important; }
+.dengshell-android #connections-drawer { inset:54px 0 66px!important; transform:none!important; width:min(100%,390px)!important; max-width:100%!important; border-radius:0 16px 16px 0!important; padding:16px!important; z-index:12; }
+.dengshell-android #settings-menu { position:fixed!important; top:55px!important; left:8px!important; right:8px!important; width:auto!important; max-height:calc(100dvh - 130px)!important; overflow:auto!important; z-index:20!important; }
+.dengshell-android dialog { width:min(100vw - 16px,580px)!important; max-width:calc(100vw - 16px)!important; max-height:calc(100dvh - 22px)!important; overflow:auto!important; padding:16px!important; border-radius:14px!important; }
+.dengshell-android dialog .form-row { flex-wrap:wrap; }
+.dengshell-android dialog input,.dengshell-android dialog select,.dengshell-android dialog textarea { font-size:16px!important; }
+.dengshell-android .toast { bottom:78px!important; }
+.dengshell-android .scale-setting,.dengshell-android #scale-effective { display:none!important; }
+.dengshell-android .mobile-key-file-picker { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.dengshell-android .mobile-key-file-picker button { min-height:40px; }
+.dengshell-android .mobile-key-file-picker span { color:#5c7480; font-size:12px; }
+.dengshell-android .server-profile-row { grid-template-columns:minmax(0,1fr) 38px; }
+.dengshell-android .server-profile-more { opacity:1!important; width:38px; height:40px; }
+.dengshell-android .server-explorer-details { display:none!important; }
+.dengshell-android .command-mobile-edit { min-width:38px; min-height:38px; border-left:1px solid currentColor; font-size:19px; line-height:1; }
+.dengshell-android #help-manual-replay { display:none!important; }
+@media (orientation:portrait), (max-width:619px) {
+  .dengshell-android #server-manager-body { display:grid!important; grid-template-columns:minmax(0,1fr)!important; grid-template-rows:74px minmax(0,1fr)!important; }
+  .dengshell-android #server-folder-pane { width:100%; min-width:0; border-bottom:1px solid #d7e2e6; }
+  .dengshell-android #server-folder-pane .server-folder-heading { height:27px; padding:2px 8px; font-size:11px; }
+  .dengshell-android #server-folder-pane .server-folder-heading button { padding:2px 5px; }
+  .dengshell-android #server-folder-list { display:flex; align-items:center; gap:5px; flex-wrap:nowrap; min-height:0; overflow-x:auto; overflow-y:hidden; padding:2px 6px 4px; scrollbar-width:none; }
+  .dengshell-android #server-folder-list .server-folder-wrap { flex:none; width:auto; min-width:0; max-width:190px; padding:0; }
+  .dengshell-android #server-folder-list .server-folder-wrap::before,
+  .dengshell-android #server-folder-list .server-folder-wrap::after { display:none; }
+  .dengshell-android #server-folder-list .server-folder-row { height:39px; min-height:39px; width:auto; margin:0!important; padding:0 4px; border:1px solid #d7e2e6; border-radius:8px; background:var(--mobile-surface); }
+  .dengshell-android #server-folder-list .server-folder-row.server-folder-selected { background:#e3f2eb; }
+  .dengshell-android #server-folder-list .server-folder-select { min-width:70px; max-width:125px; }
+  .dengshell-android #server-folder-list .server-folder-name { font-size:12px!important; font-weight:600; }
+  .dengshell-android #server-folder-list .server-folder-count { font-size:10px; }
+  .dengshell-android #server-folder-list .server-group-more { opacity:1!important; width:28px; height:32px; }
+  .dengshell-android #server-manager-divider { display:none!important; }
+  .dengshell-android #server-explorer-heading { padding:5px 8px!important; }
+  .dengshell-android #server-explorer-path { max-height:22px!important; margin:0!important; overflow:hidden; }
+  .dengshell-android #server-descendants-label { margin:0!important; }
+  .dengshell-android #connection-groups { flex:1; min-height:0; }
+}
+@media (max-width:370px) {
+  .dengshell-android .session-bar { max-width:29%; }
+  .dengshell-android .mobile-tool-grid { grid-template-columns:1fr; }
+}
+@media (orientation:landscape) and (min-width:620px) {
+  .dengshell-android .titlebar { height:46px!important; min-height:46px!important; }
+  .dengshell-android .session-bar { display:none!important; }
+  .dengshell-android #mobile-navigation { top:46px; bottom:0; right:auto; width:68px; height:auto; flex-direction:column; justify-content:flex-start; padding:7px 4px; border-top:0; border-right:1px solid #d7e2e6; }
+  .dengshell-android #mobile-navigation button { flex:none; min-height:55px; }
+  .dengshell-android #mobile-context { display:flex; flex-direction:column; position:fixed; z-index:2; top:46px; bottom:0; left:68px; width:188px; overflow:auto; background:#fff; border-right:1px solid #d7e2e6; padding:6px; }
+  .dengshell-android .mobile-context-heading { font-size:10px; color:#7b919a; padding:10px 7px 5px; }
+  .dengshell-android .mobile-context-empty { font-size:11px; color:#96a8af; padding:0 7px; margin:5px 0; }
+  .dengshell-android .mobile-context-row { display:flex; gap:7px; align-items:center; flex:none; width:100%; min-height:39px; padding:7px; border-radius:8px; text-align:left; font-size:11px; overflow:hidden; }
+  .dengshell-android .mobile-context-row span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dengshell-android .mobile-context-row svg { width:15px; height:15px; color:#6f9c98; }
+  .dengshell-android .mobile-context-row[aria-current=true] { background:#e3f2eb; color:#147f73; }
+  .dengshell-android .mobile-context-add { color:#147f73; }
+  .dengshell-android .app-shell { margin-left:256px; padding:0!important; }
+  .dengshell-android #drawer-backdrop { inset:46px 0 0!important; }
+  .dengshell-android #connections-drawer { inset:46px auto 0 68px!important; max-width:350px!important; border-radius:0 14px 14px 0!important; }
+  .dengshell-android #settings-menu { top:47px!important; left:auto!important; right:8px!important; width:320px!important; max-height:calc(100dvh - 55px)!important; }
+  .dengshell-android #mobile-more-panel { padding:12px; }
+  .dengshell-android #mobile-more-panel h1 { font-size:19px; }
+  .dengshell-android #mobile-more-panel p { margin-bottom:10px; }
+  .dengshell-android .mobile-tool-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
+  .dengshell-android .mobile-tool-grid button { min-height:50px; }
+  .dengshell-android .file-content { grid-template-columns:140px minmax(0,1fr)!important; }
+  .dengshell-android .file-content > .directory-tree { display:block!important; }
+  .dengshell-android .toast { bottom:14px!important; }
+}
+@media (orientation:landscape) and (max-height:470px) {
+  .dengshell-android .mobile-context-heading { padding-top:6px; }
+  .dengshell-android #mobile-navigation button { min-height:48px; }
+  .dengshell-android #mobile-keybar { padding:3px 6px; }
+  .dengshell-android #mobile-keybar button { min-height:24px; }
+}

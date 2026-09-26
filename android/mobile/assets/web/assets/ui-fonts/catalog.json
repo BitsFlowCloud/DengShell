@@ -1,0 +1,19 @@
+{
+  "fonts": [
+    {
+      "id": "builtin:ui-ibm-plex-sans-sc",
+      "name": "IBM Plex Sans SC",
+      "family": "Deng UI IBM Plex",
+      "upstream": "IBM Plex Sans SC",
+      "description": "默认界面字体 · 清晰的中英文混排",
+      "version": "bf260093582f04622aacc1e9f9ca604d7ccd0c42",
+      "file": "assets/ui-fonts/ibm-plex-sans-sc.woff2",
+      "license": "assets/ui-fonts/ibm-plex-sans-sc-OFL.txt",
+      "licenseName": "SIL Open Font License 1.1",
+      "source": "https://raw.githubusercontent.com/IBM/plex/bf260093582f04622aacc1e9f9ca604d7ccd0c42/packages/plex-sans-sc/fonts/complete/woff2/hinted/IBMPlexSansSC-Regular.woff2",
+      "bytes": 3813972,
+      "sha256": "dc51399ce38f7200806df891476d7216a81c8aede47284e421a54413608c407c"
+    }
+  ],
+  "previewText": "简体中文 · 繁體中文 · English 012345"
+}

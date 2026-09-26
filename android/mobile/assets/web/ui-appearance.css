@@ -1,0 +1,90 @@
+/* UI families are independent of the terminal's grid and per-font colors. */
+:root { --font-ui: "Deng UI IBM Plex", system-ui, sans-serif; font-family: var(--font-ui); }
+.welcome-state, .traffic-grid text, .traffic-empty, .latency-grid text, .latency-time, .latency-empty { font-family: var(--font-ui); }
+button, input, select { font-family: inherit; }
+:root[data-ui-text-custom] :is(.file-table td:first-child, .meter b, .meter em, .disk-percent) { color: var(--text); }
+#ui-appearance-dialog { width: min(820px, calc(var(--view-width, 100vw) - 32px)); max-width: none; max-height: calc(var(--view-height, 100vh) - 32px); padding: 24px; overflow: auto; font-size: 14px; }
+#ui-appearance-dialog h2 { font-size: 21px; }
+#ui-appearance-dialog h3 { margin: 0; font-size: 16px; }
+#ui-appearance-dialog p { line-height: 1.7; font-size: 13px; margin: 9px 0 14px; }
+#ui-appearance-dialog .dialog-heading { align-items: flex-start; }
+.ui-text-settings { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 20px; }
+.ui-color-row { display: grid; grid-template-columns: minmax(100px, 1fr) 40px 105px auto auto; align-items: center; gap: 10px; margin-top: 16px; }
+.ui-color-label { display: grid; gap: 3px; }
+.ui-color-state { font-size: 12px; color: var(--muted); }
+.ui-color-input > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+#ui-appearance-dialog .ui-color-input { margin: 0; display: block; }
+#ui-appearance-dialog input[type=color] { height: 36px; width: 40px; padding: 3px; cursor: pointer; }
+#ui-appearance-dialog input[type=text] { width: 105px; padding: 8px; margin: 0; font-size: 14px; }
+.ui-color-sample { grid-column: 1 / -1; padding: 10px 12px; border-radius: 9px; line-height: 1.6; }
+.ui-color-sample.light { background: #f4f7fa; }
+.ui-color-sample.dark { background: #1c2935; }
+.ui-font-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#ui-font-status { padding: 10px 12px; border-radius: 9px; background: var(--surface-inset, #eef3f7); color: var(--text-secondary); }
+#ui-font-status.pending { border: 1px solid var(--accent); }
+#ui-font-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ui-font-card { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; min-width: 0; background: var(--surface); }
+.ui-font-card.selected { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+#ui-appearance-dialog .ui-font-choice { display: flex; flex-direction: column; align-items: flex-start; width: 100%; gap: 8px; padding: 16px; border-radius: 0; text-align: left; white-space: normal; color: var(--text); }
+.ui-font-choice strong { font-size: 15px; }
+.ui-font-detail, .ui-font-state { color: var(--muted); font-size: 12px; }
+.ui-font-sample { display: block; font-size: 16px; line-height: 1.8; overflow-wrap: anywhere; }
+.ui-font-actions { display: flex; flex-wrap: wrap; gap: 14px; padding: 0 16px 12px; }
+.ui-font-actions button { font-size: 13px; }
+#ui-appearance-dialog :is(.ui-color-save, .ui-color-reset, #import-ui-font) { font-size: 13px; padding: 8px 12px; }
+#ui-font-license { width: min(740px, calc(var(--view-width, 100vw) - 32px)); max-width: none; max-height: calc(var(--view-height, 100vh) - 32px); padding: 24px; overflow: auto; }
+#ui-font-license h2 { font-size: 19px; }
+#ui-font-license p { font-size: 14px; line-height: 1.7; }
+#ui-font-license pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.7 var(--font-ui); color: var(--text); }
+@media (max-width: 650px) {
+  #ui-appearance-dialog, #ui-font-license { padding: 16px; }
+  #ui-font-list { grid-template-columns: 1fr; }
+  .ui-color-row { grid-template-columns: 1fr 40px 105px; }
+  .ui-color-save { grid-column: 2; }
+  .ui-color-reset { grid-column: 3; }
+}
+/* Both font settings use the same movable frame and content hierarchy. */
+#ui-appearance-dialog, #appearance-dialog[data-kind="font"] { position:fixed; inset:auto; margin:0; width:min(700px,calc(var(--view-width,100vw) - 16px)); height:min(740px,calc(var(--view-height,100vh) - 16px)); max-height:calc(var(--view-height,100vh) - 16px); padding:0; overflow:hidden; border-radius:17px; font-size:14px; z-index:25; box-shadow:0 12px 46px #152d4338; }
+#ui-appearance-dialog[open], #appearance-dialog[data-kind="font"][open] { display:flex; flex-direction:column; }
+#ui-appearance-dialog .dialog-heading, #appearance-dialog[data-kind="font"] .dialog-heading { flex:none; margin:0; padding:20px 20px 12px; cursor:grab; touch-action:none; user-select:none; --wails-draggable:no-drag; }
+#ui-appearance-dialog .dialog-heading h2, #appearance-dialog[data-kind="font"] .dialog-heading h2 { font-size:21px; margin:0; }
+#ui-appearance-dialog .dialog-heading p, #appearance-dialog[data-kind="font"] .dialog-heading p { font-size:13px; line-height:1.6; margin:8px 0 0; }
+#ui-appearance-dialog .font-kind-tabs, #appearance-dialog[data-kind="font"] .font-kind-tabs { flex:none; margin:0 20px 12px; }
+#ui-appearance-dialog .font-library-entry, #appearance-dialog[data-kind="font"] .font-library-entry { flex:none; justify-content:center; margin:0 20px 12px; font-size:13px; }
+#ui-appearance-dialog .appearance-body, #appearance-dialog[data-kind="font"] .appearance-body { min-height:0; overflow:auto; padding:0 20px 20px; overscroll-behavior:contain; }
+:is(#online-ui-fonts, #online-shell-fonts) { padding:11px 16px!important; color:#fff!important; background:#315f7a!important; border:1px solid #315f7a; border-radius:10px; font-size:14px!important; font-weight:600; box-shadow:0 3px 9px #183c521f; }
+:is(#online-ui-fonts, #online-shell-fonts):hover { background:#23485f!important; }
+#appearance-dialog[data-kind="font"] :is(.asset-caption strong,.manager-toolbar) { font-size:14px; }
+#appearance-dialog[data-kind="font"] :is(.asset-caption span,.font-card-bold,.font-color-open,.font-preview-options label) { font-size:13px; }
+#appearance-dialog[data-kind="font"] .asset-list, #ui-font-list { gap:12px; }
+#ui-appearance-dialog .ui-text-settings { border-top:1px solid var(--border); border-bottom:0; padding:16px 0 0; margin:20px 0 0; }
+#ui-appearance-dialog .ui-text-settings summary { cursor:pointer; font-weight:600; }
+#ui-appearance-dialog .ui-color-row { grid-template-columns:minmax(100px,1fr) 40px 105px auto; }
+.library-bold { display:flex!important; flex-direction:row!important; align-items:center; gap:7px; white-space:nowrap; margin:0!important; font-size:13px!important; }
+.library-bold input { width:16px!important; height:16px; margin:0!important; accent-color:var(--accent); }
+.library-live-preview { display:block; width:100%; white-space:pre-wrap; color:#253e50; font-size:18px; font-weight:400; line-height:1.8; padding:14px; overflow-wrap:anywhere; font-synthesis:weight; }
+.preview-bold .library-live-preview { font-weight:700; }
+.library-toolbar { flex-wrap:wrap; gap:10px; }
+.library-toolbar .library-search { flex-basis:180px; }
+@media(max-width:650px) { #ui-font-list, #appearance-dialog[data-kind="font"] .asset-list { grid-template-columns:1fr; } .font-library-entry { flex-wrap:wrap; } #ui-appearance-dialog .ui-color-row { grid-template-columns:1fr 40px 105px; } }
+
+/* Installed fonts use two compact rows: name/state, then sample/style. */
+#appearance-dialog[data-kind="font"] .font-list .asset-card { padding:10px 12px; border-radius:12px; }
+#appearance-dialog[data-kind="font"] .font-list .asset-caption { flex-direction:row; align-items:center; justify-content:space-between; padding:0; gap:8px; min-height:30px; }
+#appearance-dialog[data-kind="font"] .font-list .asset-caption strong { min-width:0; padding:3px 7px; border:1px solid var(--border); border-radius:7px; white-space:normal; overflow-wrap:anywhere; line-height:1.35; }
+#appearance-dialog[data-kind="font"] .font-list .asset-caption span { flex:none; font-size:11px; }
+#appearance-dialog[data-kind="font"] .font-list .font-card-toolbar { padding:7px 0 0; gap:8px; }
+#appearance-dialog[data-kind="font"] .font-list .font-sample-choice { flex:1; min-width:0; text-align:left; border-radius:7px; }
+#appearance-dialog[data-kind="font"] .font-list .font-sample { justify-content:flex-start; margin:0; padding:5px 6px; min-height:30px; border-radius:7px; font-size:13px; line-height:1.4; white-space:nowrap; overflow:hidden; }
+#appearance-dialog[data-kind="font"] .font-list .font-card-bold { font-size:12px; white-space:nowrap; gap:4px; }
+#appearance-dialog[data-kind="font"] .font-list .font-card-color-button { padding:5px 6px; font-size:12px; }
+#appearance-dialog[data-kind="font"] .font-list .asset-actions { padding:7px 0 0; }
+#ui-appearance-dialog .ui-font-choice { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:7px 10px; padding:12px; }
+.ui-font-choice strong { grid-column:1; grid-row:1; justify-self:start; padding:3px 7px; border:1px solid var(--border); border-radius:7px; overflow-wrap:anywhere; }
+.ui-font-choice .ui-font-state { grid-column:2; grid-row:1; align-self:center; font-size:11px; }
+.ui-font-choice :is(.ui-font-detail,.ui-font-sample) { grid-column:1/-1; line-height:1.5; }
+.ui-font-actions { padding:0 12px 10px; }
+/* Native popovers use UA centering by default; notifications retain one fixed
+   screen position and never take focus or intercept dialog controls. */
+#toast { inset:auto auto 24px 50%; margin:0; width:max-content; max-width:calc(var(--view-width,100vw) - 32px); max-height:calc(var(--view-height,100vh) - 48px); overflow:auto; transform:translateX(-50%); pointer-events:none; font:13px/1.6 var(--font-ui); white-space:pre-wrap; overflow-wrap:anywhere; }
+#toast::backdrop { background:transparent; backdrop-filter:none; }

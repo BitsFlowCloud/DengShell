@@ -1,0 +1,41 @@
+/* Every single-select shares the application's soft, theme-aware surface. */
+.themed-select { position:relative; display:inline-flex; align-items:center; min-width:0; max-width:100%; vertical-align:middle; --wails-draggable:no-drag; }
+select.themed-select-native { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:0!important; border:0!important; clip:rect(0,0,0,0)!important; clip-path:inset(50%)!important; overflow:hidden!important; white-space:nowrap!important; opacity:0!important; pointer-events:none!important; }
+.themed-select-trigger { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; min-width:0; min-height:32px; padding:8px 11px; border:0; border-radius:10px; background:var(--surface-inset,#f1f5f8); color:var(--text,#526b7e); font:inherit; font-size:11px; text-align:left; line-height:1.4; transition:background-color .12s,color .12s; }
+.themed-select-trigger:hover,.themed-select-trigger:focus-visible,.themed-select.is-open .themed-select-trigger { background:var(--surface-hover,#e9f0f5); color:var(--text,#42627c); }
+.themed-select-trigger:disabled { opacity:.55; cursor:default; }
+.themed-select-value { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.themed-select-caret { flex:none; width:6px; height:6px; margin:0 2px 3px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(45deg); opacity:.65; transition:transform .12s; }
+.themed-select.is-open .themed-select-caret { transform:translateY(3px) rotate(225deg); }
+.themed-select-popup { position:fixed; inset:auto; margin:0; padding:6px; border:1px solid var(--border,#e7edf2); border-radius:13px; background:var(--surface,#fff); color:var(--text,#43576b); box-shadow:0 10px 32px #19334b26,0 2px 6px #19334b0d; z-index:100; font-family:inherit; font-size:11px; line-height:1.5; overflow:auto; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#91a8ba66 transparent; --wails-draggable:no-drag; }
+.themed-select-popup::backdrop { background:transparent; pointer-events:none; }
+.themed-select-option { position:relative; display:flex; align-items:center; min-height:32px; padding:7px 30px 7px 10px; border-radius:8px; cursor:pointer; user-select:none; }
+.themed-select-option-label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.themed-select-option.is-active { background:var(--surface-hover,#edf3f7); }
+.themed-select-option[aria-selected="true"] { color:var(--accent,#658daf); font-weight:550; }
+.themed-select-option[aria-selected="true"]::after { position:absolute; right:12px; top:11px; content:""; width:6px; height:10px; border-bottom:1.5px solid currentColor; border-right:1.5px solid currentColor; transform:rotate(45deg); }
+.themed-select-option[aria-disabled="true"] { opacity:.42; cursor:default; }
+.themed-select-group { padding:8px 10px 4px; font-size:10px; color:var(--muted); }
+.themed-select-empty { padding:10px 12px; color:var(--muted); }
+[data-theme="dark"] .themed-select-popup { box-shadow:0 10px 32px #00000055,0 2px 6px #00000022; }
+dialog label > .themed-select { width:100%; }
+.input-with-button > .themed-select { flex:1; }
+.themed-select-editable { width:100%; }
+.themed-select-editable input { padding-right:30px; }
+.themed-select-toggle { position:absolute; right:2px; top:2px; bottom:2px; display:flex; align-items:center; justify-content:center; width:29px; padding:0; border-radius:7px; color:var(--muted); }
+.themed-select-toggle:hover { background:var(--surface-hover,#e9f0f5); }
+.network-caption > .themed-select { flex:0 1 108px; width:108px; max-width:56%; margin-left:auto; }
+.network-caption .themed-select-trigger { position:relative; min-height:27px; padding:4px 17px; border-radius:8px; background:transparent; font-size:11px; gap:0; color:var(--text-secondary,#61798d); justify-content:center; text-align:center; }
+.network-caption .themed-select-trigger:hover,.network-caption .themed-select-trigger:focus-visible,.network-caption .themed-select.is-open .themed-select-trigger { background:var(--surface-hover,#e9f0f5); }
+.network-caption .themed-select-value { width:100%; font-size:11px; color:inherit; text-align:center; }
+.network-caption .themed-select-caret { position:absolute; right:7px; width:5px; height:5px; }
+.themed-select-popup[data-select-id="network-interface"] { font-size:11px; }
+.themed-select-popup[data-select-id="network-interface"] .themed-select-option { justify-content:center; padding-inline:27px; text-align:center; }
+.themed-select-popup[data-select-id="network-interface"] .themed-select-option-label { width:100%; text-align:center; }
+.scale-setting > .themed-select { min-width:78px; flex:none; }
+.scale-setting .themed-select-trigger { min-height:30px; padding:6px 9px; }
+.font-preview .themed-select-trigger { min-height:29px; padding:5px 9px; background:#2c4454; color:#d7e1e8; }
+.font-preview label { white-space:nowrap; }
+.font-preview label > .themed-select { width:auto; flex:none; }
+.font-preview .themed-select-trigger:hover,.font-preview .themed-select-trigger:focus-visible,.font-preview .themed-select.is-open .themed-select-trigger { background:#395464; color:#e5edf2; }
+@media (prefers-reduced-motion:reduce) { .themed-select-trigger,.themed-select-caret { transition:none; } }

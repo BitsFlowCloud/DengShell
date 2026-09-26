@@ -1,0 +1,149 @@
+/* Use the footer space for the workspace itself. */
+.app-shell { padding-bottom: 12px; }
+.drawer-backdrop { bottom: 0; }
+.connections-drawer { bottom: 12px; }
+.toast { bottom: 18px; }
+.process-details summary #monitor-state { margin-left: auto; font-size: 9px; }
+.process-details summary #process-count { margin-left: 3px; }
+
+.commands-view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.commands-toolbar { display: flex; align-items: center; gap: 10px; padding: 6px 17px 9px; min-height: 40px; }
+#command-groups { display: flex; align-items: center; gap: 4px; min-width: 0; overflow: auto; scrollbar-width: none; }
+#command-groups button { font-size: 11px; white-space: nowrap; padding: 5px 10px; border-radius: 20px; color: var(--muted); }
+#command-groups button.selected { background: var(--surface-selected, #edf3f7); color: var(--accent); }
+#command-target { margin-left: auto; font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#new-command { flex-shrink: 0; }
+.commands-content { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: transparent transparent; padding: 6px 18px 18px; }
+.commands-content:is(:hover, :focus-within, .is-scrolling) { scrollbar-color: #a4b6c36b transparent; }
+.commands-content:is(:hover, :focus-within, .is-scrolling)::-webkit-scrollbar-thumb { background: #a4b6c36b; }
+.command-list { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; }
+[data-color="blue"] { --pill-bg: #e6f0f8; --pill-hover: #d7e8f5; --pill-fg: #477598; }
+[data-color="green"] { --pill-bg: #e7f2e9; --pill-hover: #d5e9da; --pill-fg: #507d61; }
+[data-color="amber"] { --pill-bg: #faf0dd; --pill-hover: #f2e4c7; --pill-fg: #957440; }
+[data-color="purple"] { --pill-bg: #efeafb; --pill-hover: #e4dbf5; --pill-fg: #8465a9; }
+[data-color="rose"] { --pill-bg: #f8e9ed; --pill-hover: #f0dbe2; --pill-fg: #a06378; }
+[data-color="teal"] { --pill-bg: #e3f3f1; --pill-hover: #cfeae6; --pill-fg: #4a827b; }
+[data-theme="dark"] [data-color="blue"] { --pill-bg: #284256; --pill-hover: #365770; --pill-fg: #b1d3ec; }
+[data-theme="dark"] [data-color="green"] { --pill-bg: #2b4539; --pill-hover: #395c48; --pill-fg: #b4d7bd; }
+[data-theme="dark"] [data-color="amber"] { --pill-bg: #483e2c; --pill-hover: #5b4e35; --pill-fg: #dfc396; }
+[data-theme="dark"] [data-color="purple"] { --pill-bg: #403550; --pill-hover: #554467; --pill-fg: #cfb9e7; }
+[data-theme="dark"] [data-color="rose"] { --pill-bg: #4c3341; --pill-hover: #604252; --pill-fg: #e0b4c6; }
+[data-theme="dark"] [data-color="teal"] { --pill-bg: #264541; --pill-hover: #315c56; --pill-fg: #aed7ce; }
+.command-pill { display: inline-flex; align-items: center; background: var(--pill-bg); color: var(--pill-fg); border-radius: 100px; min-height: 28px; max-width: 100%; overflow: hidden; }
+.command-pill button { color: inherit; background: transparent; }
+.command-pill button:is(:hover, :focus-visible) { background: var(--pill-hover); color: var(--pill-fg); }
+.command-run { padding: 5px 10px; font-size: 12px; line-height: 18px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.command-dragging { opacity: .45; }
+.command-drop-before { box-shadow: -3px 0 0 var(--accent); }
+.command-drop-after { box-shadow: 3px 0 0 var(--accent); }
+.command-drop-group { outline: 2px solid var(--accent); outline-offset: -2px; }
+[data-command-id], #command-groups [draggable=true] { cursor: grab; }
+#command-dialog { width: 580px; }
+.command-group-field { flex: 1; min-width: 0; }
+.command-group-field > label { margin-bottom: 7px; }
+.command-group-choice { display: flex; align-items: center; gap: 7px; }
+.command-group-choice > .themed-select { flex: 1; min-width: 0; }
+#new-command-group { flex: none; width: 35px; height: 35px; border-radius: 11px; background: var(--surface-selected, #edf3f7); color: var(--accent); }
+#new-command-group:hover { background: var(--surface-hover, #e3edf4); }
+.command-context-menu { position: fixed; z-index: 90; width: 172px; box-sizing: border-box; padding: 6px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface, #fff); color: var(--text); box-shadow: 0 14px 46px #091a3433; }
+.command-context-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 11px; border-radius: 8px; text-align: left; font-size: 12px; color: inherit; }
+.command-context-menu button:is(:hover, :focus-visible) { background: var(--surface-hover, #edf3f7); }
+.command-context-menu svg { width: 16px; height: 16px; color: var(--accent); flex: none; }
+.command-parameter-buttons { display: flex; flex-wrap: wrap; gap: 7px; margin: 8px 0 12px; }
+.command-parameter-buttons button { padding: 7px 12px; }
+.command-composer { margin-top: 15px; border: 1px solid var(--border); border-radius: 13px; padding: 13px; background: var(--surface, #fff); color: var(--text); }
+.command-composer-heading, .command-composer-footer { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.command-composer-heading { margin-bottom: 12px; }
+.command-composer label { display: flex; flex-direction: column; gap: 7px; margin: 9px 0; font-size: 13px; min-width: 0; }
+.command-composer textarea { display: block; box-sizing: border-box; width: 100%; min-height: 65px; max-height: 45vh; resize: vertical; padding: 10px; background: var(--surface-inset); color: var(--text); border: 1px solid var(--border); border-radius: 9px; font: 14px/1.6 var(--terminal-family, monospace); }
+.command-composer .checkbox-label { flex-direction: row; align-items: center; }
+.command-composer input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); }
+.command-parameter-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.command-parameter-fields input { min-width: 0; width: 100%; padding: 8px; color: var(--text); background: var(--surface-inset); border: 1px solid var(--border); border-radius: 8px; }
+.command-composer-footer .primary-button { width: auto; padding: 9px 15px; margin-left: auto; }
+.command-composer-note { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+@media (max-width: 800px) { .commands-toolbar { flex-wrap: wrap; } #command-groups { flex: 1 1 100%; } #command-target { margin-right: auto; margin-left: 0; } }
+dialog textarea { width: 100%; min-width: 0; max-height: 38vh; resize: vertical; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-inset, #f9fbfc); color: var(--text, #43576b); font: 12px/1.6 "DejaVu Sans Mono", "Cascadia Mono", Consolas, monospace; padding: 10px 12px; }
+dialog textarea:focus { background: var(--focus-input); }
+dialog textarea::placeholder { color: var(--text-faint, #9fadb8); }
+.command-colors { border: 0; margin: 0 0 15px; padding: 0; min-width: 0; }
+.command-colors legend { font-size: 11px; margin-bottom: 8px; }
+#command-colors { display: flex; flex-wrap: wrap; gap: 8px; }
+.command-colors .color-option { display: flex; flex: none; flex-direction: row; align-items: center; gap: 5px; padding: 5px 9px; margin: 0; border-radius: 20px; background: var(--pill-bg); color: var(--pill-fg); cursor: pointer; }
+.color-option:has(input:checked) { background: var(--pill-hover); }
+.color-option input { width: 12px; height: 12px; margin: 0; accent-color: var(--pill-fg); }
+.color-option:focus-within { background: var(--pill-hover); }
+.dialog-buttons .danger-button { margin-right: auto; }
+.danger-button { color: #b37976; }
+.danger-button:is(:hover, :focus-visible) { color: #bd7470; background: #b3797612; }
+[data-theme="dark"] .danger-button { color: #d6a29b; }
+.proxy-settings { margin: 7px 0 15px; padding: 10px 12px; border-radius: 11px; background: var(--surface-inset, #f5f8fa); }
+.proxy-settings summary { display: flex; align-items: center; gap: 8px; list-style: none; cursor: pointer; font-size: 11px; border-radius: 7px; }
+.proxy-settings summary::-webkit-details-marker { display: none; }
+.proxy-settings summary span { margin-left: auto; font-size: 10px; color: var(--muted); }
+.proxy-settings summary svg { width: 12px; height: 12px; }
+.proxy-settings[open] summary { margin-bottom: 13px; }
+.proxy-settings[open] summary svg { transform: rotate(90deg); }
+.proxy-settings .proxy-note { font-size: 10px; margin: 5px 0 0; }
+.input-with-button select { min-width: 0; flex: 1; }
+.input-with-button button { white-space: nowrap; }
+#keys-dialog { width: 650px; }
+.keys-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
+.keys-toolbar > span { flex: 1; font-size: 11px; color: var(--muted); }
+.key-card { display: flex; align-items: center; gap: 13px; padding: 15px 0; border-top: 1px solid var(--border); }
+.key-card > svg { color: var(--muted); width: 22px; height: 22px; }
+.key-detail { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.key-detail strong { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.key-detail :is(small, code) { font-size: 10px; color: var(--muted); overflow-wrap: anywhere; }
+.key-actions { display: flex; gap: 5px; }
+.key-actions button { padding: 6px 8px; border-radius: 8px; font-size: 10px; }
+.key-actions button:hover { background: var(--surface-hover, #edf4f8); }
+#key-editor-dialog, #public-key-dialog { width: 540px; }
+#public-key-fingerprint { overflow-wrap: anywhere; }
+@media (max-width: 1100px) { #command-target { display: none; } #new-command { margin-left: auto; } }
+
+/* Saved templates open a small parameter form; editing stays an explicit action. */
+.command-composer { margin:0 0 12px; }
+.command-composer-compact { display:grid; grid-template-columns:minmax(0,1fr) minmax(150px,1fr); gap:8px 14px; padding:10px 12px; }
+.command-composer-compact :is(.composer-template-label,.command-parameter-buttons,#composer-preview,.composer-save-as,.command-composer-note) { display:none; }
+.command-composer-compact .command-composer-heading { margin:0; min-width:0; }
+.command-composer-compact .command-composer-heading strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.command-composer-compact .composer-target-label { flex-direction:row; align-items:center; margin:0; font-size:11px; }
+.command-composer-compact .composer-target-label > :is(select,.themed-select) { flex:1; min-width:0; }
+.command-composer-compact .command-parameter-fields { grid-column:1/-1; gap:8px; }
+.command-composer-compact .command-parameter-fields label { margin:0; font-size:12px; gap:4px; }
+.command-composer-compact .command-composer-footer { grid-column:1/-1; }
+.command-composer-compact .command-composer-footer label { margin:0; font-size:12px; }
+@media(max-width:650px) { .command-composer-compact { grid-template-columns:minmax(0,1fr); } }
+
+.transfer-notice { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+#clear-completed-transfers { flex:none; }
+
+#welcome-quick-connect { margin-bottom:14px; }
+#quick-connect-dialog { width:540px; max-height:calc(var(--view-height,100vh) - 24px); overflow:auto; }
+#quick-connect-output { white-space:pre-wrap; overflow-wrap:anywhere; max-height:160px; overflow:auto; font-size:12px; line-height:1.6; }
+#quick-connect-output:empty { display:none; }
+#quick-connect-dialog .dialog-buttons { display:flex; align-items:stretch; gap:12px; }
+#quick-connect-dialog .dialog-buttons > button {
+  display:flex; align-items:center; justify-content:center;
+  flex:1 1 0; width:0; min-width:0; min-height:40px;
+  box-sizing:border-box; padding:10px 14px;
+  font-family:inherit; font-size:12px; font-weight:500; line-height:1.5;
+  text-align:center; white-space:normal;
+}
+#quick-save-dialog .checkbox-label { display:flex; flex-direction:row; align-items:center; }
+#quick-save-dialog input[type=checkbox] { width:16px; }
+#quick-save-error { color:var(--danger); }
+
+/* Parameter entry replaces the command list without moving the splitter. */
+.command-parameters-open :is(.command-list,#commands-empty) { display:none; }
+.command-composer-compact { margin-bottom:0; }
+.command-composer-compact .command-parameter-fields { grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),240px)); }
+.command-composer-compact .command-parameter-fields input { box-sizing:border-box; height:32px; padding:5px 9px; font-family:inherit; font-size:12px; line-height:1.5; }
+
+.command-composer-compact .command-parameter-fields { grid-column:1; }
+.command-composer-compact .command-composer-footer { grid-column:2; align-self:end; justify-content:flex-end; }
+@media(max-width:650px) {
+  .command-composer-compact .command-parameter-fields,
+  .command-composer-compact .command-composer-footer { grid-column:1; }
+}

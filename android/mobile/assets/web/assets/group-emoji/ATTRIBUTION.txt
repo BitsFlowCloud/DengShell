@@ -1,0 +1,6 @@
+Twemoji graphics by Twitter, Inc. and other contributors.
+Pinned release: https://github.com/twitter/twemoji/tree/v14.0.2
+Licensed under Creative Commons Attribution 4.0 International (CC-BY-4.0).
+https://creativecommons.org/licenses/by/4.0/
+These SVG graphics are redistributed unchanged as offline DengShell group icons.
+The full license is included in LICENSE-GRAPHICS.txt.

@@ -1,0 +1,85 @@
+/* Near-black dark palette, with separated panel and terminal surfaces.
+   Keep light mode, saved artwork and ANSI colors intact. */
+:root[data-theme="dark"] {
+  --surface: #181f26;
+  --surface-inset: #131a21;
+  --surface-hover: #24303a;
+  --surface-selected: #213948;
+  --border: #2d3944;
+  --text: #e5e5e5;
+  --text-secondary: #c6c6c6;
+  --muted: #a3a3a3;
+  --text-faint: #919191;
+  --focus-surface: #293947;
+  --focus-input: #1c2731;
+  --shadow: inset 0 0 0 1px var(--border);
+  background: #0f1419;
+}
+
+[data-theme="dark"] body { background: #0f1419; }
+[data-theme="dark"] .terminal-panel { background: #0f161d; }
+
+/* The darker base remains behind the selected image. Background visibility
+   and strength stay controlled by appearance.css and the background manager. */
+
+[data-theme="dark"] .terminal-panel .terminal-meta,
+[data-theme="dark"] .terminal-panel .terminal-command-bar {
+  background: #121b23;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+[data-theme="dark"] .terminal-panel .terminal-meta { border-bottom-color: var(--border); }
+[data-theme="dark"] .terminal-panel .terminal-command-bar { border-top-color: var(--border); }
+[data-theme="dark"] .color-dialog-preview,
+[data-theme="dark"] #diagnostics-output,
+[data-theme="dark"] .ui-color-sample.dark { background: #0f161d; }
+
+[data-theme="dark"] :is(dialog, .connections-drawer, .popup-menu, .settings-menu) {
+  box-shadow: 0 0 0 1px var(--border), 0 16px 60px #0009;
+}
+[data-theme="dark"] .drawer-backdrop { background: #0006; }
+[data-theme="dark"] dialog::backdrop { background: #0009; }
+[data-theme="dark"] #security-lock-screen { box-shadow: none; }
+[data-theme="dark"] #security-lock-screen::backdrop { background: #000a; }
+[data-theme="dark"] #sync-dialog::backdrop { background: #0009; }
+/* These non-modal popovers must never dim or obscure their owner. */
+[data-theme="dark"] :is(#toast, #directory-favorites, .movable-color-dialog)::backdrop { background: transparent; }
+
+[data-theme="dark"] .connections-drawer {
+  --tree-guide: #526473;
+  --group-root: #202b35;
+  --group-second: #1c242d;
+  --group-path: #21303b;
+  --group-picked: #213948;
+  --group-picked-border: #86afc9;
+  --group-picked-text: #eff6fb;
+}
+[data-theme="dark"] .connection-card.selected .server-icon { background: #1b303d; }
+[data-theme="dark"] .server-profile-row.server-multi-selected .connection-card { background: #10261b; }
+[data-theme="dark"] .server-selection-open { background: #153023; }
+[data-theme="dark"] .server-selection-open:enabled:hover { background: #20432f; }
+[data-theme="dark"] .path-history-path mark { background: #193447; }
+
+[data-theme="dark"] :is(.upload-button, .pill.offline, .transfer-state.cancelled) { background: var(--surface-inset); }
+[data-theme="dark"] :is(.process-table tbody tr + tr, .disk-row + .disk-row, .transfer-row) { border-color: var(--border); }
+[data-theme="dark"] .file-table tbody tr:nth-child(even) { background: #1b242d; }
+[data-theme="dark"] .file-table tbody tr:hover { background: var(--surface-hover); }
+[data-theme="dark"] .file-table tbody tr.selected { background: var(--surface-selected); }
+[data-theme="dark"] .drop-overlay { background: #181f26f5; }
+[data-theme="dark"] .toast { background: #24303af5; border-color: #425566; }
+
+/* Keep restrained color cues for space usage and I/O against near-black panels. */
+[data-theme="dark"] .disk-summary > .disk-summary-used { background: #342c21; }
+[data-theme="dark"] .disk-summary > .disk-summary-available { background: #1e332a; }
+[data-theme="dark"] .disk-readout.read { background: #1d3440; }
+[data-theme="dark"] .disk-readout.write { background: #342c21; }
+[data-theme="dark"] .splitter span { background: #526473; }
+[data-theme="dark"] .titlebar .window-controls { background: #131a21; }
+[data-theme="dark"] .titlebar .window-controls button:not(.window-close):is(:hover, :focus-visible) { background: #2e3b47; }
+[data-theme="dark"] .titlebar .window-controls button:not(.window-close):active { background: #374752; }
+
+[data-theme="dark"] .startup-splash { background: #000a; }
+[data-theme="dark"] .startup-splash-panel {
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border), 0 24px 85px #0009;
+}

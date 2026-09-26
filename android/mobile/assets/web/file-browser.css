@@ -1,0 +1,94 @@
+/* Directory navigation and file contents own separate scroll areas. */
+.file-content {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  align-items: stretch;
+  grid-template-columns: clamp(126px, 18%, 208px) minmax(0, 1fr);
+}
+.file-content > .directory-tree,
+.file-content > .file-table-wrap {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.file-content > .directory-tree {
+  display: block;
+  padding: 2px 7px 8px 2px;
+}
+.file-content > .file-table-wrap { padding: 0 0 7px 5px; }
+.file-content > :is(.directory-tree, .file-table-wrap):is(:hover, :focus-within, .is-scrolling) {
+  scrollbar-color: #a4b6c36b transparent;
+}
+.file-content > :is(.directory-tree, .file-table-wrap)::-webkit-scrollbar-thumb { background: transparent; }
+.file-content > :is(.directory-tree, .file-table-wrap):is(:hover, :focus-within, .is-scrolling)::-webkit-scrollbar-thumb { background: #a4b6c36b; }
+.file-table thead { position: sticky; top: 0; z-index: 2; }
+.directory-tree .tree-row { min-height: 28px; height: 28px; }
+.directory-tree .tree-row.contains-current { color: var(--accent, #7198b1); }
+.directory-tree .tree-row.contains-current .tree-link > span:first-of-type { font-weight: 600; }
+.tree-placeholder, .tree-directory-status {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted, #8f9fae);
+  padding: 5px 6px 5px calc(10px + var(--depth, 0) * 12px);
+  overflow-wrap: anywhere;
+}
+.tree-placeholder { padding: 12px 8px; }
+.tree-retry {
+  padding: 0;
+  font: inherit;
+  color: var(--accent, #7198b1);
+  text-align: left;
+}
+.tree-link .tree-symlink { flex-shrink: 0; font-size: 10px; opacity: .65; }
+.directory-tree .tree-toggle:disabled { opacity: .4; }
+[data-compact="true"] .file-content { grid-template-columns: 116px minmax(0, 1fr); }
+[data-narrow="true"] .file-content { grid-template-columns: 104px minmax(0, 1fr); }
+[data-narrow="true"] .file-content > .directory-tree { display: block; }
+@media (max-width: 1050px) {
+  .file-content { grid-template-columns: 126px minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .file-content { grid-template-columns: 104px minmax(0, 1fr); padding-inline: 4px; }
+  .file-content > .directory-tree { padding-right: 3px; }
+  .directory-tree .tree-row { padding-left: calc(var(--depth, 0) * 8px); }
+  .directory-tree .tree-toggle { width: 15px; }
+  .directory-tree .tree-link { gap: 4px; }
+}
+
+/* Text metrics vary across installed UI fonts. Let each toolbar grow with its
+   controls rather than overflowing the fixed short-window row above it. */
+.files-panel .file-tabs { flex:0 0 auto; height:auto; min-height:36px; padding-block:5px; }
+.files-panel .file-tab { line-height:1.4; }
+.files-panel .file-toolbar { flex:0 0 auto; height:auto; min-height:36px; padding-block:4px; }
+.files-panel .path-form { min-height:28px; }
+.files-panel .path-form input { line-height:1.4; }
+.files-panel .upload-button { line-height:1.4; }
+.files-panel .file-search { min-width:0; }
+#directory-favorites { position:fixed; inset:auto; margin:0; z-index:24; display:flex; flex-direction:column; gap:8px; padding:12px; border:1px solid var(--border); border-radius:12px; background:var(--surface); color:var(--text); box-shadow:0 8px 30px #10253633; overflow:hidden; font-size:12px; }
+#directory-favorites::backdrop { background:transparent; }
+.directory-favorites-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; flex:none; }
+.directory-favorites-heading strong { font-size:14px; }
+#directory-favorites-count,#directory-favorites-target { color:var(--muted); font-size:11px; }
+#directory-favorites-target { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:none; }
+#favorite-current-directory { flex:none; min-height:32px; padding:7px 10px; text-align:left; border-radius:7px; background:var(--surface-selected); color:var(--accent); font-size:12px; }
+#directory-favorites-search { flex:none; width:100%; padding:7px 9px; border:1px solid var(--border); border-radius:7px; background:var(--surface-inset); color:var(--text); font-size:12px; }
+#directory-favorites-list { min-height:0; overflow:auto; overscroll-behavior:contain; }
+.directory-favorite-row { display:flex; align-items:center; gap:4px; border-radius:7px; }
+.directory-favorite-row:hover { background:var(--surface-hover); }
+.directory-favorite-path { display:flex; align-items:center; gap:8px; min-width:0; flex:1; padding:9px 6px; text-align:left; font-size:12px; }
+.directory-favorite-path svg { width:15px; height:15px; color:var(--muted); }
+.directory-favorite-path span { min-width:0; overflow-wrap:anywhere; line-height:1.5; }
+.directory-favorite-remove { color:var(--muted); }
+.directory-favorite-remove svg { width:14px; height:14px; }
+#directory-favorites-empty,#directory-favorites-error { margin:0; font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
+#directory-favorites-empty { color:var(--muted); }
+#directory-favorites-error { color:var(--danger,#c56770); flex:none; }
+#directory-favorites-error:empty { display:none; }
+@container (max-width:480px) { .file-toolbar .file-search { display:none; } }
