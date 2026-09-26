@@ -46,3 +46,5 @@ GRADLE_USER_HOME="$PWD/.gradle" gradle :app:assembleDebug
 - 保留 alpha4 的移动界面、文件选择器和下载修复。Android 仍为调试签名测试版，手动安装新版。
 
 构建依赖：Go 1.27.1、JDK 17 或更新版、Gradle 9、Android SDK 36、NDK 28.2.13676358，以及 go.mod 对应版本的 gomobile/gobind。先运行 `go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20260908204917-8b95e45f8d3e` 和同版本 `gobind`，再执行上述构建命令。签名密钥不在源码中；自行构建使用自己的签名，不能覆盖官方 APK。
+
+运行时请保持 Android System WebView 为系统支持的最新版；系统长期未更新的旧 WebView 无法解析当前界面脚本。
