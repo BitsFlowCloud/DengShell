@@ -261,9 +261,15 @@ func TestSSHLatencyExcludesMonitorExecution(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// This fixture never attaches a terminal. Production starts heartbeats
+	// after terminal startup; explicitly start the sole loop under test here.
+	go session.heartbeat()
 	deadline := time.Now().Add(time.Second)
 	for !session.Latency().Ready && time.Now().Before(deadline) {
 		time.Sleep(5 * time.Millisecond)
+	}
+	if !session.Latency().Ready {
+		t.Fatal("heartbeat did not publish its first RTT")
 	}
 	start := time.Now()
 	stats, err := session.Stats(context.Background())
