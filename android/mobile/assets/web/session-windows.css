@@ -94,3 +94,9 @@
 .session-tab-menu .merge-window-option span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .session-tab-menu .merge-window-empty{padding:8px 13px;color:var(--muted);font-size:10px}
 @media(prefers-reduced-motion:reduce){.window-opening-preview,.window-opening-card,.session-tab{transition:none}.window-opening-card{transform:none!important}}
+
+/* Sorting feedback lives outside the wrapped, scrollable tab list. */
+.session-tabs .session-tab { touch-action:none; }
+.session-tab.tab-being-dragged { opacity:.5; }
+.session-tab-insertion { position:fixed; z-index:100002; width:3px; margin-left:-1px; border-radius:3px; background:#3c819f; box-shadow:0 0 0 1px #ffffff88; pointer-events:none; }
+[data-theme="dark"] .session-tab-insertion { background:#9bd5ee; box-shadow:0 0 0 1px #14232daa; }

@@ -1,8 +1,8 @@
-# DengShell Android（0.1.0 alpha 4）
+# DengShell Android（0.1.0 alpha 6）
 
 这一版把 DengShell 的现有 SSH/SFTP 后端装入 Android 应用，并针对竖屏和横屏提供触控布局。应用在设备本机的 `127.0.0.1` 启动服务，界面通过内置 WebView 访问；服务器配置保存在应用私有目录中。
 
-安装包已放在 [DengShell 官网](https://dengshell.com/#downloads) 和 [GitHub Android 预发布页](https://github.com/BitsFlowCloud/DengShell/releases/tag/android-v0.1.0-alpha5)。
+安装包已放在 [DengShell 官网](https://dengshell.com/#downloads) 和 [GitHub 发布页](https://github.com/BitsFlowCloud/DengShell/releases/tag/v0.02-build.20260928090)。
 
 ## 选择安装包
 
@@ -14,7 +14,7 @@
 | `x86` | 32 位 Intel Android 设备及模拟器 |
 | `universal` | 不清楚 CPU 类型时使用，包含以上四种架构，因此体积较大 |
 
-最低系统版本：Android 7.0（API 24）。这些是调试签名的 alpha 安装包，用于试用与反馈；正式分发前应使用长期保管的发布签名密钥重新签名。换用不同签名的包时，Android 可能要求先卸载旧包。安装新版本前请备份应用内的重要配置。`release/SHA256SUMS-alpha4` 可用于核对下载文件。
+最低系统版本：Android 7.0（API 24）。这些是调试签名的 alpha 安装包，用于试用与反馈；正式分发前应使用长期保管的发布签名密钥重新签名。换用不同签名的包时，Android 可能要求先卸载旧包。安装新版本前请备份应用内的重要配置。官网提供的校验清单 可用于核对下载文件。
 
 ## 当前功能
 
@@ -48,3 +48,10 @@ GRADLE_USER_HOME="$PWD/.gradle" gradle :app:assembleDebug
 构建依赖：Go 1.27.1、JDK 17 或更新版、Gradle 9、Android SDK 36、NDK 28.2.13676358，以及 go.mod 对应版本的 gomobile/gobind。先运行 `go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20260908204917-8b95e45f8d3e` 和同版本 `gobind`，再执行上述构建命令。签名密钥不在源码中；自行构建使用自己的签名，不能覆盖官方 APK。
 
 运行时请保持 Android System WebView 为系统支持的最新版；系统长期未更新的旧 WebView 无法解析当前界面脚本。
+
+## 2026-09-28 · alpha6
+
+- 同步连接卡片的整块点击与禁止文字误选，保留 Android 点按连接方式。
+- 上传同名文件集中确认，支持覆盖、跳过和取消；优化连接表单布局。
+- 更新共用后端与界面，保留触控导航、文件选择器及下载修复。
+- 保持原调试签名，支持覆盖安装 alpha5；RDP 引擎本次仅适用于 Windows，不在 Android 开放。

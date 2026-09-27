@@ -1,0 +1,50 @@
+/* Separate connection credentials from optional organisation and routing. */
+#connection-dialog { width:800px; max-width:calc(var(--view-width,100vw) - 32px); max-height:min(680px,calc(var(--view-height,100dvh) - 32px)); padding:0; overflow:hidden; border-radius:14px; }
+#connection-form { display:flex; flex-direction:column; max-height:min(678px,calc(var(--view-height,100dvh) - 34px)); min-height:0; }
+#connection-form .dialog-heading { flex:none; gap:12px; margin:0; padding:14px 20px 12px; border-bottom:1px solid var(--border); }
+#connection-form .dialog-heading h2 { font-size:17px; line-height:1.4; }
+#connection-form .dialog-heading .icon-button { flex:none; }
+#connection-form .connection-form-body { min-height:0; padding:18px 20px; overflow:auto; overscroll-behavior:contain; scrollbar-width:thin; container-type:inline-size; container-name:connection-editor; }
+#connection-form .connection-editor-grid { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(290px,1fr); gap:22px; align-items:start; }
+#connection-form .connection-main, #connection-form .connection-options { display:flex; flex-direction:column; gap:16px; min-width:0; }
+#connection-form .connection-options { gap:10px; padding-left:20px; border-left:1px solid var(--border); }
+#connection-form .connection-section { display:flex; flex-direction:column; gap:10px; min-width:0; }
+#connection-form .connection-section + .connection-section { padding-top:14px; border-top:1px solid var(--border); }
+#connection-form h3 { margin:0 0 2px; color:var(--text); font-size:12px; font-weight:600; line-height:1.4; }
+#connection-form label { margin:0; gap:5px; color:var(--text-secondary,var(--text)); font-size:12px; line-height:1.4; }
+#connection-form .connection-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 12px; min-width:0; }
+#connection-form .connection-section:first-child .connection-fields { grid-template-columns:minmax(0,1fr) 165px; }
+#connection-form .connection-address-row { display:grid; grid-template-columns:minmax(0,1fr) 80px; gap:12px; }
+#connection-form .port-field { max-width:none; }
+#connection-form input:not([type="checkbox"]):not([type="hidden"]),
+#connection-form .themed-select-trigger { height:36px; min-height:36px; padding:7px 10px; font:inherit; font-size:12px; line-height:20px; border-radius:8px; }
+#connection-form .input-with-button { min-width:0; }
+#connection-form .input-with-button > input { min-width:0; }
+#connection-form .input-with-button > button { flex:none; min-height:36px; padding:7px 10px; font-size:11px; white-space:nowrap; }
+#connection-form .connection-secret-row { display:flex; flex-direction:column; gap:6px; }
+#connection-form .connection-secret-row:not(:has(> :not([hidden]))) { display:none; }
+#connection-form .checkbox-label { flex-direction:row; align-items:center; gap:8px; min-height:24px; font-size:11px; }
+#connection-form input[type="checkbox"] { flex:none; width:14px; height:14px; }
+#connection-form p { margin:0; font-size:11px; line-height:1.5; color:var(--muted); }
+#connection-form #connection-notes { height:72px; min-height:72px; max-height:144px; padding:8px 10px; font:inherit; font-size:12px; line-height:18px; }
+#connection-form .notes-input-hint { font-size:10px; line-height:1.5; }
+#connection-form .proxy-settings { margin:0; padding:10px; border:1px solid var(--border); border-radius:9px; background:transparent; }
+#connection-form .connection-options > .proxy-settings { margin-top:6px; }
+#connection-form .connection-notes-field { margin-top:4px; }
+#connection-form .proxy-settings summary { min-height:20px; font-size:12px; }
+#connection-form #proxy-summary { max-width:55%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); }
+#connection-form .proxy-settings[open] summary { margin-bottom:12px; }
+#connection-form .proxy-settings .connection-fields { grid-template-columns:minmax(0,1fr); }
+#connection-form #proxy-fields > *, #connection-form .proxy-note { margin-top:10px; }
+#connection-form #proxy-fields .port-field { flex:0 0 74px; }
+#connection-form #proxy-fields > .form-row:nth-child(2) { flex-direction:column; gap:10px; }
+#connection-form .connection-form-footer { display:flex; align-items:center; justify-content:flex-end; gap:12px; flex:none; padding:12px 20px; border-top:1px solid var(--border); }
+#connection-form #reset-host-key { margin-right:auto; text-align:left; font-size:11px; }
+#connection-form #save-connection { width:auto; min-width:144px; min-height:36px; padding:8px 18px; font-size:12px; }
+@container connection-editor (max-width:650px) {
+  #connection-form .connection-editor-grid { grid-template-columns:minmax(0,1fr); gap:16px; }
+  #connection-form .connection-options { padding:14px 0 0; border-left:0; border-top:1px solid var(--border); }
+}
+@container connection-editor (max-width:380px) {
+  #connection-form .connection-fields, #connection-form .connection-section:first-child .connection-fields { grid-template-columns:minmax(0,1fr); }
+}

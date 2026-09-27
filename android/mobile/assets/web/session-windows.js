@@ -2,8 +2,10 @@
 'use strict';
 (() => {
  const pending = new Map();
- let activeDrag=null, menuCleanup=null, restoreRequest=null, restoringWindow=false, dropGeneration=0, pendingDrop=false;
+ let activeDrag=null, menuCleanup=null, restoreRequest=null, restoringWindow=false, dropGeneration=0, pendingDrop=false, tabsRenderPending=false;
  function cancelDrag(){dropGeneration++;pendingDrop=false;activeDrag?.();}
+ function deferTabsRender(){if(!activeDrag)return false;tabsRenderPending=true;return true;}
+ function flushTabsRender(){if(tabsRenderPending){tabsRenderPending=false;queueMicrotask(()=>renderTabs());}}
  function reflect(){
   const state=current(),button=document.getElementById('detach-terminal');if(!button)return;
   button.hidden=sessions.size<2;
@@ -75,48 +77,82 @@
    if(completed)window.DengWindowTransfers.afterTransfer().catch(error=>toast(error.message));
   }
  }
- function bindTab(tab,state) {
-  tab.style.setProperty('--wails-draggable','no-drag');tab.title=state.detaching?'正在移至独立窗口…':'拖出标签栏以拆分 · Esc 取消';
+ function bindTab(tab,state=null) {
+  tab.dataset.dragBound='true';tab.style.setProperty('--wails-draggable','no-drag');
+  const canDetach=()=>!!(state?.ready&&state.connected&&!state.localOnly&&!state.detaching&&!state.handoffProvisional&&!state.ownershipUncertain);
+  tab.title=state?.detaching?'正在移至独立窗口…':'拖动调整标签顺序'+(canDetach()?' · 拖出标签栏以拆分':'')+' · Esc 取消';
   let drag=null,suppressUntil=0;
   const cleanup=()=>{
-   const old=drag;drag=null;cancelAnimationFrame(old?.frame);clearInterval(old?.probeTimer);old?.preview?.remove();
+   const old=drag;drag=null;cancelAnimationFrame(old?.frame);clearInterval(old?.probeTimer);old?.preview?.remove();old?.marker?.remove();
+   tab.classList.remove('tab-being-dragged');
    document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',cancel);
    if(old&&tab.hasPointerCapture(old.id))tab.releasePointerCapture(old.id);
    document.documentElement.classList.remove('session-tab-dragging');if(activeDrag===cancel)activeDrag=null;
+   flushTabsRender();
   };
   const cancel=()=>{if(drag?.moved)suppressUntil=Date.now()+600;cleanup()};
   tab.addEventListener('click',event=>{if(Date.now()<suppressUntil){event.preventDefault();event.stopImmediatePropagation()}},true);
+  tab.addEventListener('dragstart',event=>event.preventDefault());
   tab.addEventListener('pointerdown',event=>{
-   if(event.button!==0||event.target.closest('.tab-close')||!state.ready||state.detaching||state.ownershipUncertain)return;
-   cancelDrag();drag={id:event.pointerId,x:event.clientX,y:event.clientY,moved:false,bounds:tab.parentElement.getBoundingClientRect()};activeDrag=cancel;
+   if(event.button===0)suppressUntil=0;
+   if(event.button!==0||event.isPrimary===false||event.target.closest('.tab-close')||state?.detaching||state?.handoffProvisional||state?.ownershipUncertain)return;
+   cancelDrag();drag={id:event.pointerId,x:event.clientX,y:event.clientY,clientX:event.clientX,clientY:event.clientY,moved:false,host:tab.parentElement};activeDrag=cancel;
    // Preserve the button as the click target until this is an actual drag.
    document.addEventListener('pointermove',move);document.addEventListener('pointerup',up);document.addEventListener('pointercancel',cancel);
   });
+  const update=()=>{
+   if(!drag?.moved)return;
+   const x=drag.clientX,y=drag.clientY,b=drag.host.getBoundingClientRect();
+   drag.position=window.DengTabOrder.location(drag.host,x,y);
+   drag.detach=canDetach()&&(y<b.top-22||y>b.bottom+40||x<-8||x>innerWidth+8);
+   // Local sorting takes priority over stale asynchronous window hit tests.
+   const target=drag.position?null:drag.target;
+   drag.label.textContent=target?'松开，合并到 '+target.title:drag.detach?'松开，移至独立窗口':drag.position?'松开，移动到此位置':canDetach()?'拖向标签栏调整顺序，或移出以拆分':'拖向标签栏调整顺序';
+   drag.preview.classList.toggle('will-detach',drag.detach&&!target);drag.preview.classList.toggle('will-merge',!!target);
+   drag.marker.hidden=!drag.position;
+   if(drag.position){const p=drag.position;drag.marker.style.cssText=`left:${p.x}px;top:${p.y}px;height:${p.height}px`;}
+   const left=Math.max(8,Math.min(innerWidth-drag.preview.offsetWidth-8,x+16)),top=Math.max(8,Math.min(innerHeight-drag.preview.offsetHeight-8,y+16));
+   drag.preview.style.transform=`translate3d(${left}px,${top}px,0)`;
+  };
+  const tick=()=>{
+   if(!drag?.moved)return;
+   const b=drag.host.getBoundingClientRect(),y=drag.clientY;
+   if(drag.clientX>=b.left&&drag.clientX<=b.right&&y>=b.top-10&&y<=b.bottom+12&&drag.host.scrollHeight>drag.host.clientHeight){
+    const edge=Math.min(18,b.height/3),speed=y<b.top+edge?-7:y>b.bottom-edge?7:0;
+    if(speed)drag.host.scrollTop+=speed/(Number(document.body.style.zoom)||1);
+   }
+   update();drag.frame=requestAnimationFrame(tick);
+  };
   const move=event=>{
    if(!drag||event.pointerId!==drag.id)return;
-   if(!drag.moved&&Math.hypot(event.clientX-drag.x,event.clientY-drag.y)<10)return;
-   if(!drag.moved)tab.setPointerCapture(event.pointerId);
-   drag.moved=true;document.documentElement.classList.add('session-tab-dragging');
-   if(!drag.preview){
-    const {preview,label}=window.DengWindowPreview.drag(state);drag.label=label;
-    document.documentElement.append(preview);drag.preview=preview;
-    const active=drag;const probe=async()=>{if(drag!==active||active.probing)return;active.probing=true;try{const target=await window.DengWindowTransfers.atPointer();if(drag===active){active.target=target;updateDragLabel();}}catch{}finally{active.probing=false}};
-    active.probeTimer=setInterval(probe,120);probe();
+   if(state?.closed){cancel();return;}
+   drag.clientX=event.clientX;drag.clientY=event.clientY;
+   if(!drag.moved&&Math.hypot(event.clientX-drag.x,event.clientY-drag.y)<6)return;
+   if(!drag.moved){
+    tab.setPointerCapture(event.pointerId);drag.moved=true;document.documentElement.classList.add('session-tab-dragging');tab.classList.add('tab-being-dragged');
+    if(state){const {preview,label}=window.DengWindowPreview.drag(state);drag.preview=preview;drag.label=label;}
+    else{drag.preview=node('div','session-drag-preview');drag.label=node('span','session-drag-label');drag.preview.append(node('strong','',tab.querySelector('.session-tab-label')?.textContent||'标签'),drag.label,node('small','','Esc 取消'));}
+    drag.marker=node('div','session-tab-insertion');drag.marker.setAttribute('aria-hidden','true');document.documentElement.append(drag.preview,drag.marker);
+    const active=drag;const probe=async()=>{if(drag!==active||active.probing||!canDetach()||active.position)return;active.probing=true;try{const target=await window.DengWindowTransfers.atPointer();if(drag===active){active.target=target;update();}}catch{}finally{active.probing=false}};
+    active.probeTimer=setInterval(probe,120);update();probe();drag.frame=requestAnimationFrame(tick);
    }
-   const b=drag.bounds;drag.detach=event.clientY<b.top-22||event.clientY>b.bottom+40||event.clientX<-8||event.clientX>innerWidth+8;
-   updateDragLabel();
-   drag.left=Math.max(8,Math.min(innerWidth-drag.preview.offsetWidth-8,event.clientX+16));drag.top=Math.max(8,Math.min(innerHeight-drag.preview.offsetHeight-8,event.clientY+16));
-   cancelAnimationFrame(drag.frame);drag.frame=requestAnimationFrame(()=>{if(drag)drag.preview.style.transform=`translate3d(${drag.left}px,${drag.top}px,0)`});
+   event.preventDefault();update();
   };
-  const updateDragLabel=()=>{if(!drag?.preview)return;const label=drag.target?'松开，合并到 '+drag.target.title:drag.detach?'松开，移至独立窗口':'拖向另一个窗口合并，或移出以拆分';drag.label.textContent=label;drag.preview.classList.toggle('will-detach',drag.detach&&!drag.target);drag.preview.classList.toggle('will-merge',!!drag.target);};
   const up=event=>{
    if(!drag||event.pointerId!==drag.id)return;
-   const moved=drag.moved,action=drag.detach,knownTarget=drag.target;if(moved)suppressUntil=Date.now()+600;
-   cleanup();if(moved){event.preventDefault();const token=++dropGeneration;pendingDrop=true;safe(async()=>{try{const target=await window.DengWindowTransfers.atPointer();if(token!==dropGeneration||state.closed||state.detaching)return;if(target)await detach(state,target);else if(action&&!knownTarget)await detach(state);else if(knownTarget)toast('目标窗口已离开，请重新拖动');}finally{if(token===dropGeneration)pendingDrop=false}})()}
+   drag.clientX=event.clientX;drag.clientY=event.clientY;update();
+   const moved=drag.moved,position=drag.position,action=drag.detach,knownTarget=drag.target;if(moved)suppressUntil=Date.now()+600;
+   cleanup();if(!moved)return;
+   event.preventDefault();
+   if(position){if(!state?.closed)window.DengTabOrder.commit(tab,position);return;}
+   if(!canDetach())return;
+   const token=++dropGeneration;pendingDrop=true;safe(async()=>{try{const target=await window.DengWindowTransfers.atPointer();if(token!==dropGeneration||state.closed||state.detaching)return;if(target)await detach(state,target);else if(action&&!knownTarget)await detach(state);else if(knownTarget)toast('目标窗口已离开，请重新拖动');}finally{if(token===dropGeneration)pendingDrop=false}})();
   };
-  tab.addEventListener('pointercancel',cancel);tab.addEventListener('lostpointercapture',cleanup);
-  tab.addEventListener('keydown',event=>{if(event.shiftKey&&event.key==='F10'){event.preventDefault();openTabMenu(event,tab,state)}});
-  tab.addEventListener('contextmenu',event=>{event.preventDefault();openTabMenu(event,tab,state)});
+  tab.addEventListener('pointercancel',cancel);tab.addEventListener('lostpointercapture',cancel);
+  if(state){
+   tab.addEventListener('keydown',event=>{if(event.shiftKey&&event.key==='F10'){event.preventDefault();openTabMenu(event,tab,state)}});
+   tab.addEventListener('contextmenu',event=>{event.preventDefault();openTabMenu(event,tab,state)});
+  }
  }
  function openTabMenu(event,tab,state){
   menuCleanup?.();if(!state.ready||state.detaching||state.ownershipUncertain)return;
@@ -178,6 +214,7 @@
   } finally {restoringWindow=false}
  }
  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&(activeDrag||pendingDrop)){event.preventDefault();event.stopPropagation();cancelDrag()}},true);
+ window.addEventListener('dengshell:locked',cancelDrag);
  document.addEventListener('DOMContentLoaded',()=>{document.getElementById('detach-terminal').onclick=safe(()=>detach(current()));reflect();},{once:true});
- window.DengSessionWindows={bindTab,handleMessage,detach,restore,receive,reflect,cancelDrag,prepareRestore};
+ window.DengSessionWindows={bindTab,handleMessage,detach,restore,receive,reflect,cancelDrag,deferTabsRender,prepareRestore};
 })();

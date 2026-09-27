@@ -142,6 +142,7 @@ func (a *App) trashProfile(id string) error {
 	for _, session := range closing {
 		session.Close()
 	}
+	a.stopRDPProfile(id)
 	return nil
 }
 func (a *App) registerConnectionManagementHTTP(mux *http.ServeMux) {

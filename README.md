@@ -461,3 +461,7 @@ DengShell 应用代码采用 [MIT License](LICENSE)，可按许可使用、修�
 ## macOS 通用预览版
 
 提供 Apple 芯片与 Intel 通用 DMG/ZIP，最低 macOS 13。当前为临时签名、尚未公证，手动替换应用更新。安装与构建说明见 [macOS 说明](docs/MACOS.md)。
+
+### 2026-09-28 连接与上传更新
+
+连接卡片整块可操作且不再误选文字；支持标签拖动排序和上传覆盖集中确认，连接表单更紧凑。Windows x64 提供内置 RDP 标签页测试功能，复用已配置代理，无需 mstsc；其他系统本轮更新 SSH/SFTP 与共用界面。详见 [更新日志](CHANGELOG.md) 与 [RDP 测试功能说明](native-rdp/README.md)。

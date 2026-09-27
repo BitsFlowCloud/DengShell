@@ -16,6 +16,7 @@ import (
 )
 
 type App struct {
+	rdp              rdpState
 	syncState        syncState
 	securityLock     securityLockState
 	sshDiagnostics   sshDiagnosticLog
@@ -95,6 +96,7 @@ func (a *App) Close() {
 	}
 	a.mu.Unlock()
 	a.cancel()
+	a.closeRDP()
 	a.closeSync()
 	a.updateCleanup.Wait()
 	a.updateCheck.mu.Lock()
@@ -202,6 +204,7 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 		respond(w, map[string]bool{"ok": true}, err)
 	})
 	a.registerQuickConnectHTTP(mux)
+	a.registerRDPHTTP(mux)
 	mux.HandleFunc("POST /api/sessions", func(w http.ResponseWriter, r *http.Request) {
 		var input struct {
 			ProfileID       string           `json:"profileId"`
@@ -229,6 +232,7 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 	mux.HandleFunc("GET /api/sessions/{id}/download", a.download)
 	mux.HandleFunc("POST /api/sessions/{id}/upload", a.uploadHTTP)
 	mux.HandleFunc("POST /api/sessions/{id}/upload-local", a.uploadLocal)
+	mux.HandleFunc("POST /api/sessions/{id}/upload-check", a.checkUploads)
 	mux.HandleFunc("GET /api/sessions/{id}/stats", a.statsHTTP)
 	mux.HandleFunc("GET /api/sessions/{id}/processes", a.processesHTTP)
 	mux.HandleFunc("GET /api/sessions/{id}/network", a.networkHTTP)

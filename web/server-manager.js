@@ -144,14 +144,14 @@ async function openSelectedServers() {
     try {
       if (!profiles.some(profile => profile.id === id && !profile.deletedAt)) return;
       const state = await connect(id, false, { background: true, refreshHistory: false });
-      if (state?.connected && sessions.get(state.id) === state) batch.connected++;
+      if ((state?.connected && sessions.get(state.id) === state) || state?.protocol === 'rdp') batch.connected++;
     } catch (error) { toast(error.message || String(error)); }
     finally { batch.completed++; reflectServerSelection(); }
   }
   // SSH opens are independent: a slow host or a credential prompt never occupies
   // a worker slot needed by another host. File uploads retain their own limit.
   try { await Promise.allSettled(ids.map(openOne)); }
-  finally { serverManager.batch = null; reflectServerSelection(); safe(refreshServerManagerHistory)(); toast(`SSH 连接完成：已连接 ${batch.connected} / ${batch.total} 台`); }
+  finally { serverManager.batch = null; reflectServerSelection(); safe(refreshServerManagerHistory)(); toast(`连接请求完成：已打开 ${batch.connected} / ${batch.total} 台`); }
 }
 
 function renderServerProfile(profile, tree, mode = 'servers', history = null) {
@@ -163,7 +163,7 @@ function renderServerProfile(profile, tree, mode = 'servers', history = null) {
   button.dataset.selectable = String(!deleted);
   if (!deleted) { button.setAttribute('aria-pressed', String(serverManager.selectedProfiles.has(profile.id))); button.setAttribute('aria-describedby', 'server-selection-hint'); }
   const glyph = node('span', 'server-icon'); glyph.append(icon('server'));
-  const text = node('span', 'connection-card-text'); text.append(node('strong', '', profile.name), node('small', '', connecting.has(profile.id) ? '正在连接…' : `${profile.user}@${profile.host}:${profile.port}${profile.auth === 'key' && !profile.keyId && !profile.keyPath ? ' · 待配置私钥' : ''}`));
+  const text = node('span', 'connection-card-text'); text.append(node('strong', '', profile.name), node('small', '', connecting.has(profile.id) ? '正在连接…' : `${profile.protocol === "rdp" ? "RDP · " : ""}${profile.user}@${profile.host}:${profile.port}${profile.auth === 'key' && !profile.keyId && !profile.keyPath ? ' · 待配置私钥' : ''}`));
   if (profile.notes?.trim()) {
     const note = node('span', 'server-card-notes');
     note.setAttribute('aria-label', '服务器备注');
@@ -175,11 +175,20 @@ function renderServerProfile(profile, tree, mode = 'servers', history = null) {
     const marker = node('span', 'server-selection-mark', '✓'); marker.setAttribute('aria-hidden','true'); marker.hidden = !serverManager.selectedProfiles.has(profile.id); button.append(marker);
     button.append(node('span', `status-dot ${[...sessions.values()].some(session => session.profileId === profile.id && session.connected) ? 'green' : 'blue'}`));
   }
-  button.onclick = safe(event => {
+  // History metadata and card padding are part of the connection target too.
+  // Keep the separate management button out of selection/connection gestures.
+  row.dataset.selectable = String(!button.disabled);
+  const isConnectionTarget = event => {
+    const control = event.target.closest('button,a,input,textarea,select,[contenteditable="true"]');
+    return !button.disabled && (!control || control === button);
+  };
+  row.onclick = safe(event => {
+    if (!isConnectionTarget(event)) return;
+    button.focus({ preventScroll: true });
     if (event.ctrlKey || event.metaKey) { event.preventDefault(); toggleServerSelection(profile); return; }
     serverManager.selectedProfiles.clear(); serverManager.selectedProfiles.add(profile.id); serverManager.focusedProfile = profile.id; reflectServerSelection();
   });
-  button.ondblclick = safe(event => { if (!deleted && !event.ctrlKey && !event.metaKey) { clearServerSelection(); return connect(profile.id); } });
+  row.ondblclick = safe(event => { if (isConnectionTarget(event) && !event.ctrlKey && !event.metaKey) { clearServerSelection(); return connect(profile.id); } });
   button.title = `${profile.name}\n${profile.user}@${profile.host}:${profile.port}\n${serverGroupPath(profile, tree)}`;
   if (profile.notes) button.title += `\n备注：${profile.notes}`;
   button.onkeydown = event => {

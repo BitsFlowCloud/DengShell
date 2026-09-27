@@ -384,9 +384,11 @@ func (a *App) uploadLocal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input struct {
-		Paths     []string `json:"paths"`
-		Directory string   `json:"directory"`
-		Overwrite bool     `json:"overwrite"`
+		Paths            []string `json:"paths"`
+		Directory        string   `json:"directory"`
+		Overwrite        bool     `json:"overwrite"`
+		OverwriteTargets []string `json:"overwriteTargets"`
+		SkipTargets      []string `json:"skipTargets"`
 	}
 	if !decode(w, r, &input) {
 		return
@@ -396,54 +398,23 @@ func (a *App) uploadLocal(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, err)
 		return
 	}
-	type uploadItem struct {
-		local, target string
-		size          int64
-		folder        bool
+	items, err := collectLocalUploads(r.Context(), input.Paths, dir)
+	if err != nil {
+		writeError(w, 400, err)
+		return
 	}
-	items := []uploadItem{}
-	for _, local := range input.Paths {
-		local = filepath.Clean(local)
-		if !filepath.IsAbs(local) {
-			err = errors.New("本地文件路径无效")
-			break
-		}
-		err = filepath.WalkDir(local, func(current string, entry os.DirEntry, walkErr error) error {
-			if err := r.Context().Err(); err != nil {
-				return err
-			}
-			if walkErr != nil {
-				return walkErr
-			}
-			if len(items) >= 20000 {
-				return errors.New("一次最多选择 20000 个项目")
-			}
-			if entry.Type()&os.ModeSymlink != 0 {
-				return fmt.Errorf("请直接选择文件，暂不上传符号链接：%s", entry.Name())
-			}
-			info, err := entry.Info()
-			if err != nil {
-				return err
-			}
-			if !info.Mode().IsRegular() && !entry.IsDir() {
-				return fmt.Errorf("不支持特殊文件：%s", entry.Name())
-			}
-			rel, err := filepath.Rel(filepath.Dir(local), current)
-			if err != nil {
-				return err
-			}
-			items = append(items, uploadItem{current, path.Join(dir, filepath.ToSlash(rel)), info.Size(), entry.IsDir()})
-			return nil
-		})
-		if err != nil {
-			break
-		}
+	approved, err := uploadTargetSet(input.OverwriteTargets)
+	if err != nil {
+		writeError(w, 400, err)
+		return
 	}
+	skipped, err := uploadTargetSet(input.SkipTargets)
 	if err != nil {
 		writeError(w, 400, err)
 		return
 	}
 	ids := []string{}
+	directories := 0
 	op := startSFTPOperation(r.Context(), s, sftpIdleTimeout)
 	defer op.close()
 	for _, item := range items {
@@ -451,11 +422,15 @@ func (a *App) uploadLocal(w http.ResponseWriter, r *http.Request) {
 			writeError(w, 400, op.err(err))
 			return
 		}
+		if uploadTargetSkipped(item.target, skipped) {
+			continue
+		}
 		if item.folder {
 			if err := s.files.MkdirAll(item.target); err != nil {
 				writeError(w, 400, op.err(err))
 				return
 			}
+			directories++
 			op.touch()
 			continue
 		}
@@ -470,10 +445,10 @@ func (a *App) uploadLocal(w http.ResponseWriter, r *http.Request) {
 		t.Retryable = true
 		t.Status = "queued"
 		a.mu.Unlock()
-		go a.runNativeUpload(ctx, s, t, item.local, input.Overwrite)
+		go a.runNativeUpload(ctx, s, t, item.local, input.Overwrite || approved[item.target])
 		op.touch()
 	}
-	writeJSON(w, map[string]any{"ids": ids, "directories": len(items) - len(ids)})
+	writeJSON(w, map[string]any{"ids": ids, "directories": directories})
 }
 
 // Native selections/drops, browser pages and retries share the same limit.

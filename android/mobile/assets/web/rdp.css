@@ -1,0 +1,30 @@
+#rdp-sessions-dialog { width: min(720px,calc(100vw - 40px)); }
+.rdp-session-help, #rdp-connection-note { color: var(--muted); font-size: 13px; line-height: 1.6; }
+#rdp-session-list { display: grid; gap: 12px; margin: 18px 0; }
+.rdp-session-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.rdp-session-row > div:first-child { min-width: 0; }
+.rdp-session-row strong { display: block; overflow-wrap: anywhere; font-size: 15px; }
+.rdp-session-row p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.rdp-session-row[data-status="error"] p { color: var(--danger,#dc8790); }
+.rdp-session-actions { display: flex; gap: 10px; flex-shrink: 0; }
+.rdp-session-actions button { padding: 9px 12px; border-radius: 9px; white-space: nowrap; font-size: 13px; }
+@media(max-width:600px) { .rdp-session-row { align-items: stretch; flex-direction: column; } .rdp-session-actions { justify-content: flex-end; } }
+body.rdp-active .app-shell { grid-template-columns: minmax(0,1fr) !important; }
+body.rdp-active .sidebar, body.rdp-active #sidebar-splitter, body.rdp-active #workspace { display: none !important; }
+.rdp-panel { display: flex; flex: 1; min-height: 0; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--panel); }
+.rdp-panel[hidden] { display: none; }
+.rdp-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.rdp-toolbar > div { display: flex; align-items: center; gap: 12px; }
+.rdp-toolbar strong { font-size: 15px; }
+.rdp-toolbar span { color: var(--muted); font-size: 13px; }
+.rdp-toolbar button { padding: 8px 12px; border-radius: 9px; font-size: 13px; }
+.rdp-viewport { position: relative; flex: 1; min-height: 80px; background: #10161c; }
+.rdp-placeholder { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 8px; color: #c7d4de; padding: 30px; text-align: center; }
+.rdp-placeholder[hidden] { display: none; }
+.rdp-placeholder p { color: #8fa2af; font-size: 13px; }
+
+body.rdp-active .main-panel { grid-column: 1 !important; grid-row: 1; }
+
+.rdp-toolbar .rdp-resolution-label { display:flex; align-items:center; gap:8px; margin:0; color:var(--muted); font-size:13px; }
+.rdp-resolution-label select { width:auto; min-width:175px; margin:0; padding:7px 10px; font-size:13px; border-radius:8px; }
+.rdp-toolbar > div:last-child { flex-wrap:wrap; }

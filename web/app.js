@@ -150,6 +150,7 @@ function releaseConnectionAttempt(state) {
   if (![...connectionAttempts.values()].some(s => s.profileId === state.profileId)) connecting.delete(state.profileId);
 }
 async function connect(profileID, force = false, options = {}) {
+  if (connectionProfile(profileID)?.protocol === "rdp") return window.DengRDP.connect(profileID, {...options, previousID: force ? options.sessionId : null});
   const matches = [...sessions.values()].filter(s => s.profileId === profileID);
   const previous = force ? (options.sessionId ? sessions.get(options.sessionId) : matches.find(s => s.id === activeID) || matches[0]) : null;
   if (force && (!previous || previous.profileId !== profileID || previous.closed)) return null;
@@ -458,13 +459,14 @@ function dropSessionView(id, expected = null) {
   if (activeID) activate(activeID, window.DengProcessView?.active() === activeID ? 'processes' : 'terminal'); else { renderTabs(); renderSessionInfo(); renderFiles(); }
 }
 async function closeSession(id) {
+  if (window.DengRDP?.has(id)) return window.DengRDP.close(id);
   const state = sessions.get(id); if (!state || state.detaching || state.handoffProvisional) return;
   dropSessionView(id);
   if (state.ownershipUncertain || state.localOnly) return;
   await remove(`/api/sessions/${id}`).catch(() => {});
 }
 function renderTabs() {
-  window.DengSessionWindows.cancelDrag();
+  if (window.DengSessionWindows.deferTabsRender()) return;
   $('#session-tabs').setAttribute('role', 'tablist');
   $('#session-tabs').replaceChildren(...[...sessions.values()].sort((a,b) => (a.tabOrder ?? 0) - (b.tabOrder ?? 0)).flatMap(state => {
     const selected = state.id === activeID && !window.DengProcessView?.active();
@@ -479,10 +481,11 @@ function renderTabs() {
     button.setAttribute('aria-busy', String(!!state.pendingConnection));
     if (state.localOnly) button.title += ` · ${state.connectionMessage}`;
     const close = node('button', 'tab-close'); close.append(icon('close')); close.title = state.pendingConnection ? '取消连接' : '关闭连接'; close.setAttribute('aria-label', `${state.pendingConnection ? '取消' : '关闭'} ${profile?.name || '会话'}`); close.onclick = safe(() => closeSession(state.id)); close.disabled = !!(state.detaching || state.handoffProvisional); tab.dataset.detaching = String(!!state.detaching); tab.append(button, close); window.DengSessionWindows.bindTab(tab, state); return [tab, ...(window.DengProcessView?.tabs(state) || [])];
-  })); updateStatus(); window.DengTextEditors?.reflect(); window.DengCommandComposer?.reflect();
+  })); window.DengRDP?.appendTabs($('#session-tabs')); window.DengTabOrder.apply($('#session-tabs')); updateStatus(); window.DengTextEditors?.reflect(); window.DengCommandComposer?.reflect();
 }
 function activate(id, view = 'terminal') {
   if (!sessions.has(id)) return;
+  window.DengRDP?.deactivate();
   activeID = id; selectedName = ''; $('#file-filter').value = '';
   window.DengProcessView?.activate(id, view);
   for (const state of sessions.values()) state.host.hidden = state.id !== id;
@@ -736,18 +739,22 @@ function showConnectionForm(profile = null, groupID = '') {
   if (profile?.temporary) { window.DengQuickConnect.open(`ssh -p ${profile.port} ${profile.user}@${profile.host}`); return; }
   const form = $('#connection-form'); form.reset(); form.elements.id.value = profile?.id || '';
   renderKeyChoices(); renderProxyChoices(); form.elements.proxyId.value = profile?.proxyId || '';
-  for (const key of ['name', 'notes', 'host', 'user', 'port', 'auth', 'keyPath', 'keyId']) if (profile?.[key] != null) form.elements[key].value = profile[key];
+  for (const key of ['name', 'notes', 'host', 'user', 'port', 'auth', 'keyPath', 'keyId', 'protocol', 'domain']) if (profile?.[key] != null) form.elements[key].value = profile[key];
+  form.elements.rdpClipboard.checked = !!profile?.rdpClipboard;
   window.DengProfileNotes.init(form.elements.notes, profile?.notes || '');
   form.elements.proxyType.value = profile?.proxy?.type || 'direct';
   for (const [field, key] of [['proxyHost', 'host'], ['proxyPort', 'port'], ['proxyUser', 'user']]) form.elements[field].value = profile?.proxy?.[key] || '';
   form.elements.proxyPassword.placeholder = profile?.proxy?.hasPassword ? '已保存，留空保留' : '代理密码（可选）';
-  $('#proxy-settings').open = !!profile?.needsProxy || !!profile?.proxyId || form.elements.proxyType.value !== 'direct'; updateProxyFields();
+  $('#proxy-settings').open = !!profile?.needsProxy; updateProxyFields();
   chooseConnectionGroup(profile, groupID);
   form.elements.remember.checked = !!profile?.hasSecret; $('#saved-secret-note').hidden = !profile?.hasSecret; $('#reset-host-key').hidden = !profile;
-  $('#connection-form-title').textContent = profile?.needsProxy ? '编辑连接 · 请补充代理或确认直连' : profile ? '编辑连接' : '新建连接'; $('#save-connection').textContent = profile ? '保存更改' : '保存并连接'; updateAuthFields(); $('#connection-dialog').showModal();
+  $('#connection-form-title').textContent = profile?.needsProxy ? '编辑连接 · 请补充代理或确认直连' : profile ? '编辑连接' : '新建连接'; $('#save-connection').textContent = profile ? '保存更改' : '保存并连接'; updateAuthFields(); $('#connection-dialog').showModal(); $('#connection-form .connection-form-body').scrollTop = 0;
 }
 function updateAuthFields() {
   const form = $('#connection-form'), auth = form.elements.auth.value, key = managedKeys.find(key => key.id === form.elements.keyId.value);
+  const rdp = form.elements.protocol.value === 'rdp';
+  $('#connection-auth-field').hidden = rdp; $('#rdp-domain-field').hidden = !rdp; $('#rdp-clipboard-field').hidden = !rdp; $('#rdp-connection-note').hidden = !rdp;
+  $('#reset-host-key').hidden = rdp || !form.elements.id.value;
   const needsSecret = auth === 'password' || (auth === 'key' && (!key || (key.encrypted && !key.hasPassphrase)));
   $('#key-library-field').hidden = auth !== 'key'; $('#key-path-field').hidden = auth !== 'key' || !!form.elements.keyId.value;
   $('#secret-field').hidden = !needsSecret; $('#remember-secret-field').hidden = !needsSecret;
@@ -756,6 +763,13 @@ function updateAuthFields() {
   $('#secret-label').textContent = auth === 'key' ? '私钥口令' : '密码'; $('#choose-key').hidden = !native();
 }
 $('#connection-form').elements.auth.onchange = updateAuthFields;
+$('#connection-protocol').onchange = () => {
+  const form = $('#connection-form'), rdp = form.elements.protocol.value === 'rdp';
+  if (rdp) form.elements.auth.value = 'password';
+  if (['22','3389',''].includes(form.elements.port.value)) form.elements.port.value = rdp ? '3389' : '22';
+  if (!form.elements.id.value && ['root','Administrator',''].includes(form.elements.user.value)) form.elements.user.value = rdp ? 'Administrator' : 'root';
+  updateAuthFields();
+};
 $('#new-connection').onclick = () => showConnectionForm(); $('#cancel-connection').onclick = () => $('#connection-dialog').close();
 $('#choose-key').onclick = safe(async () => { const path = await native().ChooseKey(); if (path) $('#connection-form').elements.keyPath.value = path; });
 $('#connection-form').onsubmit = safe(async event => {
@@ -766,7 +780,7 @@ $('#connection-form').onsubmit = safe(async event => {
   const previous = profiles.find(profile => profile.id === values.id);
   const proxy = { type: values.proxyId ? 'direct' : values.proxyType, host: values.proxyHost, port: Number(values.proxyPort), user: values.proxyUser, password: values.proxyPassword, clearPassword: form.elements.clearProxyPassword.checked };
   for (const name of ['proxyType', 'proxyHost', 'proxyPort', 'proxyUser', 'proxyPassword', 'clearProxyPassword']) delete values[name];
-  const saved = await post('/api/profiles', { ...values, port: Number(values.port), secret: remember ? secret : '', clearSecret: !remember, proxy });
+  const saved = await post('/api/profiles', { ...values, rdpClipboard: form.elements.rdpClipboard.checked, port: Number(values.port), secret: remember ? secret : '', clearSecret: !remember, proxy });
   credentials.delete(saved.id);
   if (secret) credentials.set(saved.id, secret); else if (!remember) credentials.delete(saved.id);
   $('#connection-dialog').close(); await loadProfiles(); if (isNew) await connect(saved.id); else { renderSessionInfo(); toast('连接配置已保存，下次连接时生效'); }
@@ -792,13 +806,19 @@ $('#choose-files').onclick = event => { const menu = $('#upload-menu'), rect = e
 document.addEventListener('click', event => { if (!event.target.closest('#upload-menu, #choose-files')) $('#upload-menu').hidden = true; });
 $('#upload-files-option').onclick = safe(async () => { $('#upload-menu').hidden = true; if (native()) { const state = current(); const directory = state?.cwd; const paths = await native().ChooseUploads(); if (paths?.length) await uploadNative(paths, state, directory); } else $('#file-picker').click(); });
 $('#upload-folder-option').onclick = safe(async () => { $('#upload-menu').hidden = true; if (native()) { const state = current(); const directory = state?.cwd; const path = await native().ChooseFolder(); if (path) await uploadNative([path], state, directory); } else $('#folder-picker').click(); });
-for (const id of ['file-picker', 'folder-picker']) $(`#${id}`).onchange = event => { queueFiles([...event.target.files].map(file => ({ file, relativePath: file.webkitRelativePath || file.name }))); event.target.value = ''; };
+for (const id of ['file-picker', 'folder-picker']) $(`#${id}`).onchange = safe(async event => { const files = [...event.target.files]; event.target.value = ''; await queueFiles(files.map(file => ({ file, relativePath: file.webkitRelativePath || file.name }))); });
 let activeUploads = 0;
-function queueFiles(items, state = current(), destination = state?.cwd) {
+async function queueFiles(items, state = current(), destination = state?.cwd) {
   if (state?.sftpAvailable === false) return toast('当前连接的 SFTP 文件服务不可用');
   if (!state?.connected) return toast('请先连接服务器');
   if (!items.length) return toast('没有可上传的文件');
-  for (const { file, relativePath } of items) { const id = crypto.randomUUID(); localTasks.set(id, { id, sessionId: state.id, name: file.name, target: normalizePath(relativePath, destination), total: file.size, done: 0, status: 'queued', file }); }
+  const prepared = items.map(({ file, relativePath }) => ({ file, target: normalizePath(relativePath, destination) }));
+  const decision = await window.DengUploadConfirmation.prepare(state, { targets: prepared.map(item => item.target), directory: destination });
+  if (!decision) return;
+  const approved = new Set(decision.overwriteTargets), skipped = new Set(decision.skipTargets);
+  const selected = prepared.filter(item => !window.DengUploadConfirmation.skipped(item.target, skipped));
+  if (!selected.length) return toast('已跳过全部同名文件');
+  for (const { file, target } of selected) { const id = crypto.randomUUID(); localTasks.set(id, { id, sessionId: state.id, name: file.name, target, total: file.size, done: 0, status: 'queued', file, overwrite: approved.has(target) }); }
   showPane('transfers'); renderTransfers(); pumpUploads();
 }
 function pumpUploads() { for (const task of localTasks.values()) if (task.file && !task.xhr && task.status === 'queued' && activeUploads < 4) { activeUploads++; task.status = 'uploading'; uploadBrowser(task).finally(() => { activeUploads--; pumpUploads(); renderTransfers(); }); } }
@@ -814,10 +834,13 @@ async function uploadBrowser(task) {
   } catch (error) { task.status = error.message === '已取消' ? 'cancelled' : 'failed'; task.error = error.message; }
   finally { task.xhr = null; renderTransfers(); }
 }
-async function uploadNative(paths, state = current(), directory = state?.cwd, overwrite = false) {
+async function uploadNative(paths, state = current(), directory = state?.cwd) {
   if (!state?.connected) return toast('请先连接服务器');
-  const result = await post(`/api/sessions/${state.id}/upload-local`, { paths, directory, overwrite });
-  showPane('transfers'); await pollTransfers(); if (!result.ids.length) { toast('目录已创建'); await navigate(state.cwd, state); }
+  if (state.sftpAvailable === false) return toast('当前连接的 SFTP 文件服务不可用');
+  const decision = await window.DengUploadConfirmation.prepare(state, { paths, directory });
+  if (!decision) return;
+  const result = await post(`/api/sessions/${state.id}/upload-local`, { paths, directory, ...decision });
+  showPane('transfers'); await pollTransfers(); if (!result.ids.length) { toast(decision.skipTargets.length ? '已跳过同名项目' : '目录已创建'); await navigate(state.cwd, state); }
 }
 window.cloudshellNativeDrop = safe(async ({ x, y, paths }) => {
   const rect = $('#files-panel').getBoundingClientRect(); if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return toast('请将文件拖入下方文件区域');
@@ -884,8 +907,8 @@ async function readEntry(entry, prefix = '') {
 filesPanel.addEventListener('drop', safe(async event => {
   if (!isFileDrag(event) || native()) return; event.preventDefault(); const state = current(), directory = state?.cwd, files = [...event.dataTransfer.files], entries = [...event.dataTransfer.items].filter(item => item.kind === 'file').map(item => item.webkitGetAsEntry?.());
   dragDepth = 0; $('#drop-overlay').hidden = true;
-  if (entries.length && entries.every(Boolean)) { const items = []; for (const entry of entries) items.push(...await readEntry(entry)); queueFiles(items, state, directory); }
-  else queueFiles(files.map(file => ({ file, relativePath: file.name })), state, directory);
+  if (entries.length && entries.every(Boolean)) { const items = []; for (const entry of entries) items.push(...await readEntry(entry)); await queueFiles(items, state, directory); }
+  else await queueFiles(files.map(file => ({ file, relativePath: file.name })), state, directory);
 }));
 
 const savedLayout = readSaved('cloudshell.layout', {});

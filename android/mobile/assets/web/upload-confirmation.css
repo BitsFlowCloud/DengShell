@@ -1,0 +1,27 @@
+#upload-confirmation-dialog {
+  width: min(580px, calc(var(--view-width, 100vw) - 32px));
+  max-width: none;
+  max-height: calc(var(--view-height, 100vh) - 32px);
+  padding: 22px;
+  overflow: auto;
+  color: var(--text);
+  background: var(--surface);
+}
+#upload-confirmation-dialog .dialog-heading { gap: 16px; margin-bottom: 12px; }
+#upload-confirmation-dialog h2 { font-size: 17px; font-weight: 650; }
+#upload-confirmation-dialog p { font-size: 12px; line-height: 1.6; margin: 0 0 14px; }
+#upload-confirmation-dialog .upload-confirmation-destination { color: var(--muted); overflow-wrap: anywhere; }
+#upload-confirmation-dialog .upload-confirmation-description { color: var(--text-secondary); }
+#upload-confirmation-dialog .upload-conflict-list {
+  list-style: none; margin: 0; padding: 4px 12px;
+  max-height: min(240px, calc(var(--view-height, 100vh) * .36)); overflow: auto;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface-inset);
+}
+#upload-confirmation-dialog .upload-conflict-list li { display: flex; align-items: flex-start; gap: 9px; padding: 10px 0; font-size: 12px; line-height: 1.5; }
+#upload-confirmation-dialog .upload-conflict-list li + li { border-top: 1px solid var(--border); }
+#upload-confirmation-dialog .upload-conflict-list svg { width: 16px; height: 18px; flex: 0 0 16px; color: var(--muted); }
+#upload-confirmation-dialog .upload-conflict-list span { min-width: 0; flex: 1; overflow-wrap: anywhere; white-space: pre-wrap; }
+#upload-confirmation-dialog .upload-conflict-list small { flex-shrink: 0; color: var(--muted); }
+#upload-confirmation-dialog .upload-confirmation-more { margin-top: 10px; color: var(--muted); }
+#upload-confirmation-dialog .dialog-buttons { flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+#upload-confirmation-dialog .dialog-buttons button { min-height: 38px; font-size: 12px; }

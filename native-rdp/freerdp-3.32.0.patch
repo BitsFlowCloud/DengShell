@@ -1,0 +1,423 @@
+--- a/client/Windows/wf_client.c
++++ b/client/Windows/wf_client.c
+@@ -159,7 +159,8 @@
+ 		}
+ #endif
+ 
+-		PostMessage(wfc->hwnd, WM_FREERDP_SHOWWINDOW, 0, 0);
++		if (!freerdp_settings_get_bool(context->settings, FreeRDP_EmbeddedWindow))
++            PostMessage(wfc->hwnd, WM_FREERDP_SHOWWINDOW, 0, 0);
+ 		WLog_INFO(TAG, "Window is shown!");
+ 	}
+ 	return TRUE;
+@@ -214,7 +215,7 @@
+ 
+ 	if (wfc->fullscreen != TRUE)
+ 	{
+-		if (wfc->hwnd && !freerdp_settings_get_bool(settings, FreeRDP_SmartSizing))
++		if (wfc->hwnd && !freerdp_settings_get_bool(settings, FreeRDP_EmbeddedWindow) && !freerdp_settings_get_bool(settings, FreeRDP_SmartSizing))
+ 			SetWindowPos(wfc->hwnd, HWND_TOP, -1, -1,
+ 			             freerdp_settings_get_uint32(settings, FreeRDP_DesktopWidth) + wfc->diff.x,
+ 			             freerdp_settings_get_uint32(settings, FreeRDP_DesktopHeight) + wfc->diff.y,
+@@ -227,6 +228,9 @@
+ 		InvalidateRect(wfc->hwnd, &rect, TRUE);
+ 	}
+ 
++	if (freerdp_settings_get_bool(settings, FreeRDP_EmbeddedWindow))
++        InvalidateRect(wfc->hwnd, nullptr, FALSE);
++    printf("DENGSHELL_RDP_SIZE:%u:%u\n", freerdp_settings_get_uint32(settings, FreeRDP_DesktopWidth), freerdp_settings_get_uint32(settings, FreeRDP_DesktopHeight)); fflush(stdout);
+ 	return TRUE;
+ }
+ 
+@@ -399,6 +403,15 @@
+ 	return windowTitle;
+ }
+ 
++void dengshell_rdp_activity(void)
++{
++    static volatile LONG last = 0;
++    LONG now = (LONG)GetTickCount();
++    LONG previous = InterlockedCompareExchange(&last, 0, 0);
++    if ((DWORD)(now - previous) >= 1000 && InterlockedCompareExchange(&last, now, previous) == previous)
++    { fputs("DENGSHELL_RDP_ACTIVITY\n", stdout); fflush(stdout); }
++}
++
+ static BOOL wf_post_connect(freerdp* instance)
+ {
+ 	rdpGdi* gdi;
+@@ -503,8 +516,14 @@
+ 	wfc->floatbar = wf_floatbar_new(wfc, wfc->hInstance,
+ 	                                freerdp_settings_get_uint32(settings, FreeRDP_Floatbar));
+ 
++	if (freerdp_settings_get_bool(settings, FreeRDP_EmbeddedWindow)) {
++        wfc->dengshell_width = 0;
++        wfc->dengshell_height = 0;
++        SetTimer(wfc->hwnd, 503, 250, nullptr);
++    }
+ 	wf_event_focus_in(wfc);
+-
++	printf("DENGSHELL_RDP_SIZE:%u:%u\n", freerdp_settings_get_uint32(settings, FreeRDP_DesktopWidth), freerdp_settings_get_uint32(settings, FreeRDP_DesktopHeight));
++	fputs("DENGSHELL_RDP_READY\n", stdout); fflush(stdout);
+ 	return TRUE;
+ }
+ 
+@@ -1158,7 +1177,8 @@
+ 				{
+ 					width = LOWORD(msg.lParam);
+ 					height = HIWORD(msg.lParam);
+-					SetWindowPos(wfc->hwnd, HWND_TOP, 0, 0, width, height, SWP_FRAMECHANGED);
++					if (!freerdp_settings_get_bool(context->settings, FreeRDP_EmbeddedWindow))
++                        SetWindowPos(wfc->hwnd, HWND_TOP, 0, 0, width, height, SWP_FRAMECHANGED);
+ 					break;
+ 				}
+ 				case WM_FREERDP_SHOWWINDOW:
+@@ -1446,7 +1466,7 @@
+ 	instance->GetAccessToken = client_failsafe_get_access_token;
+ 
+ #ifdef WITH_WINDOWS_CERT_STORE
+-	if (!freerdp_settings_set_bool(context->settings, FreeRDP_CertificateCallbackPreferPEM, TRUE))
++	if (!freerdp_settings_set_bool(context->settings, FreeRDP_CertificateCallbackPreferPEM, FALSE))
+ 		return FALSE;
+ #endif
+ 
+@@ -1499,24 +1519,27 @@
+ 
+ 	if (freerdp_settings_get_bool(settings, FreeRDP_EmbeddedWindow))
+ 	{
+-		typedef UINT(WINAPI * GetDpiForWindow_t)(HWND hwnd);
+-		typedef BOOL(WINAPI * SetProcessDPIAware_t)(void);
+-
+-		HMODULE module = GetModuleHandle(_T("User32"));
+-		if (module)
+-		{
+-			GetDpiForWindow_t pGetDpiForWindow =
+-			    GetProcAddressAs(module, "GetDpiForWindow", GetDpiForWindow_t);
+-			SetProcessDPIAware_t pSetProcessDPIAware =
+-			    GetProcAddressAs(module, "SetProcessDPIAware", SetProcessDPIAware_t);
+-			if (pGetDpiForWindow && pSetProcessDPIAware)
+-			{
+-				const UINT dpiAwareness = pGetDpiForWindow(hWndParent);
+-				if (dpiAwareness != USER_DEFAULT_SCREEN_DPI)
+-					pSetProcessDPIAware();
+-			}
+-			FreeLibrary(module);
+-		}
++        /* Match the host's DPI awareness before creating the embedded child.
++         * System-aware/unaware children otherwise get bitmap-virtualized on
++         * high-DPI displays, blurring even a native-resolution framebuffer. */
++        typedef HANDLE(WINAPI * GetWindowDpiAwarenessContext_t)(HWND);
++        typedef BOOL(WINAPI * SetProcessDpiAwarenessContext_t)(HANDLE);
++        typedef BOOL(WINAPI * SetProcessDPIAware_t)(void);
++        HMODULE module = GetModuleHandle(_T("User32"));
++        if (module) {
++            GetWindowDpiAwarenessContext_t getContext =
++                GetProcAddressAs(module, "GetWindowDpiAwarenessContext", GetWindowDpiAwarenessContext_t);
++            SetProcessDpiAwarenessContext_t setContext =
++                GetProcAddressAs(module, "SetProcessDpiAwarenessContext", SetProcessDpiAwarenessContext_t);
++            SetProcessDPIAware_t setAware =
++                GetProcAddressAs(module, "SetProcessDPIAware", SetProcessDPIAware_t);
++            BOOL matched = FALSE;
++            if (getContext && setContext) {
++                HANDLE context = getContext(hWndParent);
++                if (context) matched = setContext(context);
++            }
++            if (!matched && setAware) setAware();
++        }
+ 	}
+ 
+ 	/* initial windows system item position where we will insert new menu item
+--- a/client/Windows/wf_client.h
++++ b/client/Windows/wf_client.h
+@@ -140,6 +140,8 @@
+ 
+ 		DispClientContext* disp;
+ 		UINT64 lastSentDate;
++        UINT32 dengshell_width, dengshell_height;
++        BOOL dengshell_disp_ready;
+ 		BOOL wasMaximized;
+ 	};
+ 
+--- a/client/Windows/wf_event.c
++++ b/client/Windows/wf_event.c
+@@ -31,6 +31,9 @@
+ 
+ #include "wf_gdi.h"
+ #include "wf_event.h"
++#include "wf_dengshell_view.h"
++
++extern void dengshell_rdp_activity(void);
+ 
+ #include <freerdp/event.h>
+ 
+@@ -94,7 +97,8 @@
+ 		HWND fg_win_hwnd = GetForegroundWindow();
+ 		DWORD fg_win_thread_id = GetWindowThreadProcessId(fg_win_hwnd, &ext_proc_id);
+ 		BOOL result = GetGUIThreadInfo(fg_win_thread_id, &gui_thread_info);
+-		if (gui_thread_info.hwndFocus != wfc->hWndParent)
++		if (!result || !IsWindowVisible(g_main_hWnd) || !IsWindowEnabled(g_main_hWnd) ||
++            (gui_thread_info.hwndFocus != g_main_hWnd && !IsChild(g_main_hWnd, gui_thread_info.hwndFocus)))
+ 		{
+ 			g_focus_hWnd = nullptr;
+ 			return CallNextHookEx(nullptr, nCode, wParam, lParam);
+@@ -118,6 +122,7 @@
+ 				if (!wfc || !p)
+ 					return 1;
+ 
++				dengshell_rdp_activity();
+ 				input = wfc->common.context.input;
+ 				rdp_scancode = MAKE_RDP_SCANCODE((BYTE)p->scanCode, p->flags & LLKHF_EXTENDED);
+ 				keystate = g_keystates[p->scanCode & 0xFF];
+@@ -327,6 +332,13 @@
+ 	int targetHeight = wfc->client_height;
+ 	rdpSettings* settings = wfc->common.context.settings;
+ 
++    const BOOL embedded = freerdp_settings_get_bool(settings, FreeRDP_EmbeddedWindow);
++    if (embedded) {
++        if (!wfc->dengshell_disp_ready || !IsWindowVisible(wfc->hwnd)) return;
++        if (wfc->dengshell_width) { targetWidth = wfc->dengshell_width; targetHeight = wfc->dengshell_height; }
++        targetWidth = MIN(8192, MAX(200, targetWidth)) & ~1;
++        targetHeight = MIN(8192, MAX(200, targetHeight));
++    }
+ 	if (freerdp_settings_get_bool(settings, FreeRDP_DynamicResolutionUpdate) &&
+ 	    wfc->disp != nullptr)
+ 	{
+@@ -360,6 +372,8 @@
+ 				                 &layout) != CHANNEL_RC_OK)
+ 				{
+ 					WLog_ERR("", "SendMonitorLayout failed.");
++                    wfc->lastSentDate = GetTickCount64();
++                    return;
+ 				}
+ 				(void)freerdp_settings_set_uint32(settings, FreeRDP_SmartSizingWidth, targetWidth);
+ 				(void)freerdp_settings_set_uint32(settings, FreeRDP_SmartSizingHeight,
+@@ -394,7 +408,34 @@
+ 			g_main_hWnd = wfc->hwnd;
+ 
+ 		switch (Msg)
+-		{
++        {
++            case WM_USER + 502:
++                if ((wParam == 0 && lParam == 0) || (wParam >= 200 && wParam <= 8192 && lParam >= 200 && lParam <= 8192)) {
++                    wfc->dengshell_width = (UINT32)wParam;
++                    wfc->dengshell_height = (UINT32)lParam;
++                    wf_send_resize(wfc);
++                    InvalidateRect(hWnd, nullptr, FALSE);
++                }
++                break;
++            case WM_USER + 503:
++                wfc->dengshell_disp_ready = wParam != 0;
++                (void)freerdp_settings_set_uint32(settings, FreeRDP_SmartSizingWidth, 0);
++                (void)freerdp_settings_set_uint32(settings, FreeRDP_SmartSizingHeight, 0);
++                wf_send_resize(wfc);
++                break;
++            case WM_TIMER:
++                if (wParam == 503) wf_send_resize(wfc);
++                else processed = FALSE;
++                break;
++            case WM_USER + 501:
++                freerdp_input_send_keyboard_event_ex(input, TRUE, FALSE, RDP_SCANCODE_LCONTROL);
++                freerdp_input_send_keyboard_event_ex(input, TRUE, FALSE, RDP_SCANCODE_LMENU);
++                freerdp_input_send_keyboard_event_ex(input, TRUE, FALSE, RDP_SCANCODE_DELETE);
++                freerdp_input_send_keyboard_event_ex(input, FALSE, FALSE, RDP_SCANCODE_DELETE);
++                freerdp_input_send_keyboard_event_ex(input, FALSE, FALSE, RDP_SCANCODE_LMENU);
++                freerdp_input_send_keyboard_event_ex(input, FALSE, FALSE, RDP_SCANCODE_LCONTROL);
++                dengshell_rdp_activity();
++                break;
+ 			case WM_MOVE:
+ 				if (!wfc->disablewindowtracking)
+ 				{
+@@ -440,6 +481,16 @@
+ 				break;
+ 
+ 			case WM_SIZE:
++                if (freerdp_settings_get_bool(settings, FreeRDP_EmbeddedWindow)) {
++                    const UINT32 width = LOWORD(lParam), height = HIWORD(lParam);
++                    if (width != wfc->client_width || height != wfc->client_height) {
++                        wfc->client_width = width;
++                        wfc->client_height = height;
++                        wf_send_resize(wfc);
++                        InvalidateRect(hWnd, nullptr, FALSE);
++                    }
++                    break;
++                }
+ 				GetWindowRect(wfc->hwnd, &windowRect);
+ 
+ 				if (!wfc->fullscreen)
+@@ -531,6 +582,7 @@
+ 				break;
+ 
+ 			case WM_LBUTTONDOWN:
++                SetFocus(hWnd);
+ 				wf_scale_mouse_event(wfc, PTR_FLAGS_DOWN | PTR_FLAGS_BUTTON1,
+ 				                     GET_X_LPARAM(lParam) - wfc->offset_x,
+ 				                     GET_Y_LPARAM(lParam) - wfc->offset_y);
+@@ -555,6 +607,7 @@
+ 				break;
+ 
+ 			case WM_MOUSEMOVE:
++                dengshell_rdp_activity();
+ 				wf_scale_mouse_event(wfc, PTR_FLAGS_MOVE, GET_X_LPARAM(lParam) - wfc->offset_x,
+ 				                     GET_Y_LPARAM(lParam) - wfc->offset_y);
+ 				break;
+@@ -870,6 +923,30 @@
+ 	if (!wh)
+ 		wh = dh;
+ 
++    if (freerdp_settings_get_bool(settings, FreeRDP_EmbeddedWindow)) {
++        DengShellView v = dengshell_view(ww, wh, dw, dh);
++        /* Never erase the desktop before blitting it: the intermediate black
++         * frame is visible on busy/remote displays. Only clear letterbox bars.
++         * BeginPaint clips these operations to the actual damaged region. */
++        const RECT bars[] = {{0, 0, ww, v.y}, {0, v.y + v.height, ww, wh},
++                             {0, v.y, v.x, v.y + v.height},
++                             {v.x + v.width, v.y, ww, v.y + v.height}};
++        for (size_t i = 0; i < ARRAYSIZE(bars); i++)
++            if (bars[i].right > bars[i].left && bars[i].bottom > bars[i].top)
++                FillRect(hdc, &bars[i], (HBRUSH)GetStockObject(BLACK_BRUSH));
++        if (!v.width || !v.height) return TRUE;
++        if (v.width == dw && v.height == dh) {
++            RECT damage = {x, y, x + w, y + h};
++            RECT desktop = {v.x, v.y, v.x + v.width, v.y + v.height};
++            RECT draw;
++            if (!IntersectRect(&draw, &damage, &desktop)) return TRUE;
++            return BitBlt(hdc, draw.left, draw.top, draw.right - draw.left, draw.bottom - draw.top,
++                          wfc->primary->hdc, draw.left - v.x, draw.top - v.y, SRCCOPY);
++        }
++        SetStretchBltMode(hdc, HALFTONE);
++        SetBrushOrgEx(hdc, 0, 0, nullptr);
++        return StretchBlt(hdc, v.x, v.y, v.width, v.height, wfc->primary->hdc, 0, 0, dw, dh, SRCCOPY);
++    }
+ 	if (wfc->fullscreen || !freerdp_settings_get_bool(settings, FreeRDP_SmartSizing) ||
+ 	    (ww == dw && wh == dh))
+ 	{
+@@ -909,6 +986,12 @@
+ 	dw = freerdp_settings_get_uint32(settings, FreeRDP_DesktopWidth);
+ 	dh = freerdp_settings_get_uint32(settings, FreeRDP_DesktopHeight);
+ 
++    if (freerdp_settings_get_bool(settings, FreeRDP_EmbeddedWindow)) {
++        DengShellView v = dengshell_view(ww, wh, dw, dh);
++        *px = (UINT16)dengshell_pointer(x, v.x, v.width, dw);
++        *py = (UINT16)dengshell_pointer(y, v.y, v.height, dh);
++        return TRUE;
++    }
+ 	if (!freerdp_settings_get_bool(settings, FreeRDP_SmartSizing) || ((ww == dw) && (wh == dh)))
+ 	{
+ 		x += wfc->xCurrentScroll;
+--- a/client/Windows/wf_gdi.c
++++ b/client/Windows/wf_gdi.c
+@@ -38,6 +38,7 @@
+ #include "wf_client.h"
+ #include "wf_graphics.h"
+ #include "wf_gdi.h"
++#include "wf_dengshell_view.h"
+ 
+ #define TAG CLIENT_TAG("windows.gdi")
+ 
+@@ -239,6 +240,16 @@
+ 	if (!wh)
+ 		wh = dh;
+ 
++    if (freerdp_settings_get_bool(settings, FreeRDP_EmbeddedWindow)) {
++        DengShellView v = dengshell_view(ww, wh, dw, dh);
++        if (dw <= 0 || dh <= 0) return FALSE;
++        source->left = v.x + (int)((int64_t)source->left * v.width / dw) - 2;
++        source->top = v.y + (int)((int64_t)source->top * v.height / dh) - 2;
++        source->right = v.x + (int)(((int64_t)source->right * v.width + dw - 1) / dw) + 2;
++        source->bottom = v.y + (int)(((int64_t)source->bottom * v.height + dh - 1) / dh) + 2;
++        return TRUE;
++    }
++
+ 	if (freerdp_settings_get_bool(wfc->common.context.settings, FreeRDP_SmartSizing) &&
+ 	    (ww != dw || wh != dh))
+ 	{
+--- a/client/Windows/wf_channels.c
++++ b/client/Windows/wf_channels.c
+@@ -19,6 +19,7 @@
+ #include <freerdp/config.h>
+ 
+ #include <winpr/assert.h>
++#include <stdio.h>
+ 
+ #include "wf_channels.h"
+ 
+@@ -30,6 +31,13 @@
+ 
+ #include <freerdp/log.h>
+ #define TAG CLIENT_TAG("windows")
++
++static UINT dengshell_display_caps(DispClientContext* disp, UINT32 count, UINT32 a, UINT32 b)
++{
++    wfContext* wfc = (wfContext*)disp->custom;
++    if (wfc && wfc->hwnd) PostMessage(wfc->hwnd, WM_USER + 503, 1, 0);
++    return CHANNEL_RC_OK;
++}
+ 
+ void wf_OnChannelConnectedEventHandler(void* context, const ChannelConnectedEventArgs* e)
+ {
+@@ -53,9 +61,17 @@
+ 	else if (strcmp(e->name, DISP_DVC_CHANNEL_NAME) == 0)
+ 	{
+ 		wfc->disp = (DispClientContext*)e->pInterface;
++        if (freerdp_settings_get_bool(settings, FreeRDP_EmbeddedWindow)) {
++            wfc->disp->custom = wfc;
++            wfc->disp->DisplayControlCaps = dengshell_display_caps;
++        }
+ 	}
+-	else
++	else {
+ 		freerdp_client_OnChannelConnectedEventHandler(context, e);
++        if (strcmp(e->name, RDPGFX_DVC_CHANNEL_NAME) == 0) {
++            fputs("DENGSHELL_RDP_GFX\n", stdout); fflush(stdout);
++        }
++    }
+ }
+ 
+ void wf_OnChannelDisconnectedEventHandler(void* context, const ChannelDisconnectedEventArgs* e)
+@@ -80,6 +96,7 @@
+ 	else if (strcmp(e->name, DISP_DVC_CHANNEL_NAME) == 0)
+ 	{
+ 		wfc->disp = nullptr;
++        if (wfc->hwnd) PostMessage(wfc->hwnd, WM_USER + 503, 0, 0);
+ 	}
+ 	else
+ 		freerdp_client_OnChannelDisconnectedEventHandler(context, e);
+--- /dev/null
++++ b/client/Windows/wf_dengshell_view.h
+@@ -0,0 +1,26 @@
++/* DengShell embedded desktop: aspect-preserving viewport and pointer mapping. */
++#ifndef DENGSHELL_RDP_VIEW_H
++#define DENGSHELL_RDP_VIEW_H
++#include <stdint.h>
++typedef struct { int x, y, width, height; } DengShellView;
++static inline DengShellView dengshell_view(int vw, int vh, int dw, int dh)
++{
++ DengShellView v = {0, 0, 0, 0};
++ if (vw <= 0 || vh <= 0 || dw <= 0 || dh <= 0) return v;
++ if ((int64_t)vw * dh <= (int64_t)vh * dw) {
++  v.width = vw; v.height = (int)((int64_t)vw * dh / dw);
++ } else { v.height = vh; v.width = (int)((int64_t)vh * dw / dh); }
++ if (v.width < 1) v.width = 1;
++ if (v.height < 1) v.height = 1;
++ v.x = (vw-v.width)/2; v.y = (vh-v.height)/2;
++ return v;
++}
++static inline int dengshell_pointer(int coordinate, int offset, int extent, int desktop)
++{
++ if (extent <= 0 || desktop <= 0) return 0;
++ int64_t p = (int64_t)(coordinate-offset) * desktop / extent;
++ if (p < 0) return 0;
++ if (p >= desktop) return desktop-1;
++ return (int)p;
++}
++#endif
+--- a/client/Windows/cli/wfreerdp.c
++++ b/client/Windows/cli/wfreerdp.c
+@@ -110,7 +110,7 @@
+ 		goto out;
+ 	}
+ 
+-	AddDefaultSettings(settings);
++	/* DengShell passes explicit credentials through stdin. Do not read mstsc credentials. */
+ 
+ 	if (freerdp_client_start(context) != 0)
+ 		goto out;

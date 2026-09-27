@@ -15,6 +15,9 @@ import (
 )
 
 type Profile struct {
+	Protocol     string      `json:"protocol,omitempty"`
+	Domain       string      `json:"domain,omitempty"`
+	RDPClipboard bool        `json:"rdpClipboard,omitempty"`
 	Temporary    bool        `json:"temporary,omitempty"`
 	NeedsProxy   bool        `json:"needsProxy,omitempty"`
 	FinalShellID string      `json:"finalShellId,omitempty"`
@@ -123,6 +126,9 @@ func (s *Store) Save(p Profile, clearSecret bool) (Profile, error) {
 	return s.saveProfile(p, clearSecret, false)
 }
 func (s *Store) saveProfile(p Profile, clearSecret, allowNewID bool) (Profile, error) {
+	if err := normalizeRDPProfile(&p); err != nil {
+		return Profile{}, err
+	}
 	p.Temporary = false
 	p.FinalShellID = ""
 	s.mu.Lock()
@@ -158,6 +164,9 @@ func (s *Store) saveProfile(p Profile, clearSecret, allowNewID bool) (Profile, e
 	}
 	if p.Port == 0 {
 		p.Port = 22
+		if p.Protocol == "rdp" {
+			p.Port = 3389
+		}
 	}
 	if p.Port < 1 || p.Port > 65535 {
 		return Profile{}, errors.New("端口应为 1–65535")
@@ -206,7 +215,7 @@ func (s *Store) saveProfile(p Profile, clearSecret, allowNewID bool) (Profile, e
 				p.GroupID = entry.GroupID
 			}
 			index = i
-			if p.Secret == "" && !clearSecret && p.Auth == entry.Auth && p.KeyID == entry.KeyID && p.KeyPath == entry.KeyPath {
+			if p.Secret == "" && !clearSecret && p.Protocol == entry.Protocol && p.Auth == entry.Auth && p.KeyID == entry.KeyID && p.KeyPath == entry.KeyPath {
 				p.Secret = entry.Secret
 			}
 			if p.Proxy.Password == "" && !p.Proxy.ClearPassword && p.Proxy.Type == entry.Proxy.Type && p.Proxy.Host == entry.Proxy.Host && p.Proxy.Port == entry.Proxy.Port && p.Proxy.User == entry.Proxy.User {

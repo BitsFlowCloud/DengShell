@@ -35,6 +35,11 @@ window.DengProfileNotes = (() => {
     field.setCustomValidity(valid ? '' : limitHint);
     state.hint.dataset.limitReached = String(rejected || !valid);
     const activeLine = normalize(field.value.slice(0, field.selectionStart)).split('\n').length - 1;
+    if (field.id === 'connection-notes') {
+      state.hint.textContent = `${rejected ? '本次输入超出限制，未写入。' : ''}最多 3 行，每行 20 中文 / 40 英文${legacy ? '；原备注已保留，修改后需符合限额' : ''}`;
+      state.hint.title = `中文计 2，英文计 1 · ${n.lines}/3 行 · 当前行 ${n.widths[activeLine] || 0}/40`;
+      return valid;
+    }
     state.hint.textContent = `${rejected ? '本次输入超出限制，未写入；可换行继续。' : ''}${limitHint}（中文计 2，英文计 1） · ${n.lines}/3 行 · 当前行 ${n.widths[activeLine] || 0}/40${legacy ? '；原备注已保留，修改后需符合限额' : ''}`;
     return valid;
   }

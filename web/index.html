@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="startup-update.css?v=20260920-v002-b70">
   <link rel="stylesheet" href="desktop-polish.css?v=20260920-v002-b70">
   <link rel="stylesheet" href="splash.css?v=20260920-v002-b70">
-  <link rel="stylesheet" href="server-manager.css?v=20260920-v002-b70">
+  <link rel="stylesheet" href="server-manager.css?v=20260928-card1">
   <link rel="stylesheet" href="connection-extras.css?v=20260920-v002-b70">
   <link rel="stylesheet" href="help-guide.css?v=20260920-v002-b70">
   <link rel="stylesheet" href="appearance-tools.css?v=20260920-v002-b70">
@@ -32,7 +32,7 @@
   <link rel="stylesheet" href="desktop-tray.css?v=20260920-v002-b70">
   <link rel="stylesheet" href="latency-chart.css?v=20260920-v002-b70">
   <link rel="stylesheet" href="common-apps.css?v=20260920-v002-b70">
-  <link rel="stylesheet" href="session-windows.css?v=20260920-v002-b70">
+  <link rel="stylesheet" href="session-windows.css?v=20260928-drag1">
   <link rel="stylesheet" href="system-identity.css?v=20260920-v002-b70">
   <link rel="stylesheet" href="chart-styles.css?v=20260920-v002-b70">
   <link rel="stylesheet" href="light-theme.css?v=20260920-v002-b70">
@@ -41,6 +41,9 @@
   <link rel="stylesheet" href="security-lock.css?v=20260920-v002-b70">
   <link rel="stylesheet" href="sync.css?v=20260920-sync1">
   <link rel="stylesheet" href="soft-dark.css?v=20260923-v002-b80">
+<link rel="stylesheet" href="rdp.css?v=20260927-preview1">
+  <link rel="stylesheet" href="connection-form.css?v=20260928-layout2">
+  <link rel="stylesheet" href="upload-confirmation.css?v=20260928-overwrite1">
 </head>
 <body>
   <svg class="icon-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
@@ -126,6 +129,10 @@
     <div class="splitter vertical" id="sidebar-splitter" role="separator" aria-label="调整侧栏宽度" aria-orientation="vertical" aria-valuemin="240" aria-valuemax="460" aria-valuenow="304" tabindex="0"><span></span></div>
 
     <main class="main-panel">
+      <section id="rdp-panel" class="rdp-panel" aria-label="RDP 远程桌面" hidden>
+        <header class="rdp-toolbar"><div><strong id="rdp-active-name"></strong><span id="rdp-active-status"></span></div><div><label class="rdp-resolution-label">分辨率<select id="rdp-resolution" title="跟随窗口可避免低分辨率画面被放大；固定分辨率会等比适应窗口"><option value="0x0">跟随窗口 · 清晰</option><option value="1920x1080">1920 × 1080</option><option value="1600x900">1600 × 900</option><option value="1280x800">1280 × 800</option><option value="1024x768">1024 × 768</option></select></label><button id="rdp-secure-attention" type="button" title="向远程 Windows 发送安全注意序列">Ctrl + Alt + Del</button><button id="rdp-active-reconnect" type="button">重新连接</button><button id="rdp-active-disconnect" type="button">断开</button></div></header>
+        <div id="rdp-viewport" class="rdp-viewport"><div id="rdp-placeholder" class="rdp-placeholder"><strong id="rdp-placeholder-message">连接中…</strong><p>连接后点击画面即可操作远程桌面。</p></div></div>
+      </section>
 
       <div class="workspace" id="workspace">
         <section class="terminal-panel" aria-label="SSH 终端">
@@ -164,7 +171,7 @@
       <label class="connection-search"><svg><use href="#i-search"/></svg><input id="connection-search" placeholder="搜索名称、地址、分组或备注" aria-label="搜索服务器"></label>
     </div>
     <div id="connection-groups" role="tabpanel" aria-labelledby="server-tab-servers"></div>
-    <div id="server-manager-create" class="server-manager-create"><button class="new-connection" id="new-connection"><svg><use href="#i-plus"/></svg>新建连接</button><button class="text-button" id="new-group">＋ 新建分组</button></div>
+    <div id="server-manager-create" class="server-manager-create"><button class="new-connection" id="new-connection"><svg><use href="#i-plus"/></svg>新建连接</button><button class="text-button" id="open-rdp-sessions" type="button" hidden>RDP 会话</button><button class="text-button" id="new-group">＋ 新建分组</button></div>
   </aside>
   <div id="server-group-menu" class="server-group-menu" role="menu" aria-label="分组操作" hidden></div>
   <dialog id="server-group-dialog"><form id="server-group-form">
@@ -180,26 +187,54 @@
   <dialog id="connection-dialog"><form id="connection-form">
     <div class="dialog-heading"><h2 id="connection-form-title">新建连接</h2><button type="button" id="cancel-connection" class="icon-button" aria-label="取消"><svg><use href="#i-close"/></svg></button></div>
     <input name="id" type="hidden">
-    <label>名称<input name="name" required maxlength="100" placeholder="例如：Tokyo-01"></label>
-    <label>备注（可选）<textarea id="connection-notes" name="notes" rows="3" aria-describedby="connection-notes-hint" placeholder="续费网址、到期时间、用途等"></textarea><small id="connection-notes-hint" class="notes-input-hint" aria-live="polite">正文最多 3 行，每行最多 20 个中文或 40 个英文字符</small></label>
-    <div class="form-row"><label class="host-field">服务器地址<input name="host" required maxlength="253" placeholder="主机名或 IP"></label><label class="port-field">端口<input name="port" type="number" min="1" max="65535" value="22" required></label></div>
-    <label>分组<div class="input-with-button"><select name="groupId" id="profile-group" required></select><button type="button" id="profile-new-group">新建分组</button></div></label><label>用户名<input name="user" required maxlength="100" value="root"></label>
-    <label>认证方式<select name="auth"><option value="password">密码</option><option value="key">私钥</option><option value="agent">SSH Agent</option></select></label>
+    <div class="connection-form-body"><div class="connection-editor-grid"><div class="connection-main">
+    <section class="connection-section" aria-labelledby="connection-basic-title">
+    <h3 id="connection-basic-title">连接信息</h3>
+    <div class="connection-fields">
+      <label>名称<input name="name" required maxlength="100" placeholder="例如：Tokyo-01"></label>
+      <label class="connection-protocol-field">连接类型<select name="protocol" id="connection-protocol"><option value="">SSH 终端</option><option value="rdp">RDP 远程桌面 · 测试版</option></select></label>
+    </div>
+    <div class="connection-address-row">
+      <label class="host-field">服务器地址<input name="host" required maxlength="253" placeholder="主机名或 IP"></label>
+      <label class="port-field">端口<input name="port" type="number" min="1" max="65535" value="22" required></label>
+    </div>
+    </section>
+    <section class="connection-section" aria-labelledby="connection-login-title">
+    <h3 id="connection-login-title">登录凭据</h3>
+    <div class="connection-fields">
+    <label>用户名<input name="user" required maxlength="100" value="root"></label>
+    <label id="connection-auth-field">认证方式<select name="auth"><option value="password">密码</option><option value="key">私钥</option><option value="agent">SSH Agent</option></select></label>
+    <label id="rdp-domain-field" hidden>域（可选）<input name="domain" maxlength="255" autocomplete="off" placeholder="留空使用本地账号"></label>
+    </div>
     <label id="key-library-field" hidden>选择私钥<div class="input-with-button"><select name="keyId" id="profile-key"></select><button type="button" id="manage-profile-keys">管理密钥</button></div></label>
     <label id="key-path-field" hidden>私钥路径<div class="input-with-button"><input name="keyPath" placeholder="~/.ssh/id_ed25519"><button type="button" id="choose-key">选择</button></div></label>
+    <div class="connection-secret-row">
     <label id="secret-field"><span id="secret-label">密码</span><input name="secret" type="password" autocomplete="new-password" placeholder="留空则连接时输入"></label>
     <label class="checkbox-label" id="remember-secret-field"><input name="remember" type="checkbox">在本机保存密码／口令</label>
+    </div>
     <p id="saved-secret-note" hidden>已保存凭据。留空保留，取消勾选则清除保存的凭据。</p>
-    <p id="managed-key-secret-note" hidden>自动使用密钥管理器中保存的口令，无需为此连接重复填写。</p>
+    <p id="managed-key-secret-note" hidden>使用密钥管理器中已保存的口令。</p>
+    <label class="checkbox-label" id="rdp-clipboard-field" hidden><input type="checkbox" name="rdpClipboard">允许本机与远程桌面共享剪贴板</label>
+    <p id="rdp-connection-note" hidden>首次连接需确认服务器证书；安全锁定会断开 RDP，解锁后可重新连接。</p>
+    </section>
+    </div><aside class="connection-options" aria-labelledby="connection-options-title">
+    <h3 id="connection-options-title">分组与选项</h3>
+      <label>分组<div class="input-with-button"><select name="groupId" id="profile-group" required></select><button type="button" id="profile-new-group">新建分组</button></div></label>
     <details class="proxy-settings" id="proxy-settings"><summary>连接代理 <span id="proxy-summary">直连</span><svg><use href="#i-chevron"/></svg></summary>
-      <label>使用代理<div class="input-with-button"><select name="proxyId" id="profile-proxy"></select><button type="button" id="manage-profile-proxies">管理代理</button></div></label>
+      <div class="connection-fields"><label>使用代理<div class="input-with-button"><select name="proxyId" id="profile-proxy"></select><button type="button" id="manage-profile-proxies">管理代理</button></div></label>
       <label id="proxy-type-field">自定义代理类型<select name="proxyType"><option value="direct">直连</option><option value="socks5">SOCKS5</option><option value="http">HTTP CONNECT</option></select></label>
+      </div>
       <div id="proxy-fields" hidden><div class="form-row"><label>代理地址<input name="proxyHost" placeholder="127.0.0.1" autocomplete="off"></label><label class="port-field">端口<input name="proxyPort" type="number" min="1" max="65535" placeholder="7890"></label></div><div class="form-row"><label>用户名（可选）<input name="proxyUser" autocomplete="off"></label><label>密码（可选）<input name="proxyPassword" type="password" autocomplete="new-password" placeholder="留空保留已保存密码"></label></div><label class="checkbox-label"><input name="clearProxyPassword" type="checkbox">清除已保存的代理密码</label></div>
-      <p class="proxy-note">直连遵循系统路由；开启 TUN 时仍可能经过代理。SOCKS5／HTTP 代理由代理端解析服务器域名。</p>
+      <p class="proxy-note">直连跟随系统路由；使用代理时，由代理端解析域名。</p>
     </details>
+    <label class="connection-notes-field">备注（可选）<textarea id="connection-notes" name="notes" rows="3" aria-describedby="connection-notes-hint" placeholder="续费网址、到期时间、用途等"></textarea><small id="connection-notes-hint" class="notes-input-hint" aria-live="polite">正文最多 3 行，每行最多 20 个中文或 40 个英文字符</small></label>
+    </aside></div></div>
+    <div class="connection-form-footer">
     <button type="button" id="reset-host-key" class="text-button" hidden>重置此服务器的主机指纹</button>
     <button type="submit" class="primary-button" id="save-connection">保存并连接</button>
+    </div>
   </form></dialog>
+  <dialog id="rdp-sessions-dialog" class="manager-dialog"><div class="dialog-heading"><div><h2>远程桌面</h2><p>内置 RDP · 标签页</p></div><button type="button" class="icon-button" id="close-rdp-sessions" aria-label="关闭远程桌面列表"><svg><use href="#i-close"/></svg></button></div><p class="rdp-session-help">首次连接时请核对证书窗口中的服务器地址和指纹。安全锁定会断开 RDP。</p><div id="rdp-session-list" aria-live="polite"></div><p id="rdp-session-empty" class="empty-state">还没有远程桌面会话。新建连接时选择 RDP。</p><button type="button" id="new-rdp-connection" class="primary-button">新建 RDP 连接</button></dialog>
   <dialog id="action-dialog"><form id="action-form"><h2 id="action-title"></h2><p id="action-description"></p><label id="action-input-label"><input id="action-input" autocomplete="off"></label><div class="dialog-buttons"><button type="button" id="action-cancel">取消</button><button type="submit" class="primary-button" id="action-confirm">确定</button></div></form></dialog>
   <dialog id="command-dialog"><form id="quick-command-form">
     <div class="dialog-heading"><h2 id="command-dialog-title">新建快捷命令</h2><button type="button" class="icon-button" id="cancel-command" aria-label="关闭命令编辑器"><svg><use href="#i-close"/></svg></button></div>
@@ -302,7 +337,7 @@
   <script src="font-library.js?v=20260920-v002-b70"></script>
   <script src="path-history.js?v=20260925-v002-b86"></script>
   <script src="directory-favorites.js?v=20260925-v002-b86"></script>
-  <script src="connection-extras.js?v=20260920-v002-b70"></script>
+  <script src="connection-extras.js?v=20260928-layout2"></script>
   <script src="file-browser.js?v=20260925-v002-b86"></script>
   <script src="latency-chart.js?v=20260920-v002-b70"></script>
   <script src="workspace-refinements.js?v=20260920-v002-b70"></script>
@@ -313,7 +348,7 @@
   <script src="finalshell-import.js?v=20260920-v002-b70"></script>
   <script src="startup-update.js?v=20260920-v002-b70"></script>
   <script src="portable-preferences.js?v=20260920-v002-b70"></script>
-  <script src="server-manager.js?v=20260920-v002-b70"></script>
+  <script src="server-manager.js?v=20260928-card1"></script>
   <script src="server-explorer.js?v=20260925-v002-b86"></script>
   <script src="help-guide.js?v=20260925-v002-b86"></script>
   <script src="chart-styles.js?v=20260920-v002-b70"></script>
@@ -322,10 +357,13 @@
   <script src="server-addresses.js?v=20260920-v002-b70"></script>
   <script src="window-preview.js?v=20260920-v002-b70"></script>
   <script src="window-transfers.js?v=20260920-v002-b70"></script>
-  <script src="session-windows.js?v=20260925-v002-b86"></script>
+  <script src="session-tab-order.js?v=20260928-drag1"></script>
+  <script src="session-windows.js?v=20260928-drag1"></script>
   <script src="session-tabs-layout.js?v=20260920-v002-b70"></script>
   <script src="system-identity.js?v=20260920-v002-b70"></script>
-  <script src="app.js?v=20260927-network-refresh"></script>
+  <script src="rdp.js?v=20260927-preview1"></script>
+  <script src="upload-confirmation.js?v=20260928-overwrite1"></script>
+  <script src="app.js?v=20260928-drag1"></script>
   <script src="sync.js?v=20260920-sync1"></script>
   <script src="quick-connect.js?v=20260920-v002-b70"></script>
   <script src="process-view.js?v=20260920-v002-b70"></script>

@@ -49,3 +49,7 @@ Thumbs.db
 
 *.pkg.tar.zst
 /finalshell_oot_pot/
+
+# Release source includes the verified embedded RDP engine.
+!/internal/rdpengine/payload/windows-amd64.zip
+!/android/internal/rdpengine/payload/windows-amd64.zip

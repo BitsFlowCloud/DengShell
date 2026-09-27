@@ -172,6 +172,9 @@ func (s *Store) prepareSyncWithBaseline(expected, next map[string]json.RawMessag
 			}
 			p.KeyPath = ""
 			p.FinalShellID = ""
+			if err := normalizeRDPProfile(&p); err != nil {
+				return err
+			}
 			if err := validateProfileNotes(p.Notes); err != nil {
 				return err
 			}
@@ -184,10 +187,13 @@ func (s *Store) prepareSyncWithBaseline(expected, next map[string]json.RawMessag
 				p.NeedsProxy = old.NeedsProxy
 				p.FinalShellID = old.FinalShellID
 				if !secrets {
-					p.Secret = old.Secret
-					p.KeyID = old.KeyID
-					p.KeyPath = old.KeyPath
-				} else if p.KeyID == "" {
+					p.Secret, p.KeyID, p.KeyPath = "", "", ""
+					if p.Protocol == old.Protocol {
+						p.Secret = old.Secret
+						p.KeyID = old.KeyID
+						p.KeyPath = old.KeyPath
+					}
+				} else if p.Protocol == old.Protocol && p.KeyID == "" {
 					p.KeyPath = old.KeyPath
 				}
 			} else if !secrets {

@@ -157,3 +157,8 @@
 
 /* Center the server picker within the viewport at every interface scale. */
 #connections-drawer { left:50%; transform:translateX(-50%); bottom:auto; top:calc(var(--titlebar-height,42px) + 12px); height:min(740px,calc(var(--view-height,100vh) - var(--titlebar-height,42px) - 44px)); }
+
+/* Connection cards are whole-row controls, including history and notes. */
+.server-profile-row,
+.server-profile-row * { -webkit-user-select:none; user-select:none; }
+.server-profile-row[data-selectable="true"] { cursor:pointer; }

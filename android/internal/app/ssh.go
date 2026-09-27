@@ -149,6 +149,9 @@ func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret 
 	if err != nil {
 		return nil, err
 	}
+	if p.Protocol == "rdp" {
+		return nil, errors.New("此连接为 RDP，请使用远程桌面打开")
+	}
 	if p.NeedsProxy {
 		return nil, &AuthenticationError{code: "ssh_proxy_missing", message: "此导入连接尚未配置代理，请编辑连接后再连接。"}
 	}

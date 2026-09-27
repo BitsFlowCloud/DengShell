@@ -178,6 +178,7 @@ func (a *App) SecurityLockStatus() SecurityLockStatus {
 	status := s.status()
 	s.mu.Unlock()
 	if status.Locked {
+		a.stopRDPLocked()
 		a.pauseSyncForLock()
 	}
 	return status

@@ -1,0 +1,17 @@
+[
+  {
+    "file": "freerdp.tar.gz",
+    "url": "https://github.com/FreeRDP/FreeRDP/releases/download/3.32.0/freerdp-3.32.0.tar.gz",
+    "sha256": "855645e886f9749a485cb6630ffe934aa717d7b18cf716699ab1fc8864633210"
+  },
+  {
+    "file": "mingw-w64-x86_64-openssl-3.6.4-1-any.pkg.tar.zst",
+    "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-openssl-3.6.4-1-any.pkg.tar.zst",
+    "sha256": "d613ab4e1b5af9e95cde16895765e1be53ab05657d8d51ff2707d4e99c29c55b"
+  },
+  {
+    "file": "mingw-w64-x86_64-zlib-1.3.2-2-any.pkg.tar.zst",
+    "url": "https://repo.msys2.org/mingw/mingw64/mingw-w64-x86_64-zlib-1.3.2-2-any.pkg.tar.zst",
+    "sha256": "9e75842a070ba648e986e12424e1c92c9d7d77200e85f6a34eeb600819f2e694"
+  }
+]
