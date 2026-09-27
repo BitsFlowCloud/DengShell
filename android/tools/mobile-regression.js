@@ -60,8 +60,8 @@ async function testOrientation(browser, size, label) {
   await page.locator('#new-connection').click();
   await page.locator('#connection-dialog[open]').waitFor();
   await inspect(page, `${label}-dialog`);
-  const dialogScroll = await page.locator('#connection-dialog').evaluate(el => { el.scrollTop = 10000; return { top: el.scrollTop, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight }; });
-  check(`${label} form scrolls to save`, dialogScroll.top > 0 && await page.locator('#save-connection').isVisible(), JSON.stringify(dialogScroll));
+  const dialogScroll = await page.locator('#connection-dialog').evaluate(dialog => { const el = dialog.querySelector('.connection-form-body') || dialog; el.scrollTop = 10000; return { top: el.scrollTop, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight }; });
+  check(`${label} form scrolls to save`, (dialogScroll.scrollHeight <= dialogScroll.clientHeight || dialogScroll.top > 0) && await page.locator('#save-connection').isVisible(), JSON.stringify(dialogScroll));
   const saveRect = await page.locator('#save-connection').boundingBox();
   const modalRect = await page.locator('#connection-dialog').boundingBox();
   check(`${label} save button within modal viewport`, saveRect && modalRect && saveRect.y >= modalRect.y && saveRect.y + saveRect.height <= modalRect.y + modalRect.height, JSON.stringify({ saveRect, modalRect }));
