@@ -30,6 +30,7 @@ type desktopBackend interface {
 	ImportLocalAsset(string, string, string) (app.ManagedAsset, error)
 	DownloadTo(string, string, string) error
 	DownloadArchiveTo(string, string, string) error
+	DownloadSelectionArchiveTo(string, []string, string) error
 	PrepareExternalFile(string, string) (string, error)
 	PreparedUpdate(string) (app.UpdateDownload, error)
 }
@@ -139,6 +140,9 @@ func (r *remoteDesktopBackend) DownloadTo(s, p, l string) error {
 }
 func (r *remoteDesktopBackend) DownloadArchiveTo(s, p, l string) error {
 	return r.native("archive", s, p, l, "", "", nil)
+}
+func (r *remoteDesktopBackend) DownloadSelectionArchiveTo(sessionID string, paths []string, local string) error {
+	return r.request(context.Background(), "POST", "/api/windows/native", map[string]any{"Method": "archive-selection", "SessionID": sessionID, "Paths": paths, "Local": local}, nil)
 }
 func (r *remoteDesktopBackend) PrepareExternalFile(s, p string) (string, error) {
 	var value string

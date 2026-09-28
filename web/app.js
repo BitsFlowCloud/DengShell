@@ -110,7 +110,7 @@ function ask({ title, description = '', input = false, value = '', secret = fals
   dialogQueue = result.then(() => undefined); return result;
 }
 
-let profiles = [], groups = [], activeID = null, ascending = true, fileSortKey = 'name', selectedName = '';
+let profiles = [], groups = [], activeID = null, ascending = true, fileSortKey = 'name';
 const sessions = new Map(), connecting = new Set(), credentials = new Map(), localTasks = new Map();
 const temporaryProfiles = new Map();
 const connectionRequests = new Map();
@@ -486,7 +486,7 @@ function renderTabs() {
 function activate(id, view = 'terminal') {
   if (!sessions.has(id)) return;
   window.DengRDP?.deactivate();
-  activeID = id; selectedName = ''; $('#file-filter').value = '';
+  activeID = id; $('#file-filter').value = '';
   window.DengProcessView?.activate(id, view);
   for (const state of sessions.values()) state.host.hidden = state.id !== id;
   renderTabs(); renderSessionInfo(); renderFiles();
@@ -561,9 +561,10 @@ async function navigate(path, state = current()) {
   try {
     const data = await api(`/api/sessions/${state.id}/files?path=${encodeURIComponent(path)}`, { signal: state.navAbort.signal });
     if (state.navGeneration !== generation || !sessions.has(state.id)) return;
+    if (state.cwd !== data.path) state.fileSelection = null;
     state.cwd = data.path; state.entries = data.entries; state.folders.set(data.path, data.entries.filter(entry => entry.kind === 'folder')); DengFileBrowser.invalidate(state, data.path);
     if (data.historyError) toast(data.historyError);
-    if (activeID === state.id) { selectedName = ''; $('#file-filter').value = ''; renderFiles(); }
+    if (activeID === state.id) { $('#file-filter').value = ''; renderFiles(); }
   } catch (error) { if (error.name === 'AbortError') return; if (activeID === state.id) { $('#path-input').value = state.cwd; $('#file-status-count').textContent = '目录读取失败'; } throw error; }
 }
 function renderFiles() {
@@ -577,18 +578,84 @@ function renderFiles() {
   if (state?.sftpPending) { $('#file-status-count').textContent = '正在连接文件服务…'; $('#file-empty').textContent = '正在加载远程文件，终端可正常使用。'; }
   else if (state?.sftpAvailable === false) { $('#file-status-count').textContent = 'SFTP 不可用'; $('#file-empty').textContent = '当前服务器的 SFTP 文件服务不可用，SSH 终端可正常使用。'; }
   $('#parent-directory').disabled ||= state?.cwd === '/';
+  const selection = fileSelection(state), visibleNames = new Set(entries.map(entry => entry.name));
+  for (const name of selection.names) if (!visibleNames.has(name)) selection.names.delete(name);
+  if (!visibleNames.has(selection.anchor)) selection.anchor = null;
   $('#file-list').replaceChildren(...entries.map(entry => {
-    const row = node('tr', selectedName === entry.name ? 'selected' : ''); row.tabIndex = 0; row.dataset.fileName = entry.name; row.setAttribute('aria-label', entry.name);
+    const row = node('tr'); row.tabIndex = 0; row.dataset.fileName = entry.name; row.setAttribute('aria-label', entry.name);
     const first = node('td'); const name = node('span', 'file-name'); name.append(icon(entry.kind === 'folder' ? 'folder' : 'file', `${entry.kind}-icon`), node('span', 'file-name-text', entry.name + (entry.link ? ' ↗' : ''))); first.append(name);
     row.append(first, node('td', '', entry.kind === 'folder' ? '—' : prettySize(entry.bytes)), node('td', '', entry.time), node('td', '', entry.mode), node('td', '', entry.owner));
     for (const cell of row.cells) cell.title = cell.textContent;
-    row.onclick = () => { selectedName = entry.name; $$('#file-list tr').forEach(el => el.classList.remove('selected')); row.classList.add('selected'); updateFileActions(); };
+    row.onclick = event => selectFileRow(state, entry.name, event);
     const open = safe(async () => { const target = normalizePath(entry.name, state.cwd); if (entry.kind === 'folder') await navigate(target, state); else if (entry.link) { try { await navigate(target, state); } catch { await DengFileTools.openText(state, target); } } else await DengFileTools.openText(state, target); });
-    row.ondblclick = open; row.onkeydown = event => { if (event.key === 'Enter') open(); }; return row;
-  })); renderTree(); updateFileActions();
+    row.ondblclick = event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey) open(); };
+    row.onkeydown = event => { if (event.key === 'Enter' && selectedEntries(state).length <= 1) { event.preventDefault(); open(); } }; return row;
+  })); renderTree(); reflectFileSelection();
 }
-function selectedEntry() { return current()?.entries.find(e => e.name === selectedName); }
-function updateFileActions() { const entry = selectedEntry(); $('#download-file').disabled = !filesUsable() || !entry || entry.kind === 'folder'; $('#rename-file').disabled = !filesUsable() || !entry; $('#delete-file').disabled = !filesUsable() || !entry; }
+// Selection belongs to one SSH session and one directory. Never carry hidden
+// files into a filtered selection or reuse names after navigation.
+function fileSelection(state = current()) {
+  if (!state) return { names: new Set(), anchor: null };
+  if (state.fileSelection?.path !== state.cwd) state.fileSelection = { path: state.cwd, names: new Set(), anchor: null };
+  return state.fileSelection;
+}
+function selectedEntries(state = current()) {
+  const names = fileSelection(state).names;
+  return (state?.entries || []).filter(entry => names.has(entry.name));
+}
+function selectedFileTargets(state = current()) {
+  return selectedEntries(state).map(entry => ({ path: normalizePath(entry.name, state.cwd), isDirectory: entry.kind === 'folder' }));
+}
+function selectedEntry() { const entries = selectedEntries(); return entries.length === 1 ? entries[0] : null; }
+function selectFileRow(state, name, event = {}) {
+  if (state !== current() || !filesUsable(state)) return;
+  const selection = fileSelection(state), additive = event.ctrlKey || event.metaKey;
+  const names = $$('#file-list tr').map(row => row.dataset.fileName);
+  if (event.shiftKey && selection.anchor !== null && names.includes(selection.anchor)) {
+    const start = names.indexOf(selection.anchor), end = names.indexOf(name);
+    if (!additive) selection.names.clear();
+    for (const value of names.slice(Math.min(start, end), Math.max(start, end) + 1)) selection.names.add(value);
+  } else {
+    if (!additive) selection.names.clear();
+    if (additive && selection.names.has(name)) selection.names.delete(name); else selection.names.add(name);
+    selection.anchor = name;
+  }
+  reflectFileSelection();
+}
+function reflectFileSelection() {
+  const state = current(), selection = fileSelection(state);
+  for (const row of $$('#file-list tr')) {
+    const selected = selection.names.has(row.dataset.fileName);
+    row.classList.toggle('selected', selected); row.setAttribute('aria-selected', String(selected));
+  }
+  if (filesUsable(state)) $('#file-status-count').textContent = `${$('#file-list').rows.length} 个项目${$('#file-filter').value ? ' · 已筛选' : ''}${selection.names.size ? ` · 已选 ${selection.names.size} 项` : ''}`;
+  updateFileActions();
+}
+function updateFileActions() {
+  const state = current(), entries = selectedEntries(state), usable = filesUsable(state) && !state.fileDeletePending;
+  $('#download-file').disabled = !usable || !entries.length;
+  $('#download-file').textContent = entries.length > 1 || entries[0]?.kind === 'folder' ? '打包下载' : '下载';
+  $('#rename-file').disabled = !usable || entries.length !== 1;
+  $('#rename-file').title = entries.length > 1 ? '重命名需要只选择一个项目' : '重命名';
+  $('#delete-file').disabled = !usable || !entries.length;
+}
+function deleteSelectedFiles() { const state = current(); return DengFileTools.removeFiles(state, selectedFileTargets(state)); }
+$('#file-list').addEventListener('keydown', event => {
+  if (!filesUsable() || event.isComposing || event.altKey) return;
+  const selection = fileSelection(), rows = $$('#file-list tr'), index = rows.indexOf(event.target.closest('tr'));
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+    event.preventDefault(); event.stopPropagation(); selection.names = new Set(rows.map(row => row.dataset.fileName)); reflectFileSelection();
+  } else if (event.key === 'Escape') {
+    event.preventDefault(); selection.names.clear(); selection.anchor = null; reflectFileSelection();
+  } else if (event.key === 'Delete') {
+    event.preventDefault(); safe(deleteSelectedFiles)();
+  } else if (event.key === ' ') {
+    event.preventDefault(); if (index >= 0) selectFileRow(current(), rows[index].dataset.fileName, event);
+  } else if (['ArrowDown', 'ArrowUp'].includes(event.key)) {
+    event.preventDefault(); const row = rows[Math.max(0, Math.min(rows.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)))];
+    if (row) { row.focus(); if ((!event.ctrlKey && !event.metaKey) || event.shiftKey) selectFileRow(current(), row.dataset.fileName, event); }
+  }
+});
 function renderTree() { window.DengFileBrowser.render(current()); }
 $('#path-form').onsubmit = safe(async event => { event.preventDefault(); await navigate($('#path-input').value); });
 $('#parent-directory').onclick = safe(() => navigate(parentPath(current().cwd)));
@@ -635,8 +702,8 @@ async function renameRemoteFile(state, path) {
   await navigate(state.cwd, state);
 }
 $('#rename-file').onclick = safe(() => { const state = current(), entry = selectedEntry(); if (entry) return renameRemoteFile(state, normalizePath(entry.name, state.cwd)); });
-$('#delete-file').onclick = safe(async () => { const state = current(), entry = selectedEntry(); if (!state?.connected || !entry) return; const target = normalizePath(entry.name, state.cwd); await DengFileTools.removeFile(state, target, false, entry.kind === 'folder'); });
-async function downloadSelected() { const state = current(), entry = selectedEntry(); if (!entry || entry.kind === 'folder') return; const path = normalizePath(entry.name, state.cwd); if (native()) { toast('正在下载…'); const target = await native().Download(state.id, path); if (target) toast('下载完成：' + target); } else { const link = node('a'); link.href = endpoint(`/api/sessions/${state.id}/download?path=${encodeURIComponent(path)}&token=${encodeURIComponent(boot.token)}`); link.download = entry.name; link.click(); } }
+$('#delete-file').onclick = safe(deleteSelectedFiles);
+async function downloadSelected() { const state = current(), entries = selectedEntries(state), entry = entries[0]; if (!filesUsable(state) || !entry) return; if (entries.length > 1 || entry.kind === 'folder') return DengFileTools.archiveFiles(state, selectedFileTargets(state).map(item => item.path)); const path = normalizePath(entry.name, state.cwd); if (native()) { toast('正在下载…'); const target = await native().Download(state.id, path); if (target) toast('下载完成：' + target); } else { const link = node('a'); link.href = endpoint(`/api/sessions/${state.id}/download?path=${encodeURIComponent(path)}&token=${encodeURIComponent(boot.token)}`); link.download = entry.name; link.click(); } }
 $('#download-file').onclick = safe(downloadSelected);
 
 // The backend samples every connected SSH independently. The visible tab only

@@ -376,7 +376,43 @@ func removeRemoteTree(ctx context.Context, c *sftp.Client, target string, depth 
 	}
 	return c.RemoveDirectory(target)
 }
+
+// A file-list batch is a set of siblings. Reject mixed directories so archive
+// names cannot collide or accidentally include files outside the selection.
+func archiveTargets(targets []string) ([]string, error) {
+	if len(targets) == 0 || len(targets) > 10000 {
+		return nil, errors.New("请选择 1 至 10000 个项目")
+	}
+	result := make([]string, 0, len(targets))
+	seen := make(map[string]bool)
+	parent := ""
+	for _, value := range targets {
+		target, err := remotePath(value)
+		if err != nil {
+			return nil, err
+		}
+		if len(targets) > 1 && target == "/" {
+			return nil, errors.New("根目录不能与其他项目一起打包")
+		}
+		if parent != "" && parent != path.Dir(target) {
+			return nil, errors.New("批量打包的项目必须位于同一目录")
+		}
+		parent = path.Dir(target)
+		if !seen[target] {
+			seen[target] = true
+			result = append(result, target)
+		}
+	}
+	return result, nil
+}
 func archiveRemote(ctx context.Context, c *sftp.Client, target string, out io.Writer) error {
+	return archiveRemoteSelection(ctx, c, []string{target}, out)
+}
+func archiveRemoteSelection(ctx context.Context, c *sftp.Client, targets []string, out io.Writer) error {
+	targets, err := archiveTargets(targets)
+	if err != nil {
+		return err
+	}
 	gzipWriter := gzip.NewWriter(out)
 	tw := tar.NewWriter(gzipWriter)
 	var visit func(string, string, int) error
@@ -437,11 +473,16 @@ func archiveRemote(ctx context.Context, c *sftp.Client, target string, out io.Wr
 		}
 		return nil
 	}
-	name := path.Base(target)
-	if name == "/" {
-		name = "root"
+	var e error
+	for _, target := range targets {
+		name := path.Base(target)
+		if name == "/" {
+			name = "root"
+		}
+		if e = visit(target, name, 0); e != nil {
+			break
+		}
 	}
-	e := visit(target, name, 0)
 	tErr := tw.Close()
 	gErr := gzipWriter.Close()
 	if e != nil {
@@ -458,7 +499,7 @@ func (a *App) archiveHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, e)
 		return
 	}
-	target, e := remotePath(r.URL.Query().Get("path"))
+	targets, e := archiveTargets(r.URL.Query()["path"])
 	if e != nil {
 		writeError(w, 400, e)
 		return
@@ -479,7 +520,7 @@ func (a *App) archiveHTTP(w http.ResponseWriter, r *http.Request) {
 	defer f.Close()
 	op := startSFTPOperation(r.Context(), s, sftpIdleTimeout)
 	defer op.close()
-	if e = op.err(archiveRemote(op.ctx, s.files, target, f)); e != nil {
+	if e = op.err(archiveRemoteSelection(op.ctx, s.files, targets, f)); e != nil {
 		writeError(w, 400, e)
 		return
 	}
@@ -487,8 +528,8 @@ func (a *App) archiveHTTP(w http.ResponseWriter, r *http.Request) {
 	f.Seek(0, 0)
 	info, _ := f.Stat()
 	w.Header().Set("Content-Type", "application/gzip")
-	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": archiveName(target)}))
-	http.ServeContent(w, r, archiveName(target), info.ModTime(), f)
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": archiveSelectionName(targets)}))
+	http.ServeContent(w, r, archiveSelectionName(targets), info.ModTime(), f)
 }
 func archiveName(target string) string {
 	n := path.Base(target)
@@ -497,12 +538,21 @@ func archiveName(target string) string {
 	}
 	return n + ".tar.gz"
 }
-func (a *App) DownloadArchiveTo(sessionID, remote, local string) (e error) {
+func archiveSelectionName(targets []string) string {
+	if len(targets) == 1 {
+		return archiveName(targets[0])
+	}
+	return "DengShell-files.tar.gz"
+}
+func (a *App) DownloadArchiveTo(sessionID, remote, local string) error {
+	return a.DownloadSelectionArchiveTo(sessionID, []string{remote}, local)
+}
+func (a *App) DownloadSelectionArchiveTo(sessionID string, targets []string, local string) (e error) {
 	s, e := a.fileSession(sessionID)
 	if e != nil {
 		return e
 	}
-	remote, e = remotePath(remote)
+	targets, e = archiveTargets(targets)
 	if e != nil {
 		return e
 	}
@@ -514,7 +564,7 @@ func (a *App) DownloadArchiveTo(sessionID, remote, local string) (e error) {
 	defer f.Close()
 	op := startSFTPOperation(s.ctx, s, sftpIdleTimeout)
 	defer op.finish(&e)
-	if e = archiveRemote(op.ctx, s.files, remote, f); e != nil {
+	if e = archiveRemoteSelection(op.ctx, s.files, targets, f); e != nil {
 		return e
 	}
 	if e = f.Close(); e != nil {

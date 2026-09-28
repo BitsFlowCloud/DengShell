@@ -76,4 +76,29 @@ func (d *Desktop) DownloadArchive(sessionID, remote string) (string, error) {
 	}
 	return destination, nil
 }
+
+// One save dialog for the entire selection, including selected directories.
+func (d *Desktop) DownloadSelectionArchive(sessionID string, paths []string) (string, error) {
+	if err := d.app.RequireUnlocked(); err != nil {
+		return "", err
+	}
+	if len(paths) == 0 {
+		return "", errors.New("请先选择文件")
+	}
+	name := "DengShell-files.tar.gz"
+	if len(paths) == 1 {
+		name = path.Base(paths[0]) + ".tar.gz"
+	}
+	destination, err := runtime.SaveFileDialog(d.ctx, runtime.SaveDialogOptions{Title: "打包并下载所选项目", DefaultFilename: name})
+	if err != nil || destination == "" {
+		return "", err
+	}
+	if err = d.app.RequireUnlocked(); err != nil {
+		return "", err
+	}
+	if err = d.app.DownloadSelectionArchiveTo(sessionID, paths, destination); err != nil {
+		return "", err
+	}
+	return destination, nil
+}
 func (d *Desktop) OpenAbout() { runtime.BrowserOpenURL(d.ctx, "https://dengshell.com") }

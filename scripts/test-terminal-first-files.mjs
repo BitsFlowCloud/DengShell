@@ -32,9 +32,9 @@ function fixture() {
   const context = vm.createContext({
     state, sessions: new Map([[state.id, state]]), activeID: state.id, current: () => state,
     Uint8Array, TextDecoder, atob, AbortController,
-    $: element, window: {}, fileSortKey: 'name', ascending: true, selectedName: '',
+    $: element, window: {}, fileSortKey: 'name', ascending: true,
     compareFileEntries: () => 0, normalizePath: path => path,
-    DengFileBrowser: { invalidate() {} }, renderTree() {}, updateFileActions() {},
+    DengFileBrowser: { invalidate() {} }, renderTree() {}, updateFileActions() {}, reflectFileSelection() {},
     renderSessionInfo() { renders++; },
     toast: message => notices.push(message), recordCommand() {}, sendInput: (_state, text) => inputs.push(text),
     setTimeout: (callback, delay) => { timers.push({ callback, delay }); return timers.length; },

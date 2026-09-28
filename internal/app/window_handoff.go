@@ -242,7 +242,10 @@ func (a *App) registerWindowHandoffHTTP(mux *http.ServeMux) {
 	// Local dialogs are owned by the child window. Actual file/config operations
 	// still run in the single primary backend, preventing concurrent store writers.
 	mux.HandleFunc("POST /api/windows/native", func(w http.ResponseWriter, r *http.Request) {
-		var input struct{ Method, SessionID, Remote, Local, Kind, Name string }
+		var input struct {
+			Method, SessionID, Remote, Local, Kind, Name string
+			Paths                                        []string
+		}
 		if !decode(w, r, &input) {
 			return
 		}
@@ -255,6 +258,8 @@ func (a *App) registerWindowHandoffHTTP(mux *http.ServeMux) {
 			err = a.DownloadTo(input.SessionID, input.Remote, input.Local)
 		case "archive":
 			err = a.DownloadArchiveTo(input.SessionID, input.Remote, input.Local)
+		case "archive-selection":
+			err = a.DownloadSelectionArchiveTo(input.SessionID, input.Paths, input.Local)
 		case "external-file":
 			value, err = a.PrepareExternalFile(input.SessionID, input.Remote)
 		default:
