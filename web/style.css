@@ -87,8 +87,8 @@ svg use { pointer-events: none; }
 .metric { display: flex; align-items: center; gap: 10px; margin: 7px 0; font-size: 11px; }
 .metric > span { width: 27px; color: #7f93a3; }
 .meter { flex: 1; height: 21px; position: relative; background: #f2f5f8; overflow: hidden; border-radius: 7px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; font-size: 10px; font-variant-numeric: tabular-nums; }
-.meter i { position: absolute; inset: 0 auto 0 0; border-radius: 7px; background: #cddfeb; }
-.meter i.cpu-fill { background: #c5e0d4; min-width: 7px; }
+.meter i { width: 0; min-width: 0; position: absolute; inset: 0 auto 0 0; border-radius: 7px; background: #cddfeb; }
+.meter i.cpu-fill { background: #c5e0d4; }
 .meter i.memory-fill { background: #c8ddeb; }
 .meter b, .meter em { position: relative; font-weight: 400; font-style: normal; }
 .meter b { color: #698394; }

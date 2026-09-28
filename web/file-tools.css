@@ -61,5 +61,3 @@
 
 /* File rows are selectable items, never a browser text-selection region. */
 #file-list, #file-list * { user-select: none; -webkit-user-select: none; }
-#file-list tr.selected td:first-child { box-shadow: inset 3px 0 var(--accent, #406a82); }
-#file-list tr:focus-visible { outline: 1px solid var(--accent, #406a82); outline-offset: -1px; }
