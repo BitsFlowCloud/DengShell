@@ -195,6 +195,8 @@ svg use { pointer-events: none; }
 .file-tab svg { width: 14px; height: 14px; }
 .file-tab.active { background: #edf3f7; color: #7190a7; }
 .count-badge { font-size: 9px; padding: 0 4px; line-height: 14px; background: #e9eff4; border-radius: 5px; color: #9cb0bd; min-width: 16px; text-align: center; }
+#transfer-count { min-width: 16px; padding: 0 5px; border-radius: 9px; background: #c94c57; color: #fff; font-weight: 600; }
+
 .files-tip { margin-left: auto; font-size: 10px; color: #b0bdc7; margin-right: 6px; }
 .files-view { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .file-toolbar { display: flex; align-items: center; height: 42px; min-height: 42px; padding: 0 13px 7px; gap: 5px; }

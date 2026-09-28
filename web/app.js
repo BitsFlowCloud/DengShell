@@ -867,7 +867,7 @@ $('#toggle-sftp').onclick = () => {
   if ($('#files-panel').hidden) { showPane('files'); setWorkspaceVisible(true); }
   else setWorkspaceVisible(false);
 };
-function showPane(pane) { setWorkspaceVisible(true, false); $$('.file-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.pane === pane)); $('#files-view').hidden = pane !== 'files'; $('#transfers-view').hidden = pane !== 'transfers'; $('#commands-view').hidden = pane !== 'commands'; $('#common-apps-view').hidden = pane !== 'common-apps'; window.DengCommonApps?.render(); $('.follow-label').hidden = pane !== 'files'; $('.files-tip').hidden = pane !== 'files'; }
+function showPane(pane) { setWorkspaceVisible(true, false); $$('.file-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.pane === pane)); $('#files-view').hidden = pane !== 'files'; $('#transfers-view').hidden = pane !== 'transfers'; $('#commands-view').hidden = pane !== 'commands'; $('#common-apps-view').hidden = pane !== 'common-apps'; window.DengCommonApps?.render(); $('.follow-label').hidden = pane !== 'files'; $('.files-tip').hidden = pane !== 'files'; updateTransferNotice(); }
 $$('.file-tab').forEach(tab => { tab.onclick = () => { showPane(tab.dataset.pane); save('dengshell.workspace', { ...readSaved('dengshell.workspace', {}), pane: tab.dataset.pane }); }; });
 $('#choose-files').onclick = event => { const menu = $('#upload-menu'), rect = event.currentTarget.getBoundingClientRect(); menu.hidden = !menu.hidden; menu.style.left = `${Math.min(rect.left / effectiveScale, logicalWidth() - 155)}px`; menu.style.top = `${Math.min(rect.bottom / effectiveScale + 5, logicalHeight() - 90)}px`; };
 document.addEventListener('click', event => { if (!event.target.closest('#upload-menu, #choose-files')) $('#upload-menu').hidden = true; });
@@ -886,7 +886,7 @@ async function queueFiles(items, state = current(), destination = state?.cwd) {
   const selected = prepared.filter(item => !window.DengUploadConfirmation.skipped(item.target, skipped));
   if (!selected.length) return toast('已跳过全部同名文件');
   for (const { file, target } of selected) { const id = crypto.randomUUID(); localTasks.set(id, { id, sessionId: state.id, name: file.name, target, total: file.size, done: 0, status: 'queued', file, overwrite: approved.has(target) }); }
-  showPane('transfers'); renderTransfers(); pumpUploads();
+  renderTransfers(); pumpUploads(); toast(`已添加 ${selected.length} 个上传任务`);
 }
 function pumpUploads() { for (const task of localTasks.values()) if (task.file && !task.xhr && task.status === 'queued' && activeUploads < 4) { activeUploads++; task.status = 'uploading'; uploadBrowser(task).finally(() => { activeUploads--; pumpUploads(); renderTransfers(); }); } }
 async function uploadBrowser(task) {
@@ -907,18 +907,35 @@ async function uploadNative(paths, state = current(), directory = state?.cwd) {
   const decision = await window.DengUploadConfirmation.prepare(state, { paths, directory });
   if (!decision) return;
   const result = await post(`/api/sessions/${state.id}/upload-local`, { paths, directory, ...decision });
-  showPane('transfers'); await pollTransfers(); if (!result.ids.length) { toast(decision.skipTargets.length ? '已跳过同名项目' : '目录已创建'); await navigate(state.cwd, state); }
+  for (const id of result.ids) { nativeUploadIDs.add(id); const task = localTasks.get(id); if (task?.historicalResult) { task.resultSeen = false; delete task.historicalResult; } }
+  await pollTransfers(); updateTransferNotice(); if (result.ids.length) toast(`已添加 ${result.ids.length} 个上传任务`); if (!result.ids.length) { toast(decision.skipTargets.length ? '已跳过同名项目' : '目录已创建'); await navigate(state.cwd, state); }
 }
 window.cloudshellNativeDrop = safe(async ({ x, y, paths }) => {
   const rect = $('#files-panel').getBoundingClientRect(); if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return toast('请将文件拖入下方文件区域');
   if (paths?.length) await uploadNative(paths);
 });
 function refreshUploaded(task) { const state = sessions.get(task.sessionId); if (!state?.connected || task.refreshed) return; task.refreshed = true; if (task.target.startsWith(state.cwd === '/' ? '/' : state.cwd + '/')) navigate(state.cwd, state).catch(() => {}); }
-let transfersBusy = false, transferEpoch = 0, clearingTransfers = false;
+let transfersBusy = false, transferEpoch = 0, clearingTransfers = false, transfersInitialized = false;
+const nativeUploadIDs = new Set();
 async function pollTransfers() {
   if (transfersBusy) return; transfersBusy = true; const epoch = transferEpoch;
-  try { const tasks = await api('/api/transfers'); if (epoch !== transferEpoch) return; const present = new Set(tasks.map(t => t.id)); for (const [id, task] of localTasks) if (task.backendSeen && task.status === 'done' && !present.has(id)) localTasks.delete(id); for (const incoming of tasks) { let task = localTasks.get(incoming.id); if (task) { if (!['done', 'failed', 'cancelled'].includes(task.status) || incoming.status !== 'uploading') Object.assign(task, incoming); } else { task = incoming; localTasks.set(task.id, task); } task.backendSeen = true; if (task.status === 'done') refreshUploaded(task); } renderTransfers(); }
-  catch {} finally { transfersBusy = false; }
+  try {
+    const tasks = await api('/api/transfers'); if (epoch !== transferEpoch) return;
+    const present = new Set(tasks.map(task => task.id));
+    for (const [id, task] of localTasks) if (task.backendSeen && task.status === 'done' && !present.has(id)) localTasks.delete(id);
+    for (const incoming of tasks) {
+      let task = localTasks.get(incoming.id);
+      if (task) {
+        if (!['done', 'failed', 'cancelled'].includes(task.status) || incoming.status !== 'uploading') Object.assign(task, incoming);
+      } else {
+        const historical = !transfersInitialized && !nativeUploadIDs.has(incoming.id) && ['done', 'failed', 'cancelled'].includes(incoming.status);
+        task = { ...incoming, resultSeen: historical, historicalResult: historical }; localTasks.set(task.id, task);
+      }
+      nativeUploadIDs.delete(task.id); task.backendSeen = true;
+      if (task.status === 'done') refreshUploaded(task);
+    }
+    transfersInitialized = true; renderTransfers();
+  } catch {} finally { transfersBusy = false; }
 }
 setInterval(pollTransfers, 1000);
 async function clearCompletedTransfers() {
@@ -942,11 +959,25 @@ async function cancelTask(task) {
 async function retryTask(task) {
   const overwrite = task.error?.includes('已存在'); if (overwrite && !await ask({ title: `覆盖 ${task.name}？`, description: `将替换远程文件 ${task.target}。`, confirm: '覆盖并上传' })) return;
   if (!task.file) { await post(`/api/transfers/${task.id}/retry`, { overwrite }); await remove(`/api/transfers/${task.id}`); localTasks.delete(task.id); await pollTransfers(); return; }
-  await remove(`/api/transfers/${task.id}`); localTasks.delete(task.id); const next = { ...task, id: crypto.randomUUID(), done: 0, error: '', status: 'queued', overwrite, refreshed: false }; localTasks.set(next.id, next); pumpUploads(); renderTransfers();
+  await remove(`/api/transfers/${task.id}`); localTasks.delete(task.id); const next = { ...task, id: crypto.randomUUID(), done: 0, error: '', status: 'queued', overwrite, refreshed: false, resultSeen: false, historicalResult: false }; localTasks.set(next.id, next); pumpUploads(); renderTransfers();
+}
+// Read state lives on each task so repeated polls cannot re-notify a result.
+// Initial history is already read; jobs created by this window are always new.
+function updateTransferNotice() {
+  const viewing = !document.hidden && !window.DengShellWindowHidden && !window.DengSecurityLock?.isLocked()
+    && !$('#files-panel').hidden && !$('#transfers-view').hidden && $('#transfers-view').getClientRects().length > 0
+    && !document.querySelector('dialog[open]');
+  const results = [...localTasks.values()].filter(task => ['done', 'failed'].includes(task.status));
+  if (viewing) for (const task of results) { task.resultSeen = true; delete task.historicalResult; }
+  const unread = results.filter(task => !task.resultSeen), failed = unread.filter(task => task.status === 'failed').length;
+  const badge = $('#transfer-count'), tab = $('.file-tab[data-pane="transfers"]');
+  badge.hidden = unread.length === 0; badge.textContent = unread.length > 99 ? '99+' : String(unread.length);
+  const label = unread.length ? `传输任务：${unread.length} 个新结果（完成 ${unread.length - failed} 项${failed ? `，失败 ${failed} 项` : ''}）` : '传输任务';
+  tab.title = label; tab.setAttribute('aria-label', label); badge.setAttribute('aria-label', label);
 }
 function renderTransfers() {
   $('#clear-completed-transfers').disabled = clearingTransfers || ![...localTasks.values()].some(t => t.status === 'done');
-  $('#transfer-count').textContent = localTasks.size; $('#transfer-empty').hidden = localTasks.size > 0;
+  updateTransferNotice(); $('#transfer-empty').hidden = localTasks.size > 0;
   const label = { queued: '等待上传', uploading: '上传中', done: '已完成', failed: '失败', cancelled: '已取消' };
   $('#transfer-list').replaceChildren(...[...localTasks.values()].map(task => {
     const row = node('div', 'transfer-row'), info = node('div', 'transfer-info'); const name = node('strong', '', task.name), detail = node('small', '', task.error || task.target); detail.title = task.error || task.target; info.append(name, detail);
