@@ -58,3 +58,6 @@
 @media(max-width:700px){.text-editor-dialog{padding:8px}.text-editor-tab{max-width:230px}.text-editor-toolbar{gap:4px}.text-editor-dialog .upload-button,.text-editor-dialog summary,.text-editor-dialog .primary-button{padding:4px 6px}.text-editor-footer>span{flex-basis:50%}}
 
 .file-context-menu button.file-context-danger{color:#ad6d77}[data-theme=dark] .file-context-menu button.file-context-danger{color:#d9a0aa}
+
+/* File rows are selectable items, never a browser text-selection region. */
+#file-list, #file-list * { user-select: none; -webkit-user-select: none; }
