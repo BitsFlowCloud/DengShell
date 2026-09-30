@@ -116,6 +116,7 @@ const temporaryProfiles = new Map();
 const connectionRequests = new Map();
 const connectionAttempts = new Map();
 let nextSessionOrder = 0;
+let workspaceInitialized = false;
 const current = () => sessions.get(activeID);
 const connectionProfile = id => profiles.find(p => p.id === id) || temporaryProfiles.get(id);
 const profileFor = session => connectionProfile(session?.profileId);
@@ -131,9 +132,14 @@ async function loadProfiles() {
   acceptServerManagerConfig(config); renderConnections(); renderTabs(); renderCommands(); renderKeyChoices(); renderKeys();
   await acceptAppearanceConfig(config);
   clampLayouts();
-  const savedPane = readSaved('dengshell.workspace', {}).pane;
-  if (['files', 'commands', 'common-apps', 'transfers'].includes(savedPane)) showPane(savedPane);
-  setWorkspaceVisible(!layout.filesHidden, false);
+  // Restore once at startup. Sync/config refreshes must not pull an active
+  // workspace back to a saved tab, including while a dropped file uploads.
+  if (!workspaceInitialized) {
+    workspaceInitialized = true;
+    const savedPane = readSaved('dengshell.workspace', {}).pane;
+    if (['files', 'commands', 'common-apps', 'transfers'].includes(savedPane)) showPane(savedPane, false);
+    setWorkspaceVisible(!layout.filesHidden, false);
+  }
   window.DengShellHelp?.acceptConfig(config);
 }
 
@@ -858,6 +864,7 @@ document.addEventListener('keydown', event => { if (event.key === 'Escape' && !d
 
 // Stream files through SFTP. Completion reflects remote writes, not just browser upload progress.
 function setWorkspaceVisible(visible, persist = true) {
+  if (persist) workspaceInitialized = true;
   $('#files-panel').hidden = !visible; $('#files-splitter').hidden = !visible;
   $('#toggle-sftp').setAttribute('aria-expanded', String(visible));
   if (persist) { layout.filesHidden = !visible; save('cloudshell.layout', layout); }
@@ -867,8 +874,8 @@ $('#toggle-sftp').onclick = () => {
   if ($('#files-panel').hidden) { showPane('files'); setWorkspaceVisible(true); }
   else setWorkspaceVisible(false);
 };
-function showPane(pane) { setWorkspaceVisible(true, false); $$('.file-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.pane === pane)); $('#files-view').hidden = pane !== 'files'; $('#transfers-view').hidden = pane !== 'transfers'; $('#commands-view').hidden = pane !== 'commands'; $('#common-apps-view').hidden = pane !== 'common-apps'; window.DengCommonApps?.render(); $('.follow-label').hidden = pane !== 'files'; $('.files-tip').hidden = pane !== 'files'; updateTransferNotice(); }
-$$('.file-tab').forEach(tab => { tab.onclick = () => { showPane(tab.dataset.pane); save('dengshell.workspace', { ...readSaved('dengshell.workspace', {}), pane: tab.dataset.pane }); }; });
+function showPane(pane, persist = true) { workspaceInitialized = true; setWorkspaceVisible(true, false); $$('.file-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.pane === pane)); $('#files-view').hidden = pane !== 'files'; $('#transfers-view').hidden = pane !== 'transfers'; $('#commands-view').hidden = pane !== 'commands'; $('#common-apps-view').hidden = pane !== 'common-apps'; window.DengCommonApps?.render(); $('.follow-label').hidden = pane !== 'files'; $('.files-tip').hidden = pane !== 'files'; if (persist) save('dengshell.workspace', { ...readSaved('dengshell.workspace', {}), pane }); updateTransferNotice(); }
+$$('.file-tab').forEach(tab => { tab.onclick = () => showPane(tab.dataset.pane); });
 $('#choose-files').onclick = event => { const menu = $('#upload-menu'), rect = event.currentTarget.getBoundingClientRect(); menu.hidden = !menu.hidden; menu.style.left = `${Math.min(rect.left / effectiveScale, logicalWidth() - 155)}px`; menu.style.top = `${Math.min(rect.bottom / effectiveScale + 5, logicalHeight() - 90)}px`; };
 document.addEventListener('click', event => { if (!event.target.closest('#upload-menu, #choose-files')) $('#upload-menu').hidden = true; });
 $('#upload-files-option').onclick = safe(async () => { $('#upload-menu').hidden = true; if (native()) { const state = current(); const directory = state?.cwd; const paths = await native().ChooseUploads(); if (paths?.length) await uploadNative(paths, state, directory); } else $('#file-picker').click(); });

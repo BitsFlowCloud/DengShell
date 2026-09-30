@@ -45,6 +45,30 @@ try{
  // Drag-and-drop uses the same background queue.
  await page.evaluate(()=>{const dt=new DataTransfer();dt.items.add(new File(['drag'], 'dragged.txt'));document.querySelector('#files-panel').dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true}))});
  await page.waitForFunction(()=>[...localTasks.values()].some(t=>t.name==='dragged.txt'));await settle();assert.equal(await pane(),'files');await assertCount(1);await read();await go('files');
+ // Windows/macOS native drops use a separate path callback. Reopening SFTP
+ // must not allow a later config refresh (including background sync) to restore
+ // the previously viewed transfer pane while the upload is in progress.
+ await read();await page.click('#toggle-sftp');await page.click('#toggle-sftp');assert.equal(await pane(),'files');
+ fs.writeFileSync(path.join(local,'native-drop.txt'),'native-drop');
+ await page.evaluate(async file=>{
+  const rect=document.querySelector('#files-panel').getBoundingClientRect();
+  await window.cloudshellNativeDrop({x:rect.left+40,y:rect.top+80,paths:[file]});
+  await loadProfiles();
+ },path.join(local,'native-drop.txt'));
+ await settle();assert.equal(await pane(),'files','config reload after native drop must preserve the visible file pane');
+ assert.equal(fs.readFileSync(path.join(remote,'native-drop.txt'),'utf8'),'native-drop');await assertCount(1);await read();await go('files');
+ // Test the actual native drop callback with a directory while another pane
+ // is selected; successful uploads should only add the completion badge.
+ fs.mkdirSync(path.join(local,'dropped-folder'));fs.writeFileSync(path.join(local,'dropped-folder/文件.txt'),'native-directory');
+ await go('commands');await page.evaluate(async folder=>{const r=document.querySelector('#files-panel').getBoundingClientRect();await cloudshellNativeDrop({x:r.left+40,y:r.top+80,paths:[folder]});await loadProfiles()},path.join(local,'dropped-folder'));
+ await settle();assert.equal(await pane(),'commands');await assertCount(1);assert.equal(fs.readFileSync(path.join(remote,'dropped-folder/文件.txt'),'utf8'),'native-directory');await read();await go('files');
+ // A config response can arrive after the user changes panes. Even if the
+ // older response contains 'transfers', it must not undo that local choice.
+ await page.evaluate(async()=>{
+  window.qaConfigAPI=api;window.qaOldConfig=await api('/api/config');qaOldConfig.appearance.layout['dengshell.workspace']={pane:'transfers'};
+  api=(p,o)=>p==='/api/config'?new Promise(resolve=>{window.qaConfigResolve=resolve}):qaConfigAPI(p,o);window.qaConfigRefresh=loadProfiles();
+ });
+ await page.waitForFunction(()=>typeof qaConfigResolve==='function');await go('commands');await page.evaluate(async()=>{await DengPortablePreferences.flush();qaConfigResolve(qaOldConfig);await qaConfigRefresh;api=qaConfigAPI});assert.equal(await pane(),'commands');await go('files');
  // A failed actual SFTP write is also visible as a new result, and a successful
  // retry gets its own notice even though the original failure was viewed.
  fs.mkdirSync(path.join(remote,'blocked'),{mode:0o500});
@@ -72,5 +96,9 @@ try{
  await read();await go('files');await page.evaluate(()=>pollTransfers());await assertCount(0);
  await page.evaluate(()=>{localTasks.clear();for(let i=0;i<120;i++)localTasks.set('many-'+i,{id:'many-'+i,status:'done'});updateTransferNotice()});await assertCount(120);assert.match((await notice()).title,/120 个新结果/);await read();await assertCount(0);
  await page.evaluate(()=>{api=qaAPI;localTasks.clear();renderTransfers()});assert.deepEqual(errors,[]);
- console.log('PASS: browser/native/folder/drop uploads stay on current pane; notifications only after remote completion; read acknowledgement; no repeated notices; accumulated results; failures/retry; cancel; hidden panel/window; initial history and fast native-result race; light/dark badge.');
+ // Startup still restores a deliberately selected pane; after reopening SFTP,
+ // both config refresh and the next startup must retain the file pane.
+ await read();await page.evaluate(()=>DengPortablePreferences.flush());await page.reload({waitUntil:'networkidle0'});await page.waitForFunction(()=>DengPortablePreferences.ready);assert.equal(await pane(),'transfers');
+ await page.click('#toggle-sftp');await page.click('#toggle-sftp');await page.evaluate(()=>DengPortablePreferences.flush());await page.reload({waitUntil:'networkidle0'});await page.waitForFunction(()=>DengPortablePreferences.ready);assert.equal(await pane(),'files');assert.deepEqual(errors,[]);
+ console.log('PASS: browser/native/folder/drop uploads stay on current pane; native drop + config refresh regression; delayed config response; startup pane restoration; notifications only after remote completion; read acknowledgement; no repeated notices; accumulated results; failures/retry; cancel; hidden panel/window; initial history and fast native-result race; light/dark badge.');
 }catch(error){if(page&&process.env.DENGSHELL_UI_ARTIFACTS)await page.screenshot({path:process.env.DENGSHELL_UI_ARTIFACTS+'/upload-notice-failure.png'});console.error({errors});throw error}finally{await browser.close()}
