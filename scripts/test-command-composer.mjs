@@ -21,4 +21,4 @@ for (const text of ['rm [p#1 路径]', 'echo [p#7 bad]', 'pwd\x1b[201~\n', 'pwd\
 a.connected = false; assert.throws(() => c.send(a, 'pwd'), /目标连接/);
 a.connected = true; states.set('a', { ...a }); assert.throws(() => c.send(a, 'pwd'), /目标连接/);
 assert.equal(sent.length, 0);
-console.log('PASS: parameters; no-CR; explicit CR; multiline/control/unresolved guards; pinned target; replaced/disconnected session rejected.');
+console.log('PASS: parameters; no-CR; explicit CR; multiline/control/unresolved guards; explicit destination; replaced/disconnected session rejected.');

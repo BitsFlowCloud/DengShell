@@ -80,6 +80,69 @@ try {
     assert.equal(await page.evaluate(() => current().term.buffer.active.viewportY), points.before);
   });
   await page.evaluate(() => { appearance.uiScale = 1; applyUIScale(); window.qaCommand = { id: 'qa-param', name: '参数命令', body: 'echo [p#1 内容]', appendCR: true }; });
+  await check('Command target follows tabs, keeps values and never falls back to a stale server', async () => {
+    const result = await page.evaluate(() => {
+      const a = current();
+      const id = 'target-fixture-b';
+      profiles.push({ id, name: 'Second session', user: 'qa', host: 'fixture.invalid', port: 22 });
+      const b = { ...makeSessionState({ id, profileId: id, home: '/' }), localOnly: false, ready: true };
+      sessions.set(id, b); createTerminal(b);
+      const c = { id: 'target-test', name: '目标跟随', body: 'echo [p#1 内容]', appendCR: true };
+      const value = () => $('#composer-target').value;
+      DengCommandComposer.run(c);
+      const input = $('[data-parameter="1"]'); input.value = 'retained'; input.dispatchEvent(new Event('input'));
+      activate(b.id); const afterSwitch = value(), retained = input.value;
+      const realPaste = pasteTerminalText, sent = [];
+      try {
+        pasteTerminalText = (state, body) => { sent.push({ id: state.id, body }); return true; };
+        $('#composer-send').click();
+        activate(a.id); DengCommandComposer.run(c); const reopened = value();
+        $('#composer-target').value = b.id; $('#composer-target').dispatchEvent(new Event('change'));
+        renderTabs(); const manualAfterBackground = value();
+        activate(b.id); activate(a.id); const manualAfterSwitch = value();
+        b.connected = false; activate(b.id); const disconnected = { target: value(), disabled: $('#composer-send').disabled };
+        $('#composer-send').click();
+        activeID = null; renderTabs(); const noSSH = { target: value(), disabled: $('#composer-send').disabled };
+        $('#composer-send').click();
+        b.connected = true; activate(b.id); dropSessionView(b.id); const closed = value();
+        activate(a.id); DengCommandComposer.run(c); const savedValue = $('[data-parameter="1"]').value;
+        $('#command-composer .text-button').click();
+        return { a: a.id, b: id, afterSwitch, retained, sent, reopened, manualAfterBackground, manualAfterSwitch, disconnected, noSSH, closed, savedValue };
+      } finally { pasteTerminalText = realPaste; }
+    });
+    assert.equal(result.afterSwitch, result.b); assert.equal(result.retained, 'retained');
+    assert.deepEqual(result.sent, [{ id: result.b, body: 'echo retained' }]);
+    assert.equal(result.reopened, result.a); assert.equal(result.manualAfterBackground, result.b);
+    assert.equal(result.manualAfterSwitch, result.a);
+    assert.deepEqual(result.disconnected, { target: result.b, disabled: true });
+    assert.deepEqual(result.noSSH, { target: '', disabled: true });
+    assert.equal(result.closed, result.a); assert.equal(result.savedValue, 'retained');
+  });
+  for (const theme of ['dark', 'light']) {
+    for (const width of [1960, 1600, 900, 640]) {
+      await page.setViewport({ width, height: 1100, deviceScaleFactor: 1 });
+      await page.evaluate(theme => { document.documentElement.dataset.theme = theme; document.documentElement.style.setProperty('--files-height', '240px'); showPane('commands'); }, theme);
+      await pause(100);
+      const before = await page.$eval('#files-panel', e => e.getBoundingClientRect().height);
+      await page.evaluate(() => DengCommandComposer.run({ id: 'five-parameters', name: '五参数命令', body: 'echo [p#1 容器名称] [p#2 起始端口] [p#3 结束端口] [p#4 超时秒数] [p#5 描述]', appendCR: true }));
+      await pause(100);
+      await check(`Horizontal parameters wrap without clipping: ${theme} ${width}`, async () => {
+        const sizes = await page.evaluate(() => {
+          const fields = $('.command-parameter-fields'), panel = $('#command-composer');
+          return { overflow: panel.scrollWidth > panel.clientWidth + 1, fields: fields.getBoundingClientRect().toJSON(), inputs: [...fields.querySelectorAll('input')].map(e => e.getBoundingClientRect().toJSON()) };
+        });
+        assert.equal(sizes.overflow, false);
+        assert.equal(sizes.inputs.length, 5);
+        for (const i of sizes.inputs) { assert(i.left >= sizes.fields.left - 1 && i.right <= sizes.fields.right + 1); assert(i.height <= 33); }
+        if (width >= 1600) assert.equal(sizes.inputs[0].top, sizes.inputs[3].top, 'four fields should fit on one row');
+        if (width === 1960) assert.equal(sizes.inputs[0].top, sizes.inputs[4].top, 'five fields should fit on a wide workspace');
+        if (width === 640) assert(sizes.inputs[4].top > sizes.inputs[0].top);
+        assert(Math.abs(await page.$eval('#files-panel', e => e.getBoundingClientRect().height) - before) < 1);
+      });
+      await page.screenshot({ path: stage + `/evidence/five-parameters-${theme}-${width}.png` });
+      await page.click('#command-composer .text-button');
+    }
+  }
   for (const theme of ['dark', 'light']) {
     for (const width of [1600, 900]) {
       await page.setViewport({ width, height: 1000, deviceScaleFactor: 1 });

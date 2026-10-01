@@ -104,16 +104,19 @@ dialog textarea::placeholder { color: var(--text-faint, #9fadb8); }
 
 /* Saved templates open a small parameter form; editing stays an explicit action. */
 .command-composer { margin:0 0 12px; }
-.command-composer-compact { display:grid; grid-template-columns:minmax(0,1fr) minmax(150px,1fr); gap:8px 14px; padding:10px 12px; }
+.command-composer-compact { display:grid; grid-template-columns:minmax(0,1fr) minmax(150px,1fr); gap:6px 14px; padding:8px 12px; }
 .command-composer-compact :is(.composer-template-label,.command-parameter-buttons,#composer-preview,.composer-save-as,.command-composer-note) { display:none; }
 .command-composer-compact .command-composer-heading { margin:0; min-width:0; }
+.command-composer-compact .command-composer-heading .text-button { padding:4px 8px; line-height:24px; }
 .command-composer-compact .command-composer-heading strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .command-composer-compact .composer-target-label { flex-direction:row; align-items:center; margin:0; font-size:11px; }
 .command-composer-compact .composer-target-label > :is(select,.themed-select) { flex:1; min-width:0; }
+.command-composer-compact .themed-select-trigger { min-height:32px; padding-top:5px; padding-bottom:5px; }
 .command-composer-compact .command-parameter-fields { grid-column:1/-1; gap:8px; }
-.command-composer-compact .command-parameter-fields label { margin:0; font-size:12px; gap:4px; }
+.command-composer-compact .command-parameter-fields label { margin:0; font-size:12px; line-height:18px; gap:4px; }
 .command-composer-compact .command-composer-footer { grid-column:1/-1; }
 .command-composer-compact .command-composer-footer label { margin:0; font-size:12px; }
+.command-composer-compact .command-composer-footer .primary-button { padding:5px 12px; font-size:12px; line-height:22px; }
 @media(max-width:650px) { .command-composer-compact { grid-template-columns:minmax(0,1fr); } }
 
 .transfer-notice { display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -138,12 +141,6 @@ dialog textarea::placeholder { color: var(--text-faint, #9fadb8); }
 /* Parameter entry replaces the command list without moving the splitter. */
 .command-parameters-open :is(.command-list,#commands-empty) { display:none; }
 .command-composer-compact { margin-bottom:0; }
-.command-composer-compact .command-parameter-fields { grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),240px)); }
+.command-composer-compact .command-parameter-fields { display:flex; flex-wrap:wrap; align-items:start; }
+.command-composer-compact .command-parameter-fields label { flex:1 1 160px; max-width:min(100%,240px); overflow-wrap:anywhere; }
 .command-composer-compact .command-parameter-fields input { box-sizing:border-box; height:32px; padding:5px 9px; font-family:inherit; font-size:12px; line-height:1.5; }
-
-.command-composer-compact .command-parameter-fields { grid-column:1; }
-.command-composer-compact .command-composer-footer { grid-column:2; align-self:end; justify-content:flex-end; }
-@media(max-width:650px) {
-  .command-composer-compact .command-parameter-fields,
-  .command-composer-compact .command-composer-footer { grid-column:1; }
-}

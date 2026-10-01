@@ -1,8 +1,8 @@
-# DengShell Android（0.1.0 alpha 7）
+# DengShell Android（0.1.0 alpha 8）
 
 这一版把 DengShell 的现有 SSH/SFTP 后端装入 Android 应用，并针对竖屏和横屏提供触控布局。应用在设备本机的 `127.0.0.1` 启动服务，界面通过内置 WebView 访问；服务器配置保存在应用私有目录中。
 
-安装包已放在 [DengShell 官网](https://dengshell.com/#downloads) 和 [GitHub 发布页](https://github.com/BitsFlowCloud/DengShell/releases/tag/v0.02-build.20260929091)。
+安装包已放在 [DengShell 官网](https://dengshell.com/#downloads) 和 [GitHub 发布页](https://github.com/BitsFlowCloud/DengShell/releases/tag/v0.02-build.20261001093)。
 
 ## 选择安装包
 
@@ -59,3 +59,7 @@ GRADLE_USER_HOME="$PWD/.gradle" gradle :app:assembleDebug
 ## 2026-09-29 · alpha7
 
 同步文件批量操作、上传完成提醒与零占用色条修复；保持原签名，可覆盖安装 alpha6。
+
+## 2026-10-01 · alpha8
+
+快捷命令发送目标跟随当前标签，多参数横向排列并自适应换行；修复上传后意外切换页面。保持原签名，可覆盖安装 alpha7。

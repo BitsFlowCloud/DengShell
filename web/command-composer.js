@@ -40,6 +40,7 @@ window.DengCommandComposer = (() => {
   }
   let panel, template, fields, preview, target, cr, sendButton, note, title, activeDraft, compact = false;
   let previousHeight = null, expandedHeight = null;
+  let reflectedSession = null;
   const drafts = new Map();
   function collapse() {
     panel.hidden = true; $('#commands-view').classList.remove('command-parameters-open'); $('#toggle-command-composer').setAttribute('aria-expanded', 'false');
@@ -72,8 +73,16 @@ window.DengCommandComposer = (() => {
   }
   function reflect() {
     if (!target || !activeDraft) return;
+    const session = current() || null;
+    // A tab switch changes the destination, including pending/disconnected tabs.
+    // Never fall back to a previously usable server. Background renders keep an
+    // explicit dropdown choice until the user switches tabs or opens a command.
+    if (session !== reflectedSession) {
+      activeDraft.targetID = session?.id || '';
+      reflectedSession = session;
+    }
     const id = activeDraft.targetID, options = [...sessions.values()].filter(s => !s.closed && !s.localOnly);
-    const placeholder = node('option', '', id && !options.some(s => s.id === id) ? '原连接已关闭，请重新选择' : '请选择发送目标'); placeholder.value = '';
+    const placeholder = node('option', '', session?.localOnly && id === session.id ? '当前连接尚未就绪' : id && !options.some(s => s.id === id) ? '原连接已关闭，请重新选择' : '请选择发送目标'); placeholder.value = '';
     target.replaceChildren(placeholder, ...options.map(s => {
       const p = profileFor(s), option = node('option', '', `${sessionDisplayName(s)} · ${p?.user || ''}@${p?.host || ''}:${p?.port || 22}${usable(s) ? '' : ' · 不可发送'}`);
       option.value = s.id; return option;
@@ -86,10 +95,12 @@ window.DengCommandComposer = (() => {
     const source = command ? JSON.stringify([command.body, command.appendCR]) : '';
     if (!drafts.has(key) || body !== null || command && drafts.get(key).source !== source) drafts.set(key, { source, body: body ?? command?.body ?? '', values: {}, appendCR: command?.appendCR === true, targetID: current()?.id || '' });
     activeDraft = drafts.get(key);
+    activeDraft.targetID = current()?.id || '';
+    reflectedSession = current() || null;
     title.textContent = command ? `${compact ? '执行' : '命令编辑区'} · ${command.name}` : '命令编辑区';
     template.value = activeDraft.body; cr.checked = activeDraft.appendCR;
     panel.hidden = false; $('#toggle-command-composer').setAttribute('aria-expanded', 'true');
-    // The target is pinned in the draft. Switching a server tab cannot redirect it.
+    // Retain parameter values, but always start with the current server.
     renderParameters(); reflect();
     showPane('commands');
     // Expand the lower workspace just for this view; retain the user's saved
