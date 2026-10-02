@@ -22,14 +22,14 @@ import (
 	"time"
 )
 
-const ApplicationVersion = "v0.02"
+const ApplicationVersion = "v0.03"
 
 // Package managers use a normalized version greater than the previous 0.1.0.
-const ApplicationPackageVersion = "0.2.0"
+const ApplicationPackageVersion = "0.3.0"
 
 // Increase this integer for every published build, including packaging-only
 // releases. It also lets older clients identify repackaged releases.
-const ApplicationBuild uint64 = 20261001093
+const ApplicationBuild uint64 = 20261003094
 
 const UpdateManifestURL = "https://dengshell.com/up.deb.json"
 const updateTimeout = 3 * time.Second

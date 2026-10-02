@@ -82,5 +82,28 @@ try {
  fs.symlinkSync(path.join(remote,'keep.txt'),path.join(remote,'link.txt'));await page.evaluate(()=>navigate(qaState.cwd,qaState));
  // Recursive batch delete removes a link itself, never its unselected target.
  await choose(['folder','link.txt']);await page.click('#delete-file');await dialog();await finish();assert(!fs.existsSync(path.join(remote,'folder')));assert(!fs.existsSync(path.join(remote,'link.txt')));assert.equal(fs.readFileSync(path.join(remote,'keep.txt'),'utf8'),'fixture');
- assert.deepEqual(errors,[]);console.log('PASS: actual SFTP Ctrl/Cmd/Shift selection, select all, no text selection, filter/sort/refresh, right-click batch, single confirmation/cancel, batch archive, double-click navigation, delete/partial error, session/directory isolation, stale session rejection, symlink-safe recursion, light/dark.');
+ // A literal tilde name must remain under cwd for open, rename, upload and
+ // recursive delete. A separate home sentinel proves no home data is touched.
+ const contents=name=>fs.readFileSync(path.join(remote,name),'utf8');
+ write('protected-home/sentinel.txt','keep home');write('~','tilde file');
+ await page.evaluate(async remote=>{qaState.home=remote+'/protected-home';await navigate(remote,qaState)},remote);
+ await page.click(row('~'),{count:2});await page.waitForFunction(()=>[...document.querySelectorAll('.text-editor-area')].some(e=>e.value==='tilde file'));
+ await page.evaluate(()=>document.querySelectorAll('dialog[open]').forEach(d=>d.close()));
+ await choose(['~']);await page.click('#rename-file');await dialog();
+ await page.$eval('#action-input',e=>{e.value='renamed-tilde.txt'});await page.click('#action-confirm');
+ await page.waitForSelector(row('renamed-tilde.txt'));
+ assert.equal(contents('renamed-tilde.txt'),'tilde file');assert(fs.existsSync(path.join(remote,'protected-home/sentinel.txt')));
+ async function uploadTilde(relativePath,data){
+  await page.evaluate(async({relativePath,data})=>{const name=relativePath.split('/').pop();await queueFiles([{file:new File([data],name),relativePath}],qaState,qaState.cwd)},{relativePath,data});
+  await page.waitForFunction(async()=>{await pollTransfers();return [...localTasks.values()].every(t=>['done','failed','cancelled'].includes(t.status))});
+  assert((await page.evaluate(()=>[...localTasks.values()].map(t=>({status:t.status,error:t.error})))).every(t=>t.status==='done'));
+  await page.evaluate(()=>navigate(qaState.cwd,qaState));
+ }
+ await uploadTilde('~','uploaded tilde');assert.equal(contents('~'),'uploaded tilde');
+ await choose(['~']);await page.click('#delete-file');await dialog();assert((await page.$eval('#action-description',e=>e.textContent)).includes(path.join(remote,'~')));await finish();
+ assert(!fs.existsSync(path.join(remote,'~')));assert.equal(contents('protected-home/sentinel.txt'),'keep home');
+ await uploadTilde('~/nested.txt','tilde directory upload');assert.equal(contents('~/nested.txt'),'tilde directory upload');
+ await choose(['~']);await page.click('#delete-file');await dialog();await finish();
+ assert(!fs.existsSync(path.join(remote,'~')));assert.equal(contents('protected-home/sentinel.txt'),'keep home');
+ assert.deepEqual(errors,[]);console.log('PASS: actual SFTP Ctrl/Cmd/Shift selection, select all, no text selection, filter/sort/refresh, right-click batch, single confirmation/cancel, batch archive, double-click navigation, delete/partial error, session/directory isolation, stale session rejection, symlink-safe recursion, literal tilde open/rename/upload/delete with home preserved, light/dark.');
 }catch(error){if(page&&process.env.DENGSHELL_UI_ARTIFACTS)await page.screenshot({path:process.env.DENGSHELL_UI_ARTIFACTS+'/file-multiselect-failure.png'});console.error({errors,deletes});throw error}finally{await browser.close()}

@@ -86,7 +86,9 @@ async function api(path, options = {}) {
 const post = (path, body) => api(path, { method: 'POST', body: JSON.stringify(body) });
 const remove = path => api(path, { method: 'DELETE' });
 function prettySize(bytes) { if (bytes == null || !Number.isFinite(bytes)) return '—'; if (bytes < 1024) return `${Math.round(bytes)} B`; for (const [power, unit] of [[4, 'TB'], [3, 'GB'], [2, 'MB'], [1, 'KB']]) if (bytes >= 1024 ** power) return `${(bytes / 1024 ** power).toFixed(1)} ${unit}`; }
-function normalizePath(value, base = '/') { if (value === '~') return current()?.home || '/'; if (value.startsWith('~/')) value = (current()?.home || '') + value.slice(1); const result = []; for (const part of (value.startsWith('/') ? value : `${base}/${value}`).split('/')) { if (!part || part === '.') continue; if (part === '..') result.pop(); else result.push(part); } return '/' + result.join('/'); }
+// Remote entry names and upload paths are literal: a file named "~" must never
+// become the home directory. Only explicit navigation opts into home expansion.
+function normalizePath(value, base = '/', home = null) { if (home !== null) { if (value === '~') value = home || '/'; else if (value.startsWith('~/')) value = (home || '') + value.slice(1); } const result = []; for (const part of (value.startsWith('/') ? value : `${base}/${value}`).split('/')) { if (!part || part === '.') continue; if (part === '..') result.pop(); else result.push(part); } return '/' + result.join('/'); }
 const parentPath = path => normalizePath('..', path);
 
 // Consistent in-app dialogs; serialised so multiple transfer errors cannot overlap.
@@ -512,7 +514,7 @@ function renderSessionInfo() {
   $('#follow-terminal').checked = !!state?.follow; $('#follow-terminal').disabled = !state?.ready || !filesUsable(state);
   renderMonitor(state?.connected ? state.stats : null); renderLatency(); renderCommands(); window.DengCommonApps?.render(); window.DengProcessView?.reflect(); updateStatus();
 }
-$('#command-form').onsubmit = event => { event.preventDefault(); const state = current(); const input = $('#command-input'); if (!state && input.value.trim()) { const command = input.value; input.value = ''; safe(() => window.DengQuickConnect.run(command))(); return; } if (!state?.ready || !input.value) return; pasteTerminalText(state, input.value, { execute: true }); input.value = ''; resizeCommandInput(); };
+$('#command-form').onsubmit = event => { event.preventDefault(); const state = current(); const input = $('#command-input'); if (!state && input.value.trim()) { const command = input.value; input.value = ''; safe(() => window.DengQuickConnect.run(command))(); return; } if (!state?.ready || !input.value) return; if (!pasteTerminalText(state, input.value, { execute: true })) return; input.value = ''; resizeCommandInput(); };
 $('#command-input').onkeydown = event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); $('#command-form').requestSubmit(); return; } const state = current(); if (!state || !['ArrowUp', 'ArrowDown'].includes(event.key)) return; event.preventDefault(); state.historyIndex = Math.max(0, Math.min(state.history.length, state.historyIndex + (event.key === 'ArrowUp' ? -1 : 1))); event.target.value = state.history[state.historyIndex] || ''; resizeCommandInput(); };
 $('#reconnect').onclick = safe(() => { const state = current(); return state && connect(state.profileId, true, { sessionId: state.id }); });
 $('#disconnect').onclick = safe(() => disconnectSession());
@@ -560,18 +562,19 @@ function refreshFileStatus(state, useHome = false) {
 
 // SFTP browser. Only successful requests replace the current path and entries.
 async function navigate(path, state = current()) {
-  if (!filesUsable(state)) return;
-  path = normalizePath(path, state.cwd);
+  if (!filesUsable(state) || state.closed || sessions.get(state.id) !== state) return;
+  path = normalizePath(path, state.cwd, state.home || '/');
   const generation = ++state.navGeneration; state.navAbort?.abort(); state.navAbort = new AbortController();
+  const currentRequest = () => state.navGeneration === generation && state.connected && !state.closed && sessions.get(state.id) === state;
   if (activeID === state.id) $('#file-status-count').textContent = '读取目录…';
   try {
     const data = await api(`/api/sessions/${state.id}/files?path=${encodeURIComponent(path)}`, { signal: state.navAbort.signal });
-    if (state.navGeneration !== generation || !sessions.has(state.id)) return;
+    if (!currentRequest()) return;
     if (state.cwd !== data.path) state.fileSelection = null;
     state.cwd = data.path; state.entries = data.entries; state.folders.set(data.path, data.entries.filter(entry => entry.kind === 'folder')); DengFileBrowser.invalidate(state, data.path);
     if (data.historyError) toast(data.historyError);
     if (activeID === state.id) { $('#file-filter').value = ''; renderFiles(); }
-  } catch (error) { if (error.name === 'AbortError') return; if (activeID === state.id) { $('#path-input').value = state.cwd; $('#file-status-count').textContent = '目录读取失败'; } throw error; }
+  } catch (error) { if (error.name === 'AbortError' || !currentRequest()) return; if (activeID === state.id) { $('#path-input').value = state.cwd; $('#file-status-count').textContent = '目录读取失败'; } throw error; }
 }
 function renderFiles() {
   window.DengPathHistory?.reflect();
@@ -780,15 +783,15 @@ function renderMonitor(stats) {
 function drawCharts(samples) {
   renderTrafficChart($('#network-chart'),samples);
 }
-let latencyBusy = false;
+const latencyRequests = new Set();
 async function pollLatency() {
-  const state = current(); if (!state?.connected || (!state.terminalOutputStarted && !state.terminalBackgroundReady) || latencyBusy) return;
-  latencyBusy = true;
+  const state = current(); if (!state?.connected || (!state.terminalOutputStarted && !state.terminalBackgroundReady) || latencyRequests.has(state) || !monitorVisible()) return;
+  latencyRequests.add(state);
   try {
-    const sample = await api(`/api/sessions/${state.id}/latency`); if (!sessions.has(state.id)) return;
+    const sample = await api(`/api/sessions/${state.id}/latency`); if (sessions.get(state.id) !== state || !state.connected) return;
     state.latency = sample;
-  } catch { state.latency = null; }
-  finally { latencyBusy = false; if (current() === state) renderLatency(); }
+  } catch { if (sessions.get(state.id) === state && state.connected) state.latency = null; }
+  finally { latencyRequests.delete(state); if (current() === state && state.connected && monitorVisible()) renderLatency(); }
 }
 function renderLatency() { renderLatencyDetails(); }
 setInterval(pollLatency, 1000);

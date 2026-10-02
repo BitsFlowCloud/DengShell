@@ -1,8 +1,8 @@
-# DengShell Android（0.1.0 alpha 8）
+# DengShell Android（0.3.0）
 
 这一版把 DengShell 的现有 SSH/SFTP 后端装入 Android 应用，并针对竖屏和横屏提供触控布局。应用在设备本机的 `127.0.0.1` 启动服务，界面通过内置 WebView 访问；服务器配置保存在应用私有目录中。
 
-安装包已放在 [DengShell 官网](https://dengshell.com/#downloads) 和 [GitHub 发布页](https://github.com/BitsFlowCloud/DengShell/releases/tag/v0.02-build.20261001093)。
+安装包已放在 [DengShell 官网](https://dengshell.com/#downloads) 和 [GitHub 发布页](https://github.com/BitsFlowCloud/DengShell/releases/tag/v0.03)。
 
 ## 选择安装包
 
@@ -14,7 +14,7 @@
 | `x86` | 32 位 Intel Android 设备及模拟器 |
 | `universal` | 不清楚 CPU 类型时使用，包含以上四种架构，因此体积较大 |
 
-最低系统版本：Android 7.0（API 24）。这些是调试签名的 alpha 安装包，用于试用与反馈；正式分发前应使用长期保管的发布签名密钥重新签名。换用不同签名的包时，Android 可能要求先卸载旧包。安装新版本前请备份应用内的重要配置。官网提供的校验清单 可用于核对下载文件。
+最低系统版本：Android 7.0（API 24）。这些是沿用原签名的调试安装包，用于试用与反馈；正式分发前应使用长期保管的发布签名密钥重新签名。换用不同签名的包时，Android 可能要求先卸载旧包。安装新版本前请备份应用内的重要配置。官网提供的校验清单 可用于核对下载文件。
 
 ## 当前功能
 
@@ -34,6 +34,8 @@ GRADLE_USER_HOME="$PWD/.gradle" gradle :app:assembleDebug
 生成的分架构及通用 APK 位于 `app/build/outputs/apk/debug/`。界面源码在 `mobile/assets/web/`，Android 容器在 `app/src/main/`。
 
 ## 验证范围
+
+以下实体设备记录来自历史 alpha4 版本，本次原生升级和 WebView 验证范围以 v0.03 发布说明为准。
 
 五种 APK 均已构建。ARM64 版已在 MEIZU 21（Android 16）通过 USB 调试实测：应用启动、SSH 密码与私钥登录、主机指纹确认、终端命令、SFTP 上传/下载/改名/删除、系统文件选择器、监控刷新、竖横屏排版、返回键关闭弹窗、后台恢复及会话关闭。最终安装包下载 `.txt`、未知扩展名和 16 MiB 文件时，均核对了文件名与 SHA-256。浏览器回归覆盖竖横屏导航、服务器抽屉、表单滚动、私钥文件读取、远程文本编辑冲突与同名上传保护；Go 后端测试覆盖配置、SSH/SFTP 和监控 API。详细记录见 [REGRESSION-alpha4.md](REGRESSION-alpha4.md)。
 
@@ -63,3 +65,7 @@ GRADLE_USER_HOME="$PWD/.gradle" gradle :app:assembleDebug
 ## 2026-10-01 · alpha8
 
 快捷命令发送目标跟随当前标签，多参数横向排列并自适应换行；修复上传后意外切换页面。保持原签名，可覆盖安装 alpha7。
+
+## 2026-10-03 · 0.3.0
+
+同步 v0.03 的文件路径、特殊文件读取、目录竞态、安全锁、同步认证、上传兼容和延迟采样修复。沿用原调试签名，支持覆盖安装 alpha8 并保留配置。

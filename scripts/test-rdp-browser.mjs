@@ -11,7 +11,8 @@ const errors=[];
 try {
  const page=await browser.newPage();await page.setViewport({width:1440,height:1000});page.on('pageerror',e=>errors.push(e.message));
  await page.setRequestInterception(true);page.on('request',r=>{const u=new URL(r.url());if(['http:','https:'].includes(u.protocol)&&u.origin!==new URL(url).origin)r.abort();else r.continue()});
- await page.goto(url,{waitUntil:'networkidle0'});
+ await page.goto(url,{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>window.DengPortablePreferences?.ready&&workspaceInitialized&&document.querySelector('#connection-button')?.title==='打开服务器管理');
  await page.evaluate(async()=>{
   document.querySelectorAll('dialog[open]').forEach(d=>d.close());setDrawer(false);
   qa={calls:[],rdp:[],seq:0};window.runtime={EventsOn:()=>()=>{}};

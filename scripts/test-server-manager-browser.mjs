@@ -23,6 +23,7 @@ try{
  await page.click('#server-collapse-all');assert.equal(await page.$(row(groups[1].id)),null);assert.equal(await page.$(row(groups[5].id)),null);
  await pick(groups[0].id);assert.equal(await expanded(groups[0].id),'true');assert(await page.$(row(groups[1].id)));assert.equal(await page.$(row(groups[2].id)),null);assert.equal(await expanded(groups[4].id),'false');
  assert.equal(await page.$eval('#server-explorer-count',e=>e.textContent),'24 个连接');
+ await pick(groups[0].id);assert.equal(await expanded(groups[0].id),'false');assert.equal(await page.$(row(groups[1].id)),null);
  await pick(groups[0].id);assert.equal(await expanded(groups[0].id),'true');
  await page.click(row(groups[0].id)+' .server-folder-caret');assert.equal(await expanded(groups[0].id),'false');assert.equal(await page.$(row(groups[1].id)),null);assert.equal(await page.$eval('#server-explorer-count',e=>e.textContent),'24 个连接');
  await pick(groups[0].id);await pick(groups[1].id);assert(await page.$(row(groups[2].id)));assert.equal(await expanded(groups[2].id),'false');
@@ -31,7 +32,7 @@ try{
  await page.click('#server-collapse-all');await page.evaluate(id=>chooseServerFolder(id),groups[3].id);for(let i=0;i<3;i++)assert.equal(await expanded(groups[i].id),'true');assert.equal(await expanded(groups[4].id),'false');
  await page.evaluate(()=>DengPortablePreferences.flush());await page.reload({waitUntil:'networkidle0'});await page.evaluate(async()=>{await loadProfiles();setDrawer(true)});for(let i=0;i<3;i++)assert.equal(await expanded(groups[i].id),'true');assert.equal(await expanded(groups[4].id),'false');
  await page.click(row(groups[4].id)+' .server-group-more');assert.equal(await expanded(groups[4].id),'false');await page.evaluate(()=>closeServerGroupMenu());
- checks.push('Name click selects and expands; repeated click stays expanded; caret folds independently; ancestors revealed, siblings preserved; keyboard and persisted state');
+ checks.push('Name click selects and expands; repeated click toggles children; caret folds independently; ancestors revealed, siblings preserved; keyboard and persisted state');
  await pick(groups[0].id);await page.click('#server-include-children');assert.equal(await page.$$eval('#connection-groups .connection-card',es=>es.length),6);await page.click('#server-include-children');
  await page.type('#connection-search','192.0.2.24');assert.equal(await page.$$eval('#connection-groups .connection-card',es=>es.length),1);await pick(groups[0].id);assert.equal(await page.$eval('#connection-search',e=>e.value),'');
  await page.click(`[data-profile-id="${profiles[0].id}"] .connection-card`);await page.keyboard.down('Control');await page.click(`[data-profile-id="${profiles[1].id}"] .connection-card`);await page.keyboard.up('Control');assert.equal(await page.$eval('#open-selected-servers',e=>e.textContent),'打开所选 (2)');

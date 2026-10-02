@@ -59,16 +59,17 @@ try {
   assert.deepEqual(await page.$$eval('.session-tab-label', nodes=>nodes.map(n=>n.textContent)),['同一服务器 · 会话 1','同一服务器 · 会话 2']);
   await page.evaluate(()=>{
     activate('first');DengCommandComposer.open({id:'p',name:'p',body:'echo [p#1 value]',appendCR:true});
-    window.qaPinned = document.querySelector('#composer-target').value;
+    window.qaInitialTarget = document.querySelector('#composer-target').value;
     activate('second');
     pasteTerminalText(sessions.get('first'),'one',{execute:true});
     pasteTerminalText(sessions.get('second'),'two',{execute:true});
   });
-  assert.equal(await page.$eval('#composer-target',e=>e.value),'first');
+  assert.equal(await page.evaluate(()=>qaInitialTarget),'first');
+  assert.equal(await page.$eval('#composer-target',e=>e.value),'second');
   assert(await page.evaluate(()=>qa.sockets.first.frames.some(f=>f.data?.includes('one'))));
   assert(!await page.evaluate(()=>qa.sockets.second.frames.some(f=>f.data?.includes('one'))));
   assert.equal(await page.$$eval('#composer-target option',nodes=>new Set(nodes.map(n=>n.textContent)).size),3);
-  checks.push('new session, pending click coalescing, distinct labels, pinned target, input isolation');
+  checks.push('new session, pending click coalescing, distinct labels, target follows active session, input isolation');
   // Starting a third connection and reconnecting the first must have independent requests.
   await start();
   await page.evaluate(()=>{ activate('first');void connect('same',true,{sessionId:'first',refreshHistory:false}); });

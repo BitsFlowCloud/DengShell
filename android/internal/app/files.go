@@ -34,6 +34,33 @@ func remotePath(value string) (string, error) {
 	}
 	return path.Clean(value), nil
 }
+
+// Inspect the target before OPEN: opening a FIFO can block at the server before
+// an FSTAT request is possible. Check the handle again because the path may
+// change between STAT and OPEN. Stat deliberately follows links to normal files.
+func openRemoteRegularFile(c *sftp.Client, target string) (*sftp.File, os.FileInfo, error) {
+	info, err := c.Stat(target)
+	if err != nil {
+		return nil, nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, nil, errors.New("请选择普通文件；目录请使用打包下载，特殊文件不支持读取")
+	}
+	f, err := c.Open(target)
+	if err != nil {
+		return nil, nil, err
+	}
+	info, err = f.Stat()
+	if err == nil && !info.Mode().IsRegular() {
+		err = errors.New("远端文件类型在打开时变化，请重试")
+	}
+	if err != nil {
+		_ = f.Close()
+		return nil, nil, err
+	}
+	return f, info, nil
+}
+
 func (a *App) listFiles(w http.ResponseWriter, r *http.Request) {
 	s, err := a.fileSession(r.PathValue("id"))
 	if err != nil {
@@ -164,17 +191,12 @@ func (a *App) download(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, op.err(err))
 		return
 	}
-	f, err := s.files.Open(target)
+	f, info, err := openRemoteRegularFile(s.files, target)
 	if err != nil {
 		writeError(w, 400, op.err(err))
 		return
 	}
 	defer f.Close()
-	info, err := f.Stat()
-	if err != nil || info.IsDir() {
-		writeError(w, 400, op.err(errors.New("请选择可下载的文件")))
-		return
-	}
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": path.Base(target)}))
 	http.ServeContent(w, r.WithContext(op.ctx), path.Base(target), info.ModTime(), sftpProgressReadSeeker{f, op})
@@ -193,7 +215,7 @@ func (a *App) DownloadTo(sessionID, remote, local string) (err error) {
 	if err := op.ctx.Err(); err != nil {
 		return err
 	}
-	in, err := s.files.Open(remote)
+	in, _, err := openRemoteRegularFile(s.files, remote)
 	if err != nil {
 		return err
 	}
@@ -343,7 +365,10 @@ func (a *App) copyUpload(ctx context.Context, s *Session, t *Transfer, input io.
 	if err = ctx.Err(); err != nil {
 		return err
 	}
-	if overwrite {
+	// An approved batch can contain both existing and new files. Only replacing
+	// an existing target needs the OpenSSH extension; v3 RENAME can publish a new
+	// file and also refuses to overwrite a target created since our initial stat.
+	if overwrite && original != nil {
 		err = s.files.PosixRename(tmp, target)
 	} else {
 		err = s.files.Rename(tmp, target)

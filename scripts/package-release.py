@@ -40,7 +40,7 @@ def distribution(folder, binary, windows):
     if windows:
         for p in (ROOT/'native-rdp').glob('*'):
             if p.is_file() and ('LICENSE' in p.name or p.name in ('sources.json','NOTICE.txt')): copy(p,folder/'data/licenses/rdp'/p.name)
-    for name in ['CONNECTION-CONFIG.md','config.example.json','COMMON-APPS.md','ONLINE-UPDATE-DESIGN.md','UPDATER-CONTRACT.md','SIGNED-UPDATES.md','FINALSHELL-IMPORT.md','COMMANDS-AND-EDITORS.md',f'FUNCTIONAL-AUDIT-{VERSION}.md',f'RELEASE-{VERSION}.md']:
+    for name in ['CONNECTION-CONFIG.md','config.example.json','COMMON-APPS.md','ONLINE-UPDATE-DESIGN.md','UPDATER-CONTRACT.md','SIGNED-UPDATES.md','FINALSHELL-IMPORT.md','COMMANDS-AND-EDITORS.md','FUNCTIONAL-AUDIT-2026-10-03.md',f'FUNCTIONAL-AUDIT-{VERSION}.md',f'RELEASE-{VERSION}.md']:
         copy(ROOT/'build'/name,folder/'data/docs'/name)
     readme = (ROOT/'README.md').read_text()
     readme = re.sub(r'(?<=[(])((?:build|docs)/[^)]+)(?=[)])', lambda m: f'https://github.com/BitsFlowCloud/DengShell/blob/{VERSION}/' + m.group(1), readme)
@@ -93,7 +93,7 @@ def package(args):
         sourcefiles.append(ROOT/'build'/name)
     for folder in ['go-licenses','font-licenses','font-library-site','installer-licenses','sync']:
         sourcefiles += [p for p in (ROOT/'build'/folder).glob('*') if p.is_file()]
-    for name in ['FINALSHELL-IMPORT.md','COMMANDS-AND-EDITORS.md','FONT-REFORM-REPORT.md','FUNCTIONAL-RECHECK-20260914.md',f'FUNCTIONAL-AUDIT-{VERSION}.md','linux/Arch.Dockerfile']:
+    for name in ['FINALSHELL-IMPORT.md','COMMANDS-AND-EDITORS.md','FONT-REFORM-REPORT.md','FUNCTIONAL-RECHECK-20260914.md','FUNCTIONAL-AUDIT-2026-10-03.md',f'FUNCTIONAL-AUDIT-{VERSION}.md','linux/Arch.Dockerfile']:
         sourcefiles.append(ROOT/'build'/name)
     for p in sorted(set(sourcefiles)):copy(p,source/p.relative_to(ROOT))
     copy(linuxbinary.parent/'build-info.json',source/'build/linux/native/build-info.json')

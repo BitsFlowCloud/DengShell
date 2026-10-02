@@ -10,7 +10,8 @@ const errors=[],results=[];
 try {
  const page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));
  await page.setRequestInterception(true);page.on('request',r=>{const u=new URL(r.url());if(['http:','https:'].includes(u.protocol)&&u.origin!==origin)r.abort();else r.continue()});
- await page.setViewport({width:1600,height:1000});await page.goto(url,{waitUntil:'networkidle0'});
+ await page.setViewport({width:1600,height:1000});await page.goto(url,{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>window.DengPortablePreferences?.ready&&workspaceInitialized&&document.querySelector('#connection-button')?.title==='打开服务器管理');
  await page.evaluate(()=>{
   document.querySelectorAll('dialog[open]').forEach(d=>d.close());setDrawer(false);
   window.qa={rdp:[],probes:0,disposed:0,cycle:0,toasts:[]};
@@ -30,9 +31,16 @@ try {
  });
  const order=()=>page.$$eval('#session-tabs > .session-tab',tabs=>tabs.map(t=>t.dataset.processSessionId?'p:'+t.dataset.processSessionId:t.dataset.sessionId));
  const selector=id=>id.startsWith('p:')?`[data-process-session-id="${id.slice(2)}"]`:`[data-session-id="${id}"]`;
- async function rect(id){return page.$eval(selector(id),e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height}})}
- async function begin(id){const r=await rect(id);await page.mouse.move(r.x+Math.min(30,r.w/3),r.y+r.h/2);await page.mouse.down();return r;}
- async function moveTo(id,after=false){const r=await rect(id);await page.mouse.move(r.x+(after?r.w*.8:r.w*.2),r.y+r.h/2,{steps:8});}
+ // Tab rows are laid out on animation frames after renderTabs. Measure only
+ // after that layout, and reveal off-screen rows before using mouse coordinates.
+ const layoutReady=()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ async function point(id,fraction){
+  await layoutReady();await page.$eval(selector(id),e=>e.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'}));await layoutReady();
+  const point=await page.$eval(selector(id),(e,fraction)=>{const r=e.getBoundingClientRect(),x=r.x+r.width*fraction,y=r.y+r.height/2;return {x,y,hit:e.contains(document.elementFromPoint(x,y))}},fraction);
+  assert(point.hit,`drag coordinates must hit ${id}`);return point;
+ }
+ async function begin(id){const p=await point(id,.25);await page.mouse.move(p.x,p.y);await page.mouse.down();}
+ async function moveTo(id,after=false){const p=await point(id,after?.8:.2);await page.mouse.move(p.x,p.y,{steps:8});}
  async function drop(){await page.mouse.up();await new Promise(r=>setTimeout(r,120));}
  async function drag(from,to,after=false){await begin(from);await moveTo(to,after);await drop()}
  let ids=await page.evaluate(()=>qaSetTabs(13));await new Promise(r=>setTimeout(r,120));

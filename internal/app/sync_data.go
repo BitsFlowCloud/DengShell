@@ -188,12 +188,14 @@ func (s *Store) prepareSyncWithBaseline(expected, next map[string]json.RawMessag
 				p.FinalShellID = old.FinalShellID
 				if !secrets {
 					p.Secret, p.KeyID, p.KeyPath = "", "", ""
-					if p.Protocol == old.Protocol {
+					// Passwords and key passphrases share the Secret field but
+					// are not interchangeable when a remote edit changes auth.
+					if p.Protocol == old.Protocol && p.Auth == old.Auth {
 						p.Secret = old.Secret
 						p.KeyID = old.KeyID
 						p.KeyPath = old.KeyPath
 					}
-				} else if p.Protocol == old.Protocol && p.KeyID == "" {
+				} else if p.Protocol == old.Protocol && p.Auth == "key" && old.Auth == "key" && p.KeyID == "" {
 					p.KeyPath = old.KeyPath
 				}
 			} else if !secrets {

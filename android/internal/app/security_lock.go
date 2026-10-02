@@ -1,9 +1,11 @@
 package app
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base32"
 	"encoding/base64"
@@ -57,6 +59,8 @@ type securityLockState struct {
 	lastActivity time.Time
 	revision     uint64
 	grants       map[string]lockGrant
+	hasDisk      bool
+	diskDigest   [32]byte
 	now          func() time.Time // deterministic clock only in isolated tests
 }
 type SecurityLockStatus struct {
@@ -122,6 +126,8 @@ func (a *App) initializeSecurityLock() error {
 		return err
 	}
 	if err == nil {
+		s.hasDisk = true
+		s.diskDigest = sha256.Sum256(data)
 		aead, e := configCipher(a.store.key)
 		if e != nil {
 			return e
@@ -170,7 +176,34 @@ func (a *App) saveLockPolicy(p securityLockPolicy) error {
 		return err
 	}
 	data := aead.Seal(nil, nil, plain, []byte(securityLockAAD))
-	return atomicConfigFile(filepath.Join(a.store.dir, securityLockFile), data)
+	unlock, err := lockConfigDirectory(a.store.dir)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	key, err := readConfigFile(filepath.Join(a.store.dir, ConfigKeyName), 32)
+	if err != nil || !bytes.Equal(key, a.store.key) {
+		return errors.New("配置解锁密钥已改变或丢失，已拒绝保存安全锁定状态；请恢复原文件后重新启动")
+	}
+	// Verification updates retry counters and TOTP replay protection as well as
+	// settings. Serialize the comparison and replacement so a stale instance
+	// cannot undo another instance's password change or accepted TOTP step.
+	s := &a.securityLock
+	path := filepath.Join(a.store.dir, securityLockFile)
+	previous, err := readConfigFile(path, 16384)
+	if s.hasDisk {
+		if err != nil || sha256.Sum256(previous) != s.diskDigest {
+			return errors.New("安全锁定配置已被其他实例修改、损坏或删除，已拒绝覆盖；请检查原文件并重新启动")
+		}
+	} else if !os.IsNotExist(err) {
+		return errors.New("安全锁定配置已存在或不可读取，已拒绝覆盖；请重新启动")
+	}
+	if err = atomicConfigFile(path, data); err != nil {
+		return err
+	}
+	s.hasDisk = true
+	s.diskDigest = sha256.Sum256(data)
+	return nil
 }
 func (a *App) SecurityLockStatus() SecurityLockStatus {
 	s := &a.securityLock

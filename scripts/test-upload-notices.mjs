@@ -10,7 +10,11 @@ let page,hold=false;const held=[],errors=[];
 try{
  page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));await page.setViewport({width:1440,height:900});
  await page.setRequestInterception(true);page.on('request',r=>{const u=new URL(r.url());if(['http:','https:'].includes(u.protocol)&&u.origin!==origin)return r.abort();if(hold&&u.pathname.endsWith('/upload')){held.push(r);return}r.continue()});
- await page.goto(url,{waitUntil:'networkidle0'});
+ // Transfer/security/sync polling continues after the UI is usable, so network
+ // idleness is not a startup signal. Wait until configuration and workspace
+ // restoration complete; assert the restored pane separately below.
+ const waitForWorkspace=()=>page.waitForFunction(()=>window.DengPortablePreferences?.ready&&workspaceInitialized&&document.querySelector('#connection-button')?.title==='打开服务器管理');
+ await page.goto(url,{waitUntil:'domcontentloaded'});await waitForWorkspace();
  await page.evaluate(async({sessionID,remote})=>{
   document.querySelectorAll('dialog[open]').forEach(d=>d.close());setDrawer(false);monitorVisible=()=>false;
   window.qaState={...makeSessionState({id:sessionID,profileId:'upload-qa',home:remote}),connected:true,sftpAvailable:true,host:Object.assign(document.createElement('div'),{hidden:true}),term:{options:{},focus(){},dispose(){}}};sessions.set(sessionID,qaState);activeID=sessionID;
@@ -98,7 +102,7 @@ try{
  await page.evaluate(()=>{api=qaAPI;localTasks.clear();renderTransfers()});assert.deepEqual(errors,[]);
  // Startup still restores a deliberately selected pane; after reopening SFTP,
  // both config refresh and the next startup must retain the file pane.
- await read();await page.evaluate(()=>DengPortablePreferences.flush());await page.reload({waitUntil:'networkidle0'});await page.waitForFunction(()=>DengPortablePreferences.ready);assert.equal(await pane(),'transfers');
- await page.click('#toggle-sftp');await page.click('#toggle-sftp');await page.evaluate(()=>DengPortablePreferences.flush());await page.reload({waitUntil:'networkidle0'});await page.waitForFunction(()=>DengPortablePreferences.ready);assert.equal(await pane(),'files');assert.deepEqual(errors,[]);
+ await read();await page.evaluate(()=>DengPortablePreferences.flush());await page.reload({waitUntil:'domcontentloaded'});await waitForWorkspace();assert.equal(await pane(),'transfers');
+ await page.click('#toggle-sftp');await page.click('#toggle-sftp');await page.evaluate(()=>DengPortablePreferences.flush());await page.reload({waitUntil:'domcontentloaded'});await waitForWorkspace();assert.equal(await pane(),'files');assert.deepEqual(errors,[]);
  console.log('PASS: browser/native/folder/drop uploads stay on current pane; native drop + config refresh regression; delayed config response; startup pane restoration; notifications only after remote completion; read acknowledgement; no repeated notices; accumulated results; failures/retry; cancel; hidden panel/window; initial history and fast native-result race; light/dark badge.');
 }catch(error){if(page&&process.env.DENGSHELL_UI_ARTIFACTS)await page.screenshot({path:process.env.DENGSHELL_UI_ARTIFACTS+'/upload-notice-failure.png'});console.error({errors});throw error}finally{await browser.close()}

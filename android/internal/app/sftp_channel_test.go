@@ -4,8 +4,10 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"encoding/json"
 	"io"
 	"net"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -120,6 +122,24 @@ func TestBlockedSFTPBridgeClosesOnlyFileChannel(t *testing.T) {
 	}
 	if ctx.Err() != nil {
 		t.Fatal("SFTP failure closed SSH")
+	}
+	a := &App{sessions: map[string]*Session{s.ID: s}}
+	if _, err := a.fileSession(s.ID); err != errSFTPUnavailable {
+		t.Errorf("closed file channel was still available: %v", err)
+	}
+	request := httptest.NewRequest("GET", "/file-status", nil)
+	request.SetPathValue("id", s.ID)
+	response := httptest.NewRecorder()
+	a.fileStatus(response, request)
+	var status struct {
+		Available bool `json:"sftpAvailable"`
+		Pending   bool `json:"sftpPending"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &status); err != nil {
+		t.Fatal(err)
+	}
+	if response.Code != 200 || status.Available || status.Pending {
+		t.Errorf("closed file status is incorrect: %d %s", response.Code, response.Body.String())
 	}
 	awaitNetworkCondition(t, time.Second, func() bool { return s.Latency().Ready })
 	sh, err := client.NewSession()

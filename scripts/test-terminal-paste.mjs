@@ -47,4 +47,33 @@ for (const key of ['closed', 'detaching', 'restoring', 'ownershipUncertain']) {
 }
 state.connected = false;
 assert.equal(paste(script).result, false);
-console.log('PASS: multiline/CRLF/heredoc integrity; one submission; explicit no-execute; editor/busy guards; unavailable-session rejection.');
+
+// The input bar submits through the same production paste function. During a
+// window handoff ready can remain true while input is rejected; retain the draft
+// (and its multiline height) until an actual successful submission.
+const appSource = fs.readFileSync(new URL('../web/app.js', import.meta.url), 'utf8');
+const start = appSource.indexOf("$('#command-form').onsubmit ="), end = appSource.indexOf("\n$('#command-input').onkeydown", start);
+assert.ok(start >= 0 && end > start);
+const form = {}, field = { value: script };
+let resized = 0, prevented = 0;
+context.$ = selector => selector === '#command-form' ? form : field;
+context.current = () => state;
+context.resizeCommandInput = () => { resized++; };
+vm.runInContext(appSource.slice(start, end), context);
+const submit = () => form.onsubmit({ preventDefault() { prevented++; } });
+for (const flag of ['detaching', 'restoring', 'ownershipUncertain', 'closed', 'connected', 'ready']) {
+  state.connected = state.ready = true;
+  state[flag] = !['connected', 'ready'].includes(flag);
+  field.value = script; pasted.length = input.length = 0;
+  submit();
+  assert.equal(field.value, script, `${flag}: rejected submission must retain the original command`);
+  assert.equal(resized, 0, `${flag}: rejected submission must preserve the input height`);
+  assert.equal(pasted.length, 0); assert.equal(input.length, 0);
+  state[flag] = ['connected', 'ready'].includes(flag);
+}
+state.connected = state.ready = true;
+submit();
+assert.equal(field.value, ''); assert.equal(resized, 1);
+assert.deepEqual(pasted, [script]); assert.deepEqual(input, ['\r']);
+assert.equal(prevented, 7);
+console.log('PASS: multiline/CRLF/heredoc integrity; one submission; explicit no-execute; editor/busy guards; unavailable-session rejection; input bar preserves rejected drafts and clears successful sends.');

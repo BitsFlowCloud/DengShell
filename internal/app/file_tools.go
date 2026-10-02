@@ -135,16 +135,12 @@ func encodeText(text, name string) ([]byte, error) {
 }
 func digestText(data []byte) string { h := sha256.Sum256(data); return hex.EncodeToString(h[:]) }
 func readRemoteText(op *sftpOperation, s *Session, target string) ([]byte, os.FileInfo, error) {
-	f, e := s.files.Open(target)
+	f, info, e := openRemoteRegularFile(s.files, target)
 	if e != nil {
 		return nil, nil, e
 	}
 	defer f.Close()
-	info, e := f.Stat()
-	if e != nil {
-		return nil, nil, e
-	}
-	if !info.Mode().IsRegular() || info.Size() > maxEditableBytes {
+	if info.Size() > maxEditableBytes {
 		return nil, nil, errors.New("文本编辑器支持最大 8 MiB 的普通文件，请使用下载或系统关联打开")
 	}
 	data, e := io.ReadAll(io.LimitReader(sftpProgressReader{f, op}, maxEditableBytes+1))

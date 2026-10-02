@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -20,10 +21,12 @@ type sshSFTPBridge struct {
 	local, relay net.Conn
 	shell        *ssh.Session
 	once         sync.Once
+	closed       atomic.Bool
 }
 
 func (b *sshSFTPBridge) close() {
 	b.once.Do(func() {
+		b.closed.Store(true)
 		b.local.Close()
 		b.relay.Close()
 		// Remote CLOSE may block on a stalled link. Only this one bounded
@@ -189,6 +192,9 @@ func (s *Session) fileClientSnapshot() (*sftp.Client, string) {
 	home := s.filesHome
 	if home == "" {
 		home = s.Home
+	}
+	if bridge := s.fileBridge.Load(); bridge != nil && bridge.closed.Load() {
+		return nil, home
 	}
 	return s.files, home
 }

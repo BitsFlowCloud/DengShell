@@ -2,9 +2,9 @@
 
 **把 SSH 终端、远程文件、服务器监控和常用命令放在一个窗口里。**
 
-DengShell 是一款中文界面的开源 SSH 桌面工具，适合日常管理 VPS、维护 Linux 服务器、编辑远程配置和排查网络问题。支持 Windows 与 Linux 桌面，可同时连接多台服务器，并按自己的习惯调整字体、背景、布局和监控曲线。
+DengShell 是一款中文界面的开源 SSH 桌面工具，适合日常管理 VPS、维护 Linux 服务器、编辑远程配置和排查网络问题。支持 Windows、Linux、macOS 桌面和 Android，可同时连接多台服务器，并按自己的习惯调整字体、背景、布局和监控曲线。
 
-本说明对应 **v0.02**。R50 以来的累计变化汇总在 [更新日志](CHANGELOG.md)。
+本说明对应 **v0.03**。R20 以来的累计变化汇总在 [更新日志](CHANGELOG.md)。
 
 ## 内容导航
 
@@ -56,6 +56,8 @@ DengShell 是一款中文界面的开源 SSH 桌面工具，适合日常管理 V
 | Fedora / openSUSE x86-64 | `DengShell-linux-x64.rpm` | 使用对应发行版的包管理器安装 |
 | Arch Linux / 兼容 pacman 的 x86-64 桌面 | `DengShell-linux-x64.pkg.tar.zst` | 使用 `sudo pacman -U` 安装 |
 | 其他满足依赖的 Linux x86-64 桌面 | `DengShell-linux-x64.tar.gz` | 解压运行，或安装到当前用户的应用菜单 |
+| macOS 13+，Apple 芯片与 Intel | `DengShell-macos-universal.dmg` / `.zip` | 通用应用，临时签名、未公证预览版 |
+| Android 7+ | `DengShell-Android-0.3.0-<架构>-debug.apk` | 按 CPU 选择或使用 universal；原调试签名，可覆盖安装 |
 
 Windows 版本需要 Microsoft Edge WebView2，缺少时程序会提供安装指引。安装版默认安装到当前用户目录，卸载保留个人配置。
 
@@ -63,7 +65,7 @@ Linux 版本使用 GTK3 和 WebKitGTK 4.1，发行构建以 Ubuntu 22.04 / glibc
 
 **测试情况：**
 
-- **Linux：已测试通过。** 已在 Ubuntu 22.04、Ubuntu 24.04、Debian 12、Fedora 43 、openSUSE Tumbleweed 和 Arch Linux 容器中通过安装、原生界面启动及卸载保留配置测试。具体范围见 [功能审查与验证](build/FUNCTIONAL-AUDIT-v0.02.md)。
+- **Linux：已测试通过。** 已在 Ubuntu 22.04、Ubuntu 24.04、Debian 12、Fedora 43 、openSUSE Tumbleweed 和 Arch Linux 容器中通过安装、原生界面启动及卸载保留配置测试。具体范围见 [功能审查与验证](build/FUNCTIONAL-AUDIT-v0.03.md)。
 - **Windows：** 发布验证覆盖原生 WebView2 启动、安装／卸载保留配置、压缩程序及从最小化状态升级后显示窗口。自动验证使用 GitHub Windows 运行器，结果见 [Windows 验证记录](https://github.com/BitsFlowCloud/DengShell/actions/workflows/windows-release-validation.yml)；不等同于全部 Windows 10／11 实体设备、显卡和托盘组合已验证。
 
 ### Linux 安装示例
@@ -212,7 +214,7 @@ Windows 和 Linux X11 支持拖动标签到其他窗口；Wayland 下使用合�
 
 拖动命令或命令分组可调整顺序，拖到其他分组可移动命令。排序会保存，空分组也保留。
 
-编辑命令时可插入 1–5 号参数，例如 `docker logs [p#1 容器] --tail [p#2 行数]`。调用后在 **命令编辑区** 填写参数、检查实际命令预览，再发送；参数和长命令草稿在本次运行中保留，便于多次调整。发送目标单独显示，切换服务器标签不会改变它。终端输入条旁的编辑按钮也可展开编辑区。详见 [命令与编辑器说明](build/COMMANDS-AND-EDITORS.md)。
+编辑命令时可插入 1–5 号参数，例如 `docker logs [p#1 容器] --tail [p#2 行数]`。调用后在 **命令编辑区** 填写参数、检查实际命令预览，再发送；参数和长命令草稿在本次运行中保留，便于多次调整。发送目标单独显示，打开命令或切换服务器标签时跟随当前会话；手动选择的目标会保留到下次切换标签或打开命令。终端输入条旁的编辑按钮也可展开编辑区。详见 [命令与编辑器说明](build/COMMANDS-AND-EDITORS.md)。
 
 ## SFTP 文件管理与编辑
 
@@ -473,3 +475,7 @@ DengShell 应用代码采用 [MIT License](LICENSE)，可按许可使用、修�
 ### 2026-10-01 快捷命令与上传修复
 
 发送目标跟随当前 SSH 标签，多参数横向排列并自动换行；修复拖拽上传后的意外切页。保留参数草稿和此前功能。详见 [更新日志](CHANGELOG.md)。
+
+### v0.03 · 2026-10-03
+
+修复远程文件路径、特殊文件读取、目录切换、安全锁多实例、同步认证和 SFTP 上传兼容问题；延迟采样按会话隔离，命令发送失败保留草稿，Windows 程序使用 UPX 压缩。详见 [v0.03 发布说明](build/RELEASE-v0.03.md)。

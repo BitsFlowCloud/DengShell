@@ -6,13 +6,14 @@ import { webcrypto } from 'node:crypto';
 const appSource = readFileSync(new URL('../web/app.js', import.meta.url), 'utf8');
 const toolsSource = readFileSync(new URL('../web/workspace-tools.js', import.meta.url), 'utf8');
 const connectSource = appSource.slice(appSource.indexOf('async function connectProfile('), appSource.indexOf('\nfunction showConnectionProgress('));
+const releaseSource = appSource.slice(appSource.indexOf('function releaseConnectionAttempt('), appSource.indexOf('\nasync function connect('));
 
 async function connectCase({ keyId = 'shared', keyPath = '/fixture/external-key', hasSecret = false, failures = [], answer = 'typed-once', background = false } = {}) {
   const prompts = [], requests = [], messages = [], forms = [];
   const profile = { id: 'profile', name: 'fixture', auth: 'key', keyId, keyPath, hasSecret };
   const context = {
     profiles: [profile], managedKeys: [{ id: 'shared', encrypted: true, hasPassphrase: false }],
-    sessions: new Map(), connecting: new Set(), connectionAttempts: new Map(), credentials: new Map(),
+    sessions: new Map(), connecting: new Set(), connectionAttempts: new Map(), connectionRequests: new Map(), credentials: new Map(),
     nextSessionOrder: 0, activeID: null, AbortController, crypto: webcrypto, window: {},
     connectionProfile: id => id === profile.id ? profile : undefined,
     makeSessionState: info => ({ ...info, host: { dataset: {} }, openTerminalSocket() {} }),
@@ -27,8 +28,10 @@ async function connectCase({ keyId = 'shared', keyPath = '/fixture/external-key'
       return { id: 'connected', home: '/fixture' };
     },
   };
-  vm.createContext(context); vm.runInContext(connectSource, context);
-  const session = await context.connectProfile('profile', false, { refreshHistory: false, background });
+  vm.createContext(context); vm.runInContext(releaseSource + '\n' + connectSource, context);
+  const session = await context.connectProfile('profile', { refreshHistory: false, background, requestKey: 'fixture-request' });
+  assert.equal(context.connectionAttempts.size, 0, 'connection attempts must be released after every outcome');
+  assert.equal(context.connecting.size, 0, 'profile must not remain connecting after completion');
   return { session, prompts, requests, messages, forms, sessions: context.sessions.size };
 }
 
@@ -73,7 +76,7 @@ const element = selector => {
   if (!nodes.has(selector)) nodes.set(selector, { hidden: false, textContent: '', showModal() {} });
   return nodes.get(selector);
 };
-const form = { elements: Object.fromEntries(['id', 'auth', 'keyId'].map(name => [name, { value: '' }])) };
+const form = { elements: Object.fromEntries(['id', 'auth', 'keyId', 'protocol'].map(name => [name, { value: '' }])) };
 nodes.set('#connection-form', form);
 form.elements.auth.value = 'key'; form.elements.keyId.value = 'shared';
 const context = { $: element, profiles: [], managedKeys: [{ id: 'shared', encrypted: true, hasPassphrase: true }], native: () => null };

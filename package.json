@@ -1,6 +1,6 @@
 {
   "name": "dengshell",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "DengShell SSH desktop workspace",
   "scripts": {
@@ -17,6 +17,7 @@
     "test:ui-appearance": "node scripts/test-ui-appearance.mjs",
     "test:chart-styles": "node scripts/test-chart-styles.mjs",
     "test:file-sort": "node scripts/test-file-sort.mjs",
+    "test:file-paths": "node scripts/test-file-path-races.mjs",
     "test:commands": "node scripts/test-command-composer.mjs",
     "test:editors": "node scripts/test-file-editor-races.mjs && node scripts/test-text-search.mjs",
     "test:server-explorer": "node scripts/test-server-explorer.mjs",
