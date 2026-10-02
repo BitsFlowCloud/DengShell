@@ -42,19 +42,19 @@ func TestUpdateReceiptHighWaterAndMalformedReceiptFailClosed(t *testing.T) {
 	if err := ValidateUpdateBuild(dir, ApplicationBuild+1, ApplicationVersion); err != nil {
 		t.Fatal(err)
 	}
-	receipt, _ := json.Marshal(UpdateReceipt{Build: ApplicationBuild + 5, Version: "v0.02"})
+	receipt, _ := json.Marshal(UpdateReceipt{Build: ApplicationBuild + 5, Version: ApplicationVersion})
 	if err := WriteUpdateReceipt(dir, receipt); err != nil {
 		t.Fatal(err)
 	}
 	for _, candidate := range []struct {
 		build   uint64
 		version string
-	}{{ApplicationBuild + 4, "v0.02"}, {ApplicationBuild + 5, "v0.02"}, {ApplicationBuild + 6, "v0.01"}} {
+	}{{ApplicationBuild + 4, ApplicationVersion}, {ApplicationBuild + 5, ApplicationVersion}, {ApplicationBuild + 6, "v0.00"}} {
 		if err := ValidateUpdateBuild(dir, candidate.build, candidate.version); err == nil {
 			t.Fatalf("rollback accepted: %+v", candidate)
 		}
 	}
-	if err := ValidateUpdateBuild(dir, ApplicationBuild+6, "v0.02"); err != nil {
+	if err := ValidateUpdateBuild(dir, ApplicationBuild+6, ApplicationVersion); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "update-receipt.json"), []byte("corrupt"), 0600); err != nil {
@@ -94,7 +94,7 @@ func TestUpdateDescriptorIdentityAndValidation(t *testing.T) {
 		{"old build", hash, "none", UpdateReceipt{}, func(d *UpdateDescriptor) { d.Build = ApplicationBuild - 1 }},
 		{"old display version with higher build", hash, "none", UpdateReceipt{}, func(d *UpdateDescriptor) { d.Version = "v0.00" }},
 		{"unknown version syntax", hash, "none", UpdateReceipt{}, func(d *UpdateDescriptor) { d.Version = "v0.01-old" }},
-		{"receipt version blocks old release", hash, "none", UpdateReceipt{Version: "v0.03"}, nil},
+		{"receipt version blocks old release", hash, "none", UpdateReceipt{Version: ApplicationVersion + ".1"}, nil},
 		{"invalid sha", hash, "none", UpdateReceipt{}, func(d *UpdateDescriptor) { d.SHA256 = "bad" }},
 		{"invalid platform", hash, "none", UpdateReceipt{}, func(d *UpdateDescriptor) { d.Platform = "windows-amd64" }},
 		{"invalid product", hash, "none", UpdateReceipt{}, func(d *UpdateDescriptor) { d.Product = "other" }},
