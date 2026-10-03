@@ -36,6 +36,7 @@
   if(!target&&!native()&&!popup)throw new Error('浏览器阻止了独立窗口，请允许本地页面弹出窗口后重试');
   const preview=window.DengWindowPreview.begin(state,target),id=nonce();let completed=false,reserved=false,reservationAttempted=false;
   state.detaching=true;state.term.options.disableStdin=true;renderTabs();
+  window.dispatchEvent(new CustomEvent('dengshell:session-context-change'));
   try {
    await Promise.all([window.DengPortablePreferences.flush(),preview.ready]);
    if(state.closed||!state.connected)throw new Error('连接已关闭，无法移动');

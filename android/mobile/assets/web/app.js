@@ -464,6 +464,7 @@ function dropSessionView(id, expected = null) {
   window.DengProcessView?.drop(id);
   state.navAbort?.abort(); state.ws?.close(); state.term?.dispose(); state.host?.remove(); sessions.delete(id);
   if (activeID === id) activeID = sessions.keys().next().value || null;
+  window.dispatchEvent(new CustomEvent('dengshell:session-context-change'));
   if (activeID) activate(activeID, window.DengProcessView?.active() === activeID ? 'processes' : 'terminal'); else { renderTabs(); renderSessionInfo(); renderFiles(); }
 }
 async function closeSession(id) {
@@ -495,6 +496,7 @@ function activate(id, view = 'terminal') {
   if (!sessions.has(id)) return;
   window.DengRDP?.deactivate();
   activeID = id; $('#file-filter').value = '';
+  window.dispatchEvent(new CustomEvent('dengshell:session-context-change'));
   window.DengProcessView?.activate(id, view);
   for (const state of sessions.values()) state.host.hidden = state.id !== id;
   renderTabs(); renderSessionInfo(); renderFiles();

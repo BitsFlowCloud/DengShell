@@ -63,7 +63,7 @@ func MigratePortableData(destination string) error {
 	var moved []string
 	for _, entry := range entries {
 		n := entry.Name()
-		own := n == EncryptedConfigName || n == ConfigKeyName || n == EncryptedConfigName+".bak" || n == "config.json" || n == "assets" || n == "keys" || strings.HasPrefix(n, "config.pre-") && strings.HasSuffix(n, ".enc") || strings.HasPrefix(n, "runtime-success-v1-")
+		own := n == EncryptedConfigName || n == ConfigKeyName || n == aiSettingsFile || n == EncryptedConfigName+".bak" || n == "config.json" || n == "assets" || n == "keys" || strings.HasPrefix(n, "config.pre-") && strings.HasSuffix(n, ".enc") || strings.HasPrefix(n, "runtime-success-v1-")
 		if !own {
 			continue
 		}
