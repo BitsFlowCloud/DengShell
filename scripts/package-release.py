@@ -22,6 +22,13 @@ def copy(src, dst):
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dst)
 
+def runtime_credential_file(p):
+    name = p.name.lower()
+    return (name in {'config.json', 'id_rsa', 'id_ed25519', '.env'}
+            or name.startswith('.env.') and name != '.env.example'
+            or re.search(r'\.(?:enc|key|pem|keystore|jks)(?:[.~]|$)', name) is not None
+            or name in {'dengshell.config.json', 'cloudshell.config.json'})
+
 def zip_tree(folder, target, prefix=Path()):
     with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for p in sorted(folder.rglob('*')):
@@ -71,6 +78,8 @@ def package(args):
     for folder in [ROOT/'web',ROOT/'internal/app/shell_integration']:
         for p in sorted(folder.rglob('*')):
             if not p.is_file() or any(n.startswith(('.','_')) for n in p.relative_to(folder).parts):continue
+            if runtime_credential_file(p):
+                raise SystemExit(f'Runtime credential file must not be embedded: {p.relative_to(ROOT)}')
             assert all(p.read_bytes() in b for b in binaries), f'Embedded asset differs: {p}'
             assets[str(p.relative_to(ROOT))]=digest(p)
     win = distribution(work/'DengShell-windows-x64',winbinary,True)
@@ -95,7 +104,8 @@ def package(args):
         sourcefiles += [p for p in (ROOT/'build'/folder).glob('*') if p.is_file()]
     for name in ['FINALSHELL-IMPORT.md','COMMANDS-AND-EDITORS.md','FONT-REFORM-REPORT.md','FUNCTIONAL-RECHECK-20260914.md','FUNCTIONAL-AUDIT-2026-10-03.md',f'FUNCTIONAL-AUDIT-{VERSION}.md','linux/Arch.Dockerfile']:
         sourcefiles.append(ROOT/'build'/name)
-    for p in sorted(set(sourcefiles)):copy(p,source/p.relative_to(ROOT))
+    for p in sorted(set(sourcefiles)):
+        if not runtime_credential_file(p): copy(p,source/p.relative_to(ROOT))
     copy(linuxbinary.parent/'build-info.json',source/'build/linux/native/build-info.json')
     zip_tree(source,out/'DengShell-source.zip',Path('DengShell'))
     notes=(args.update_notes.read_text().strip() if args.update_notes else f'{VERSION} 更新：详情见官网更新日志。')

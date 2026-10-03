@@ -51,6 +51,9 @@ type Desktop struct {
 	children         map[string]*exec.Cmd
 	pendingWindows   map[string]bool
 	windowClosed     bool
+	aiWindowID       string
+	aiAlwaysOnTop    bool
+	aiChildren       map[string]*aiWindowProcess
 }
 
 type nativeTerminal struct {
@@ -70,7 +73,7 @@ type DesktopWindowState struct {
 }
 
 func (d *Desktop) CaptureWindowState() error {
-	if d.detachedNonce != "" || d.ctx == nil || runtime.WindowIsMinimised(d.ctx) {
+	if d.aiWindowID != "" || d.detachedNonce != "" || d.ctx == nil || runtime.WindowIsMinimised(d.ctx) {
 		return nil
 	}
 	previous := d.app.Appearance()
@@ -102,6 +105,7 @@ func (d *Desktop) ConfirmQuit() error {
 		d.windowClosed = true
 		d.quitPending = false
 		d.mu.Unlock()
+		d.closeOwnedAIWindows()
 		runtime.WindowHide(d.ctx)
 		return nil
 	}
@@ -113,6 +117,9 @@ func (d *Desktop) ConfirmQuit() error {
 }
 func (d *Desktop) CancelQuit() { d.mu.Lock(); d.quitPending = false; d.mu.Unlock() }
 func (d *Desktop) beforeClose(ctx context.Context) bool {
+	if d.aiWindowID != "" {
+		return false
+	}
 	d.mu.Lock()
 	if d.quitConfirmed {
 		d.mu.Unlock()
@@ -128,7 +135,7 @@ func (d *Desktop) beforeClose(ctx context.Context) bool {
 }
 
 func (d *Desktop) WindowState() DesktopWindowState {
-	state := DesktopWindowState{Platform: goruntime.GOOS, Frameless: goruntime.GOOS == "windows"}
+	state := DesktopWindowState{Platform: goruntime.GOOS, Frameless: goruntime.GOOS == "windows" || d.aiWindowID != ""}
 	d.mu.Lock()
 	state.QuitPending = d.quitPending
 	d.mu.Unlock()
@@ -144,7 +151,11 @@ func (d *Desktop) WindowAction(action string) (DesktopWindowState, error) {
 	}
 	switch action {
 	case "minimise":
-		d.requestMinimize()
+		if d.aiWindowID != "" {
+			runtime.WindowMinimise(d.ctx)
+		} else {
+			d.requestMinimize()
+		}
 	case "toggle-maximise":
 		runtime.WindowToggleMaximise(d.ctx)
 	case "close":
@@ -425,6 +436,7 @@ func runDesktopBackend(application desktopBackend, assets fs.FS, configDir, deta
 		Bind:          []interface{}{desktop},
 		OnBeforeClose: desktop.beforeClose,
 		OnShutdown: func(context.Context) {
+			desktop.closeAIWindows()
 			desktop.mu.Lock()
 			cancel := desktop.lifecycleCancel
 			desktop.mu.Unlock()

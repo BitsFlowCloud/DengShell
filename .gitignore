@@ -3,6 +3,7 @@
 /keys/
 /assets/
 **/dengshell.config.enc
+**/dengshell.ai.enc
 **/dengshell.config.key
 **/dengshell.config.json
 **/cloudshell.config.enc

@@ -19,7 +19,7 @@ try {
    document.documentElement.classList.add('frameless');document.querySelector('#window-controls').hidden=false;
  });
  await page.waitForFunction(()=>!document.querySelector('#startup-splash.is-running'));
- assert.deepEqual(await page.$$eval('.brand button',bs=>bs.map(b=>b.id)),['settings-button','theme-toggle','security-lock-button','sync-button','connection-button']);
+ assert.deepEqual(await page.$$eval('.brand button',bs=>bs.map(b=>b.id)),['settings-button','theme-toggle','security-lock-button','sync-button','ai-button','connection-button']);
  assert.equal(await page.$('.session-bar #settings-button'),null);
  const initialTheme=await page.evaluate(()=>document.documentElement.dataset.theme);
  await page.waitForFunction(()=>!document.documentElement.dataset.lightSwitch);await page.click('#theme-toggle');await page.waitForFunction(t=>document.documentElement.dataset.theme!==t&&!document.documentElement.dataset.lightSwitch,{},initialTheme);

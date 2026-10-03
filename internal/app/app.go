@@ -16,6 +16,8 @@ import (
 )
 
 type App struct {
+	ai               aiState
+	aiWindows        aiWindowState
 	rdp              rdpState
 	syncState        syncState
 	securityLock     securityLockState
@@ -96,6 +98,8 @@ func (a *App) Close() {
 	}
 	a.mu.Unlock()
 	a.cancel()
+	a.closeAI()
+	a.closeAIWindows()
 	a.closeRDP()
 	a.closeSync()
 	a.updateCleanup.Wait()
@@ -148,6 +152,8 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 	mux.HandleFunc("GET /api/config", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, a.configWithQuickProfiles()) })
 	a.registerSecurityLockHTTP(mux)
 	a.registerSyncHTTP(mux)
+	a.registerAIHTTP(mux)
+	a.registerAIWindowHTTP(mux)
 	a.registerWindowHandoffHTTP(mux)
 	a.registerCommandHistoryHTTP(mux)
 	a.registerPathHistoryHTTP(mux)

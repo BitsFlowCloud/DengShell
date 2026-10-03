@@ -1,0 +1,7 @@
+:root { font-size: 13px; }
+body.ai-window-body { min-width: 300px; min-height: 340px; background: var(--surface); }
+.ai-window-body .ai-assistant { position: relative; inset: auto; width: 100%; height: auto; min-height: 0; flex: 1; border: 0; border-radius: 0; box-shadow: none; }
+.ai-window-body .ai-header { padding: 10px 13px 5px; }
+.ai-window-body .ai-conversation { min-height: 50px; }
+@media (max-width: 360px) { .ai-window-body .ai-controls { gap: 5px; } .ai-window-body .ai-provider-picker { min-width: 82px; } .ai-window-body .ai-shortcut { display: none; } .ai-window-body #ai-stop { margin-left: auto; } .ai-window-body #ai-stop[hidden] + #ai-send { margin-left: auto; } }
+@media (max-height: 570px) { .ai-window-body .ai-header { padding-block: 7px 4px; } .ai-window-body .ai-disclosure { margin-bottom: 5px; } .ai-window-body .ai-composer textarea { min-height: 45px; max-height: 90px; } .ai-window-body .ai-composer { padding-block: 7px; } }

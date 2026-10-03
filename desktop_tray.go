@@ -126,7 +126,7 @@ func (d *Desktop) InstallUpdate(id string) error {
 	}
 
 	d.mu.Lock()
-	if d.detachedNonce != "" || len(d.children) > 0 {
+	if d.aiWindowID != "" || d.detachedNonce != "" || len(d.children) > 0 || len(d.aiChildren) > 0 {
 		d.mu.Unlock()
 		return errors.New("请先关闭独立窗口，再在主窗口中更新")
 	}

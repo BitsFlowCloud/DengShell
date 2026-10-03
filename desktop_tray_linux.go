@@ -29,7 +29,7 @@ static int deng_tray_available(){return g_atomic_int_get(&deng_tray_connected);}
 static int deng_tray_take_events(){int events;do{events=g_atomic_int_get(&deng_tray_events);}while(!g_atomic_int_compare_and_exchange(&deng_tray_events,events,0));return events;}
 static gboolean deng_tray_stop(gpointer ignored){if(deng_indicator&&deng_set_status)deng_set_status(deng_indicator,0);g_atomic_int_set(&deng_tray_connected,0);return FALSE;}
 static void deng_tray_close(){g_idle_add(deng_tray_stop,NULL);}
-static gboolean deng_present(gpointer ignored){GList *windows=gtk_window_list_toplevels();for(GList *l=windows;l;l=l->next){GtkWindow *w=GTK_WINDOW(l->data);if(g_strcmp0(gtk_window_get_title(w),"DengShell")==0){gtk_window_present(w);break;}}g_list_free(windows);return FALSE;}
+static gboolean deng_present(gpointer ignored){GList *windows=gtk_window_list_toplevels();for(GList *l=windows;l;l=l->next){GtkWindow *w=GTK_WINDOW(l->data);if(g_strcmp0(gtk_window_get_title(w),"DengShell")==0 || g_strcmp0(gtk_window_get_title(w),"DengShell AI")==0){gtk_window_present(w);break;}}g_list_free(windows);return FALSE;}
 static void deng_raise(){g_idle_add(deng_present,NULL);}
 */
 import "C"

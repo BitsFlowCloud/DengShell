@@ -19,6 +19,7 @@ func main() {
 		return
 	}
 	detached := flag.Bool("detached-window", false, "internal independent window")
+	aiWindow := flag.Bool("ai-window", false, "internal independent AI window")
 	browser := flag.Bool("browser", false, "run local browser mode instead of a desktop window")
 	address := flag.String("addr", "127.0.0.1:0", "local API listen address")
 	dev := flag.Bool("dev", false, "read frontend assets from the web directory")
@@ -33,6 +34,13 @@ func main() {
 		if contentErr != nil {
 			log.Fatal(contentErr)
 		}
+	}
+	if *aiWindow {
+		if err := runAIWindowProcess(content); err != nil {
+			showStartupError(err.Error())
+			log.Print(err)
+		}
+		return
 	}
 	if *detached {
 		if err := runDetachedProcess(content); err != nil {

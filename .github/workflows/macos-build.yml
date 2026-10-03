@@ -40,6 +40,8 @@ jobs:
         run: python3 scripts/build-macos.py --arch universal --jobs 4
       - name: Native Apple Silicon launch
         run: python3 scripts/test-macos-app.py build/macos/DengShell.app --output build/macos/native-arm64.json
+      - name: Native Apple Silicon AI window
+        run: python3 scripts/test-macos-ai-window.py build/macos/DengShell.app --output build/macos/native-ai-arm64.json
       - name: Retain macOS packages and evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -75,10 +77,14 @@ jobs:
           (cd macos-artifact && shasum -a 256 --check SHA256SUMS.txt)
           ditto -x -k macos-artifact/DengShell-macos-universal.zip macos-unpacked
           python3 scripts/test-macos-app.py macos-unpacked/DengShell.app --output macos-artifact/native-amd64.json
+      - name: Native Intel AI window
+        run: python3 scripts/test-macos-ai-window.py macos-unpacked/DengShell.app --output macos-artifact/native-ai-amd64.json
       - name: Retain Intel launch evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: DengShell-macos-intel-validation
-          path: macos-artifact/native-amd64.*
+          path: |
+            macos-artifact/native-amd64.*
+            macos-artifact/native-ai-amd64.*
           retention-days: 14
