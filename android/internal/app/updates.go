@@ -29,7 +29,7 @@ const ApplicationPackageVersion = "0.3.0"
 
 // Increase this integer for every published build, including packaging-only
 // releases. It also lets older clients identify repackaged releases.
-const ApplicationBuild uint64 = 20261003094
+const ApplicationBuild uint64 = 20261003101
 
 const UpdateManifestURL = "https://dengshell.com/up.deb.json"
 const updateTimeout = 3 * time.Second
@@ -137,11 +137,6 @@ func (a *App) beginUpdateCheck() {
 		a.updateCheck.done = make(chan struct{})
 		go func() {
 			defer close(a.updateCheck.done)
-			platform := currentUpdatePlatform()
-			if source, _ := updateAddress(platform); source == "" {
-				a.updateCheck.result = noUpdate("platform-unavailable")
-				return
-			}
 			ctx, cancel := context.WithTimeout(a.ctx, updateTimeout)
 			defer cancel()
 			a.updateCheck.result = boundedUpdateProbe(ctx, func() UpdateStatus {
@@ -157,6 +152,7 @@ func (a *App) beginUpdateCheck() {
 				if err != nil {
 					return noUpdate("invalid-receipt")
 				}
+				platform := currentUpdatePlatform()
 				address, _ := updateAddress(platform)
 				result := checkUpdate(ctx, updateClient(updateTimeout), address, platform, hash, receipt)
 				if result.Status == "available" && !NativePackageUpdateSupported() {

@@ -34,7 +34,7 @@ def zip_tree(folder, target, prefix=Path()):
         for p in sorted(folder.rglob('*')):
             if p.is_file(): z.write(p, prefix/p.relative_to(folder))
 
-def distribution(folder, binary, windows):
+def distribution(folder, binary, windows, source_ref=VERSION):
     folder.mkdir(parents=True, exist_ok=False)
     copy(binary, folder/('DengShell.exe' if windows else 'dengshell'))
     for sub, pattern, dest in [('web/assets/fonts/licenses','*.txt','fonts'), ('web/vendor','*LICENSE',''), ('build/go-licenses','*','go'), ('build/installer-licenses','*','installer')]:
@@ -50,7 +50,7 @@ def distribution(folder, binary, windows):
     for name in ['CONNECTION-CONFIG.md','config.example.json','COMMON-APPS.md','ONLINE-UPDATE-DESIGN.md','UPDATER-CONTRACT.md','SIGNED-UPDATES.md','FINALSHELL-IMPORT.md','COMMANDS-AND-EDITORS.md','FUNCTIONAL-AUDIT-2026-10-03.md',f'FUNCTIONAL-AUDIT-{VERSION}.md',f'RELEASE-{VERSION}.md']:
         copy(ROOT/'build'/name,folder/'data/docs'/name)
     readme = (ROOT/'README.md').read_text()
-    readme = re.sub(r'(?<=[(])((?:build|docs)/[^)]+)(?=[)])', lambda m: f'https://github.com/BitsFlowCloud/DengShell/blob/{VERSION}/' + m.group(1), readme)
+    readme = re.sub(r'(?<=[(])((?:build|docs)/[^)]+)(?=[)])', lambda m: f'https://github.com/BitsFlowCloud/DengShell/blob/{source_ref}/' + m.group(1), readme)
     (folder/'data/docs/README.md').write_text(readme)
     copy(ROOT/'CHANGELOG.md',folder/'data/docs/CHANGELOG.md')
     copy(ROOT/('build/windows/README.txt' if windows else 'build/linux/README.txt'),folder/'data/docs/使用说明.txt')
@@ -82,8 +82,8 @@ def package(args):
                 raise SystemExit(f'Runtime credential file must not be embedded: {p.relative_to(ROOT)}')
             assert all(p.read_bytes() in b for b in binaries), f'Embedded asset differs: {p}'
             assets[str(p.relative_to(ROOT))]=digest(p)
-    win = distribution(work/'DengShell-windows-x64',winbinary,True)
-    linux = distribution(work/'DengShell-linux-x64',linuxbinary,False)
+    win = distribution(work/'DengShell-windows-x64',winbinary,True,args.source_ref)
+    linux = distribution(work/'DengShell-linux-x64',linuxbinary,False,args.source_ref)
     zip_tree(win,out/'DengShell-windows-x64.zip')
     subprocess.run(['python3',str(ROOT/'scripts/package-windows.py'),'--stage',str(win),'--output',str(out/'DengShell-Setup-x64.exe')],check=True)
     subprocess.run(['python3',str(ROOT/'scripts/package-linux.py'),'--stage',str(linux),'--build-info',str(linuxbinary.parent/'build-info.json'),'--version',PACKAGE_VERSION,'--release',str(BUILD % 1000),'--output',str(out)],check=True)
@@ -136,6 +136,7 @@ if __name__=='__main__':
     parser.add_argument('--update-notes',type=Path,help='UTF-8 notes shown by existing clients for this signed update')
     parser.add_argument('--windows-binary',type=Path,required=True)
     parser.add_argument('--windows-reference',type=Path)
+    parser.add_argument('--source-ref',default=VERSION,help='Published source tag used by packaged documentation links')
     parser.add_argument('--linux-binary',type=Path,default=ROOT/'build/linux/native/dengshell')
     parser.add_argument('--work-dir',type=Path,required=True)
     parser.add_argument('--website',type=Path,required=True)

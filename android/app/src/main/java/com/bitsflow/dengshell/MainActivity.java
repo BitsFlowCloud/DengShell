@@ -9,6 +9,7 @@ import android.graphics.Insets;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Message;
 import android.os.SystemClock;
 import android.provider.DocumentsContract;
 import android.util.Log;
@@ -49,6 +50,8 @@ public final class MainActivity extends Activity {
     private static final int SAVE_DOWNLOAD = 42;
 
     private WebView webView;
+    private WebView aiWebView;
+    private FrameLayout rootView;
     private TextView status;
     private ValueCallback<Uri[]> fileResult;
     private volatile String localOrigin;
@@ -92,6 +95,7 @@ public final class MainActivity extends Activity {
 
     private void buildView() {
         FrameLayout root = new FrameLayout(this);
+        rootView = root;
         root.setBackgroundColor(Color.rgb(238, 243, 245));
         webView = new WebView(this);
         webView.setBackgroundColor(Color.rgb(238, 243, 245));
@@ -116,7 +120,11 @@ public final class MainActivity extends Activity {
         }
         setContentView(root);
 
-        WebSettings settings = webView.getSettings();
+        configureWebView(webView, false);
+    }
+
+    private void configureWebView(WebView target, boolean assistant) {
+        WebSettings settings = target.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false);
@@ -125,13 +133,18 @@ public final class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setMediaPlaybackRequiresUserGesture(true);
+        settings.setSupportMultipleWindows(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(false);
         if (Build.VERSION.SDK_INT >= 26) settings.setSafeBrowsingEnabled(true);
-        webView.setWebViewClient(new WebViewClient() {
+        target.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
-                if (isLocal(uri)) return false;
+                if (isLocal(uri)) {
+                    if (!assistant || !request.isForMainFrame() || "/ai-window.html".equals(uri.getPath())) return false;
+                    return true;
+                }
                 if (!request.isForMainFrame()) return true;
-                if ("https".equals(uri.getScheme())) {
+                if ("https".equals(uri.getScheme()) || "http".equals(uri.getScheme())) {
                     try { startActivity(new Intent(Intent.ACTION_VIEW, uri)); }
                     catch (ActivityNotFoundException error) { showToast("没有可打开此链接的浏览器"); }
                 }
@@ -148,21 +161,37 @@ public final class MainActivity extends Activity {
             }
             @Override public void onPageFinished(WebView view, String url) {
                 if (isLocal(Uri.parse(url))) {
-                    // The embedded UI uses window.open for its website links.
-                    // WebView has no popup window, so route HTTPS links through
-                    // main-frame navigation and the browser handler above.
-                    view.evaluateJavascript("(function(){window.open=function(url){if(typeof url==='string'&&url.indexOf('https://')===0){location.href=url;}return null;};document.addEventListener('click',function(event){var a=event.target.closest('a[target=\"_blank\"]');if(a&&a.href.indexOf('https://')===0){event.preventDefault();location.href=a.href;}},true);})()", null);
+                    // Preserve the user-opened, same-origin AI WebView. Website
+                    // links go to the system browser without replacing either UI.
+                    view.evaluateJavascript("(function(){if(window.__dengshellExternalLinks)return;window.__dengshellExternalLinks=true;const open=window.open;window.open=function(url,...args){if(typeof url==='string'&&/^https?:\\/\\//.test(url)){location.href=url;return null;}return open.call(window,url,...args);};document.addEventListener('click',function(event){var a=event.target.closest('a[target=\"_blank\"]');if(event.isTrusted&&a&&/^https?:\\/\\//.test(a.href)){event.preventDefault();location.href=a.href;}},true);})()", null);
                     status.setVisibility(View.GONE);
                 }
             }
             @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                if (request.isForMainFrame()) showStatus("页面加载失败，请重新打开应用");
+                if (request.isForMainFrame()) {
+                    if (assistant) { showToast("AI 页面加载失败，请重新打开"); closeAIWindow(); }
+                    else showStatus("页面加载失败，请重新打开应用");
+                }
             }
             @Override public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
                 handler.cancel();
             }
         });
-        webView.setWebChromeClient(new WebChromeClient() {
+        target.setWebChromeClient(new WebChromeClient() {
+            @Override public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
+                if (assistant || !isUserGesture || destroyed || aiWebView != null || !isLocal(Uri.parse(view.getUrl()))) return false;
+                aiWebView = new WebView(MainActivity.this);
+                aiWebView.setBackgroundColor(Color.rgb(238, 243, 245));
+                configureWebView(aiWebView, true);
+                rootView.addView(aiWebView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                aiWebView.requestFocus();
+                ((WebView.WebViewTransport) resultMsg.obj).setWebView(aiWebView);
+                resultMsg.sendToTarget();
+                return true;
+            }
+            @Override public void onCloseWindow(WebView window) {
+                if (window == aiWebView) closeAIWindow();
+            }
             @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
                 if (fileResult != null) fileResult.onReceiveValue(null);
                 fileResult = callback;
@@ -179,7 +208,7 @@ public final class MainActivity extends Activity {
                 return true;
             }
         });
-        webView.setDownloadListener((url, userAgent, disposition, mimeType, contentLength) -> {
+        target.setDownloadListener((url, userAgent, disposition, mimeType, contentLength) -> {
             Uri uri = Uri.parse(url);
             if (!isLocal(uri)) { showToast("已阻止非本地下载"); return; }
             downloadUrl = url;
@@ -191,6 +220,18 @@ public final class MainActivity extends Activity {
             try { startActivityForResult(intent, SAVE_DOWNLOAD); }
             catch (ActivityNotFoundException error) { downloadUrl = null; showToast("无法选择保存位置"); }
         });
+    }
+
+    private void closeAIWindow() {
+        WebView previous = aiWebView;
+        if (previous == null) return;
+        aiWebView = null;
+        rootView.removeView(previous);
+        previous.destroy();
+        if (!destroyed && webView != null) {
+            webView.evaluateJavascript("window.DengShellAIWindowOwner?.close()", null);
+            webView.requestFocus();
+        }
     }
 
     private static String suggestedDownloadName(Uri uri, String disposition, String mimeType) {
@@ -281,6 +322,12 @@ public final class MainActivity extends Activity {
     }
 
     @Override public void onBackPressed() {
+        if (!destroyed && aiWebView != null) {
+            aiWebView.evaluateJavascript("(function(){const ds=document.querySelectorAll('dialog[open]');const d=ds[ds.length-1];if(!d)return false;const e=new Event('cancel',{cancelable:true});if(d.dispatchEvent(e)&&d.open)d.close();return true;})()", value -> {
+                if (!"true".equals(value)) closeAIWindow();
+            });
+            return;
+        }
         if (!destroyed && webView != null) {
             webView.evaluateJavascript("(function(){const ds=document.querySelectorAll('dialog[open]');const d=ds[ds.length-1];if(d){const cancel=new Event('cancel',{cancelable:true});const close=d.dispatchEvent(cancel);if(close&&d.open)d.close();return true;}const drawer=document.getElementById('connections-drawer');if(drawer&&!drawer.hidden){document.getElementById('close-connections').click();return true;}if(window.DengShellMobile&&window.DengShellMobile.back&&window.DengShellMobile.back()){return true;}return document.querySelector('#session-tabs .session-tab')?'connected':false;})()", value -> {
                 if ("true".equals(value)) {
@@ -302,6 +349,7 @@ public final class MainActivity extends Activity {
 
     @Override protected void onDestroy() {
         destroyed = true;
+        closeAIWindow();
         if (fileResult != null) { fileResult.onReceiveValue(null); fileResult = null; }
         if (webView != null) {
             webView.destroy();

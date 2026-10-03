@@ -1,0 +1,9 @@
+.ai-window-body { min-height: 0 !important; height: 100dvh; }
+.ai-window-body :is(button, input, textarea, select) { -webkit-tap-highlight-color: transparent; }
+.ai-window-body .ai-header-actions > button { min-height: 32px; }
+.ai-window-body .ai-settings :is(input, select, button) { min-height: 36px; }
+.ai-window-body .ai-composer textarea { font-size: 16px; }
+@media (max-height: 340px) {
+  .ai-window-body .ai-disclosure { display: none; }
+  .ai-window-body .ai-composer textarea { min-height: 32px; max-height: 60px; }
+}
