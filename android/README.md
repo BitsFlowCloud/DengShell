@@ -2,7 +2,7 @@
 
 这一版把 DengShell 的现有 SSH/SFTP 后端装入 Android 应用，并针对竖屏和横屏提供触控布局。应用在设备本机的 `127.0.0.1` 启动服务，界面通过内置 WebView 访问；服务器配置保存在应用私有目录中。
 
-安装包已放在 [DengShell 官网](https://dengshell.com/#downloads) 和 [GitHub 发布页](https://github.com/BitsFlowCloud/DengShell/releases/tag/v0.03)。
+安装包已放在 [DengShell 官网](https://dengshell.com/#downloads) 和 [GitHub 发布页](https://github.com/BitsFlowCloud/DengShell/releases/latest)。
 
 ## 选择安装包
 
