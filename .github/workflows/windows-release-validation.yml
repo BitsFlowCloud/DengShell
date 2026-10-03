@@ -10,6 +10,11 @@ on:
         description: Previous release for upgrade validation; latest uses the current public release
         required: true
         default: latest
+      backend_only:
+        description: Run only backend tests when native artifacts were already validated
+        type: boolean
+        required: false
+        default: false
 env:
   GOMAXPROCS: '4'
   GOFLAGS: '-p=4'
@@ -38,6 +43,7 @@ jobs:
           GOFLAGS: -p=4
         run: go test -race -v -timeout 3m ./internal/updateproxy
   windows:
+    if: ${{ !inputs.backend_only }}
     runs-on: windows-2022
     timeout-minutes: 15
     permissions:

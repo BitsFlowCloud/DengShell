@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -39,8 +40,12 @@ func TestAISettingsEncryptedAndSeparate(t *testing.T) {
 	if err != nil || bytes.Contains(disk, []byte(s.Providers[0].APIKey)) || bytes.Contains(disk, []byte("fixture.invalid")) {
 		t.Fatal("AI settings were not encrypted", err)
 	}
-	info, _ := os.Stat(filepath.Join(a.store.dir, aiSettingsFile))
-	if info.Mode().Perm()&0077 != 0 {
+	info, err := os.Stat(filepath.Join(a.store.dir, aiSettingsFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Windows FileMode reports DOS read-only attributes, not Unix owner permissions.
+	if runtime.GOOS != "windows" && info.Mode().Perm()&0077 != 0 {
 		t.Fatal("AI settings readable outside owner")
 	}
 	config, _ := json.Marshal(a.store.List())
