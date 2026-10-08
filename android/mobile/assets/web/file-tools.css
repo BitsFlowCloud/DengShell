@@ -39,7 +39,10 @@
 .text-editor-more-body,.text-editor-layout-tools{position:absolute;top:calc(100% + 4px);right:0;z-index:3;min-width:220px;display:flex;flex-direction:column;gap:7px;padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--surface);box-shadow:0 8px 24px #091a3444}
 .text-editor-more-body label{display:flex;flex-direction:row;align-items:center;gap:8px;margin:0;font-size:12px;white-space:nowrap}
 .text-editor-more-body .themed-select{min-width:150px}
-.text-editor-area{flex:1;min-height:60px;max-height:none;width:100%;resize:none;white-space:pre;tab-size:4;background:var(--surface-inset,#f4f7f9);color:var(--text);font-family:var(--terminal-family,monospace);font-size:14px;line-height:1.65;padding:10px;border:1px solid var(--border);border-radius:8px;overflow:auto;box-sizing:border-box}
+.text-editor-code{display:flex;flex:1;min-height:60px;min-width:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface-inset,#f4f7f9);font:14px/24px var(--terminal-family,monospace)}
+.text-editor-gutter{position:relative;flex:none;align-self:flex-start;width:calc(2ch + 18px);max-width:30%;overflow:hidden;border-right:1px solid var(--border);box-sizing:border-box;color:var(--muted);background:var(--surface);font:inherit;text-align:right;user-select:none;pointer-events:none}
+.text-editor-line-numbers{position:absolute;top:0;left:0;right:0;padding:0 9px;white-space:pre;font:inherit;font-variant-numeric:tabular-nums}
+.text-editor-area{flex:1;min-height:60px;min-width:0;max-height:none;width:0;resize:none;white-space:pre;tab-size:4;background:var(--surface-inset,#f4f7f9);color:var(--text);font:inherit;padding:10px;border:0;border-radius:0;overflow:auto;box-sizing:border-box}
 .text-editor-footer{display:flex;align-items:center;gap:10px;flex:none;min-width:0;font-size:11px;color:var(--muted)}
 .text-editor-owner{flex:1;min-width:0;margin:0;font-size:11px;line-height:1.5;color:var(--muted);white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
 .text-editor-footer>span{flex:0 1 60%;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}

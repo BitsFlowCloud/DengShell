@@ -9,6 +9,46 @@ window.DengTextEditors = (() => {
   const copyText = text => native()?.WriteClipboard ? native().WriteClipboard(text) : navigator.clipboard.writeText(text);
   const button = (label, cls, action) => { const b = node('button', cls, label); b.type = 'button'; b.onclick = safe(action); return b; };
   const isDirty = () => [...documents.values()].some(d => d.dirty);
+  function lineNumbers(area) {
+    const element = node('div', 'text-editor-gutter'), lines = node('span', 'text-editor-line-numbers');
+    element.setAttribute('aria-hidden', 'true'); element.append(lines);
+    let previous, count = 1, frame = 0, disposed = false;
+    function render() {
+      frame = 0;
+      if (disposed || !area.clientHeight) return;
+      const style = getComputedStyle(area), padding = parseFloat(style.paddingTop);
+      // At fractional UI scales, native text line boxes round differently
+      // from the computed CSS line-height. Calibrate from the full scroll
+      // extent so that this rounding cannot accumulate over long files.
+      const height = area.scrollHeight > area.clientHeight
+        ? (area.scrollHeight - padding - parseFloat(style.paddingBottom)) / count
+        : parseFloat(style.lineHeight);
+      const scroll = Math.max(0, Math.min(area.scrollTop, area.scrollHeight - area.clientHeight));
+      const first = Math.min(count - 1, Math.max(0, Math.floor((scroll - padding) / height) - 1));
+      const end = Math.min(count, Math.ceil((scroll + area.clientHeight - padding) / height) + 1);
+      const visible = [];
+      for (let line = first; line < end; line++) visible.push(line + 1);
+      // Only the viewport is materialised, even when a file has hundreds of
+      // thousands of lines. Its offset follows textarea scrolling, not a
+      // second independently scrollable element.
+      lines.textContent = visible.join('\n');
+      lines.style.transform = `translateY(${padding + first * height - scroll}px)`;
+      element.style.height = area.clientHeight + 'px';
+    }
+    function schedule() { if (!disposed && !frame) frame = requestAnimationFrame(render); }
+    function refresh() {
+      const value = area.value;
+      if (value !== previous) {
+        previous = value; count = 1;
+        for (let offset = value.indexOf('\n'); offset !== -1; offset = value.indexOf('\n', offset + 1)) count++;
+        element.style.width = `calc(${Math.max(2, String(count).length)}ch + 18px)`;
+      }
+      schedule();
+    }
+    const observer = new ResizeObserver(schedule); observer.observe(area);
+    area.addEventListener('scroll', schedule, { passive: true });
+    return { element, refresh, dispose() { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); area.removeEventListener('scroll', schedule); } };
+  }
   function reflect() {
     for (const doc of documents.values()) update(doc);
     if (dock) { dock.hidden = !documents.size; dock.textContent = `文本编辑器 (${documents.size})${isDirty() ? ' *' : ''}`; }
@@ -49,7 +89,7 @@ window.DengTextEditors = (() => {
       select.append(node('span', 'text-editor-tab-server', doc.owner), node('span', '', `${doc.path.split('/').pop() || '/'}${doc.dirty ? ' *' : ''}`));
       select.title = `${doc.address}\n${doc.path}${connected(doc) ? '' : '\n原连接不可用，可复制或保留草稿'}`;
       const close = button('×', 'text-editor-tab-close', () => closeDoc(doc)); close.setAttribute('aria-label', `关闭 ${doc.owner} · ${doc.path}`);
-      tab.append(select, close); doc.ui.panel.hidden = !active; return tab;
+      tab.append(select, close); doc.ui.panel.hidden = !active; if (active) doc.ui.gutter.refresh(); return tab;
     }));
     const doc = win.active;
     win.title.textContent = '文本编辑器';
@@ -70,7 +110,7 @@ window.DengTextEditors = (() => {
       const raw = doc.model?.raw;
       if (doc.dirty && !await ask({ title: '放弃未保存的修改？', description: `${doc.owner} · ${doc.address}\n${doc.path}`, confirm: '放弃修改' })) return false;
       if (doc.saving || doc.model?.raw !== raw) { toast('文件内容已变化，请检查后重新关闭'); return false; }
-      const win = doc.win; doc.close(); documents.delete(doc.key); doc.ui.panel.remove();
+      const win = doc.win; doc.close(); doc.ui.gutter.dispose(); documents.delete(doc.key); doc.ui.panel.remove();
       const i = win.docs.indexOf(doc); win.docs.splice(i, 1);
       if (win.active === doc) win.active = win.docs[Math.min(i, win.docs.length - 1)];
       if (!win.docs.length) removeWindow(win); else renderTabs(win);
@@ -131,6 +171,7 @@ window.DengTextEditors = (() => {
     if (!doc.ui || doc.closed) return;
     const ui = doc.ui, live = connected(doc), model = doc.model;
     if (replace && model) { ui.area.value = model.visible; ui.area.setSelectionRange(0, 0); }
+    ui.gutter.refresh();
     ui.area.disabled = doc.loading || !model;
     ui.encoding.disabled = doc.loading || doc.saving || !live;
     if (doc.baseline) { ui.encoding.value = doc.baseline.encoding; window.DengSelect?.refresh(ui.encoding); }
@@ -175,6 +216,7 @@ window.DengTextEditors = (() => {
     more.append(node('summary', '', '更多'), moreBody); moreBody.append(label, ui.reload, ui.copy);
     moreBody.addEventListener('click', event => { if (event.target.closest('button') && !event.target.closest('.themed-select')) more.open = false; });
     const area = ui.area = node('textarea', 'text-editor-area'); area.spellcheck = false; area.autocapitalize = 'off'; area.autocomplete = 'off'; area.wrap = 'off'; area.setAttribute('aria-label', `${doc.owner} · ${doc.path}`);
+    const code = node('div', 'text-editor-code'); ui.gutter = lineNumbers(area); code.append(ui.gutter.element, area);
     const sync = caret => { area.value = doc.model.visible; if (caret != null) area.setSelectionRange(caret, caret); update(doc); };
     area.oninput = () => { if (doc.model && !doc.loading) { doc.model.edit(area.value); update(doc); } };
     area.addEventListener('paste', event => {
@@ -208,7 +250,7 @@ window.DengTextEditors = (() => {
     toolbar.append(...ui.tools.buttons, more, ui.save);
     foot.append(owner, ui.status);
     foot.title = '编码、BOM 与原有换行保持原样。Ctrl+S 保存；Ctrl+Tab 切换文件；Ctrl+W 关闭当前文件。';
-    ui.panel.append(toolbar, ui.tools.bar, ui.tools.goto, area, foot);
+    ui.panel.append(toolbar, ui.tools.bar, ui.tools.goto, code, foot);
     doc.win.body.append(ui.panel);
   }
   async function openText(state, path) {

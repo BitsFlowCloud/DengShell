@@ -87,6 +87,8 @@ body.dengshell-android { background:#eef3f5; color:var(--mobile-ink); width:100%
 .dengshell-android dialog { width:min(100vw - 16px,580px)!important; max-width:calc(100vw - 16px)!important; max-height:calc(100dvh - 22px)!important; overflow:auto!important; padding:16px!important; border-radius:14px!important; }
 .dengshell-android dialog .form-row { flex-wrap:wrap; }
 .dengshell-android dialog input,.dengshell-android dialog select,.dengshell-android dialog textarea { font-size:16px!important; }
+/* Match the editor gutter to Android's text input size. */
+.dengshell-android .text-editor-code { font-size:16px; }
 .dengshell-android .toast { bottom:78px!important; }
 .dengshell-android .scale-setting,.dengshell-android #scale-effective { display:none!important; }
 .dengshell-android .mobile-key-file-picker { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }

@@ -1,5 +1,11 @@
 # DengShell v0.03
 
+## 2026-10-08 · 文本编辑器行号
+
+- 修复 [#31](https://github.com/BitsFlowCloud/DengShell/issues/31)：文本编辑器左侧显示行号，与正文纵向滚动同步，横向滚动时保持可见。
+- 编辑、粘贴、撤销重做、搜索替换和重新读取时同步更新行号；各文件标签与独立窗口分别显示。
+- 兼容明暗主题、缩放和窄窗口；行号不进入复制或保存内容，保留原有编码与换行。
+
 ## 2026-10-03 · AI 助手与全平台更新
 
 - 同步按钮右侧新增 AI 入口；桌面助手使用独立窗口，可置顶，不占用 SSH 工作区。启用后可自动读取终端、发送命令和交互按键、切换或连接已保存会话、读写远程文件，支持随时停止。
@@ -27,11 +33,11 @@
 - **Windows 10/11 x64**：安装版 EXE、绿色 ZIP，包含内置 RDP 标签页测试功能。
 - **Linux x64**：DEB、RPM、pacman 和通用 tar.gz；Ubuntu 22.04 / glibc 2.35 构建基线，需要 GTK3 / WebKitGTK 4.1。
 - **macOS 13+**：Apple 芯片与 Intel 通用 DMG / ZIP，临时签名、未公证预览版。
-- **Android 7+**：0.3.0（versionCode 10），提供 ARM64、ARMv7、x86_64、x86 及通用 APK；原调试签名，支持覆盖安装，需保持系统 WebView 更新。
+- **Android 7+**：0.3.0（versionCode 11），提供 ARM64、ARMv7、x86_64、x86 及通用 APK；原调试签名，支持覆盖安装，需保持系统 WebView 更新。
 - **源码**：桌面、Android、构建与验证脚本、内置 RDP 补丁及许可证，不包含用户配置或签名私钥。
 
-桌面显示 **v0.03**，构建 **20261003101**；Linux 包版本 **0.3.0-101**。Windows、Debian/Ubuntu 与 R28 起的 pacman 客户端可通过“检查更新”升级，继续校验签名、大小及 SHA-256。RPM、Linux 通用包、macOS 和 Android 请手动安装。
+桌面显示 **v0.03**，构建 **20261008102**；Linux 包版本 **0.3.0-102**。Windows、Debian/Ubuntu 与 R28 起的 pacman 客户端可通过“检查更新”升级，继续校验签名、大小及 SHA-256。RPM、Linux 通用包、macOS 和 Android 请手动安装。
 
 升级保留配置、密钥、字体和背景；请先保存正在编辑的文件，桌面更新会关闭连接会话。AI 默认关闭，启用后会把指令及操作所需内容发送至选定服务。关闭助手、锁定、手动切换会话会停止后续操作；已发送的远程命令可能仍需在终端按 Ctrl+C 中断。RDP 图形桌面暂不支持 AI 操作。
 
-[官网下载](https://dengshell.com/) · [完整更新记录](https://github.com/BitsFlowCloud/DengShell/blob/v0.03-build.20261003101/CHANGELOG.md)
+[官网下载](https://dengshell.com/) · [完整更新记录](https://github.com/BitsFlowCloud/DengShell/blob/v0.03-build.20261008102/CHANGELOG.md)
