@@ -53,6 +53,17 @@ const provider = http.createServer(async (request, response) => {
     } else if (mode === 'select') {
       const actions = [() => tool('select_session',{session_id:session2}), () => tool('terminal_input',{session_id:session2,text:"printf 'AI_SECOND_SESSION_OK\\n'",execute:true,wait_ms:900})];
       message=step < actions.length ? actions[step++]() : {role:'assistant',content:longSelectReply};
+    } else if (mode === 'long-task') {
+      if (step === 0) {
+        step++;
+        message=tool('terminal_input',{session_id:session1,text:"printf 'AI_LONG_TASK_STARTED\\n'; sleep 12; printf 'AI_LONG_TASK_DONE\\n'",execute:true,wait_ms:0});
+      } else if (step === 1 && !(previous.at(-1)?.atPrompt && previous.at(-1)?.output?.split('\n').some(line=>line.trim()==='AI_LONG_TASK_DONE'))) {
+        message=tool('read_terminal',{session_id:session1,wait_ms:60000});
+      } else if (step++ < 112) message=tool('read_terminal',{session_id:session1,max_lines:80});
+      else message={role:'assistant',content:'长任务与连续操作完成。'};
+    } else if (mode === 'long-wait-stop') {
+      if (step++ === 0) message=tool('terminal_input',{session_id:session1,text:"sleep 8; printf 'AI_STOP_DID_NOT_KILL_COMMAND\\n'",execute:true,wait_ms:0});
+      else message=tool('read_terminal',{session_id:session1,wait_ms:60000});
     } else {
       await new Promise(resolve=>setTimeout(resolve,1200));
       message=tool('terminal_input',{session_id:session1,text:'touch /home/bitsflow/ai-must-not-run',execute:true,wait_ms:100});
@@ -205,6 +216,24 @@ try {
   assert.equal(await assistant.evaluate(()=>window.aiClipboardWrites[0]),longSelectReply);
   checks.push('A >128000-character Chinese/emoji reply traverses real get_original relay chunks, preserves emoji at the chunk boundary and trailing newline, and copies the exact full source only through a clipboard spy');
   checks.push('AI-authorized session switch continues its own tool loop');
+  await page.evaluate(id=>activate(id),session1); await assistant.click('#ai-clear'); mode='long-task'; step=0;
+  const longStart=requestCount;
+  await send('等待隔离测试命令完成，继续读取超过旧轮次上限并检查结果'); await idle();
+  assert(requestCount-longStart>100);
+  assert((await assistant.$eval('#ai-conversation',e=>e.textContent)).includes('长任务与连续操作完成。'));
+  assert(requests.slice(longStart).some(body=>body.messages.some(message=>message.content?.includes('较早对话的截取记录'))));
+  assert(requests.slice(longStart).every(body=>body.messages.length<=97));
+  checks.push('Real SSH 12-second command returns early from a 60-second wait, then >100 model/tool rounds complete through HTTP with automatic history compaction');
+  await assistant.click('#ai-clear'); mode='long-wait-stop'; step=0;
+  await send('测试长时间等待中的停止');
+  await assistant.waitForFunction(()=>document.querySelector('.ai-operation[data-status="running"]')?.textContent.includes('read_terminal'),{timeout:10000});
+  const stopAt=Date.now(); await assistant.click('#ai-stop');
+  await page.waitForFunction(()=>!DengShellAI.busy,{timeout:3000});
+  assert(Date.now()-stopAt<3000);
+  await page.waitForFunction(id=>sessions.get(id)?.shellIntegration?.atPrompt,{timeout:15000},session1);
+  const stoppedResult=await page.evaluate(async id=>DengShellAITools.execute('read_terminal',{session_id:id},()=>true),session1);
+  assert(stoppedResult.output.includes('AI_STOP_DID_NOT_KILL_COMMAND'));
+  checks.push('Stop during a real 60-second observation responds within 3 seconds while the already submitted SSH command continues to completion');
   for(const action of ['stop','switch','close','lock']) {
     await page.evaluate(id=>activate(id),session1);await assistant.click('#ai-clear');mode='late';
     const before=requestCount;await send('等待并验证取消');

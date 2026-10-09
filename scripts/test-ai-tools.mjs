@@ -70,6 +70,46 @@ function fixture(environment = {}) {
 
 const checks = [];
 {
+  let now = 0;
+  const f = fixture({Date: {now: () => now}, setTimeout(callback, ms) {return setImmediate(() => {now += ms; callback();});}});
+  f.a.shellIntegration.atPrompt = false;
+  const durations = [];
+  for (let index = 0; index < 7; index++) {
+    const start = now;
+    await f.run('read_terminal', {session_id: 'a', wait_ms: 0});
+    durations.push(now - start);
+  }
+  assert.deepEqual(durations, [0, 5000, 10000, 20000, 30000, 30000, 30000]);
+  const before = now; await f.run('read_terminal', {session_id: 'a', wait_ms: 60000}); assert.equal(now - before, 60000);
+  f.a.shellIntegration.atPrompt = true;
+  const ready = now; await f.run('read_terminal', {session_id: 'a'}); assert.equal(now, ready);
+  f.a.shellIntegration.atPrompt = false;
+  await f.run('read_terminal', {session_id: 'a'}); assert.equal(now, ready, 'idle resets observation backoff');
+  await f.run('terminal_key', {session_id: 'a', key: 'CtrlC', wait_ms: 0});
+  const afterInput = now; await f.run('read_terminal', {session_id: 'a'}); assert.equal(now, afterInput);
+  const otherGuard = () => true;
+  await f.tools.execute('read_terminal', {session_id: 'a'}, otherGuard); assert.equal(now, afterInput, 'new task starts with immediate observation');
+  await assert.rejects(f.run('read_terminal', {session_id: 'a', wait_ms: 60001}));
+  checks.push('Running commands back off from immediate observation to 5/10/20/30 seconds, support 60-second waits, and reset on input, idle and new tasks');
+}
+{
+  let now = 0, f;
+  f = fixture({Date: {now: () => now}, setTimeout(callback, ms) {return setImmediate(() => {now += ms; if (now >= 700) f.enabled = false; callback();});}});
+  f.a.shellIntegration.atPrompt = false;
+  await assert.rejects(f.run('read_terminal', {session_id: 'a', wait_ms: 60000}), /stopped/);
+  assert(now <= 800, 'stop must not wait for the full observation timeout');
+  assert.equal(f.frames.length, 0, 'stopping observation must not interrupt the remote command');
+  checks.push('Stop interrupts a long observation promptly without sending Ctrl+C or another remote command');
+}
+{
+  let now = 0, f;
+  f = fixture({Date: {now: () => now}, setTimeout(callback, ms) {return setImmediate(() => {now += ms; if (now >= 1300) f.a.shellIntegration.atPrompt = true; callback();});}});
+  f.a.shellIntegration.atPrompt = false;
+  const result = await f.run('read_terminal', {session_id: 'a', wait_ms: 60000});
+  assert.equal(result.atPrompt, true); assert.equal(now, 1300);
+  checks.push('Long observation returns as soon as the shell prompt becomes available');
+}
+{
   // Model hidden Chromium's one-second timer batches and intensive throttling
   // after five nested timer tasks. xterm parsing also schedules a timer; a
   // bounded five-second observation must not inherit a minute-long delay.

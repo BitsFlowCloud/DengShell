@@ -6,7 +6,7 @@
   const string = (description, maxLength = 4096) => ({ type: 'string', description, minLength: 1, maxLength });
   const session = string('Explicit SSH session ID. Use the task starting session unless the user requested another server.', 256);
   const remotePathSchema = string('Literal absolute remote path. A name containing ~ is not home expansion.');
-  const wait = { type: 'integer', minimum: 0, maximum: 5000, description: 'Maximum observation time in milliseconds; no command cancellation on timeout.' };
+  const wait = { type: 'integer', minimum: 0, maximum: 60000, description: 'Observation time in milliseconds, up to 60 seconds. Returns early at a confirmed idle prompt; does not cancel commands. Repeated reads of a running command automatically wait 5–30 seconds even if omitted or zero, to avoid busy polling.' };
   const definition = (name, description, properties = {}, required = []) => ({ name, description, parameters: { type: 'object', properties, required, additionalProperties: false } });
   const definitions = [
     definition('get_app_state', 'Read application and saved server summaries, without secrets or terminal contents.'),
@@ -25,7 +25,7 @@
     definition('open_file', 'Open an explicit remote text file in the existing editor UI without modifying it.', { session_id: session, path: remotePathSchema }, ['session_id', 'path']),
   ];
   const byName = new Map(definitions.map(item => [item.name, item]));
-  const tokens = new WeakMap(), reads = new WeakMap();
+  const tokens = new WeakMap(), reads = new WeakMap(), observations = new WeakMap();
   let nextToken = 0;
   const clip = (value, size = 500) => typeof value === 'string' ? value.slice(0, size) : '';
   const transitional = state => !!(state.detaching || state.restoring || state.handoffProvisional || state.ownershipUncertain);
@@ -173,8 +173,18 @@
     const binding = args.session_id ? sessionCheck(args.session_id, guard, options) : { state: null, check: () => checkGuard(guard) };
     const { state, check } = binding;
     if (name === 'select_session') { select(state, name, check); return { ...summary(state), targetChanged: true }; }
-    if (name === 'read_terminal') return terminalResult(state, check, args.wait_ms ?? 0, args.max_lines ?? 120);
+    if (name === 'read_terminal') {
+      const previous = observations.get(guard);
+      const idle = state.shellIntegration?.ready && state.shellIntegration.atPrompt;
+      const repeated = !idle && previous?.state === state ? Math.min(previous.repeated + 1, 4) : 0;
+      observations.set(guard, {state, repeated});
+      const minimumWait = repeated ? Math.min(5000 * 2 ** (repeated - 1), 30000) : 0;
+      const result = await terminalResult(state, check, Math.max(args.wait_ms ?? 0, minimumWait), args.max_lines ?? 120);
+      if (result.atPrompt) observations.delete(guard);
+      return result;
+    }
     if (name === 'terminal_input' || name === 'terminal_key') {
+      observations.delete(guard);
       check();
       if (name === 'terminal_input') {
         if (args.execute && (state.term.buffer.active.type !== 'normal' || !state.shellIntegration?.ready || !state.shellIntegration.atPrompt)) throw new Error('终端不在已确认的空闲 Shell 提示符，请先读取终端；交互程序请使用文本输入或按键');

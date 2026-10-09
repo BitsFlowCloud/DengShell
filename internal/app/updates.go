@@ -29,7 +29,7 @@ const ApplicationPackageVersion = "0.3.0"
 
 // Increase this integer for every published build, including packaging-only
 // releases. It also lets older clients identify repackaged releases.
-const ApplicationBuild uint64 = 20261008102
+const ApplicationBuild uint64 = 20261010103
 
 const UpdateManifestURL = "https://dengshell.com/up.deb.json"
 const updateTimeout = 3 * time.Second

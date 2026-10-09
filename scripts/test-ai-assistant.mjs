@@ -3,9 +3,9 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const source = fs.readFileSync(new URL('../web/ai-assistant.js', import.meta.url), 'utf8');
-const start = source.indexOf('  const MAX_ROUNDS'), end = source.indexOf('\n  const trigger =');
+const start = source.indexOf('  const CONTEXT_BYTES'), end = source.indexOf('\n  const trigger =');
 assert.ok(start > 0 && end > start);
-const context = vm.createContext({});
+const context = vm.createContext({TextEncoder});
 vm.runInContext(source.slice(start, end) + '\nglobalThis.createRunner = createRunner;', context);
 const pause = () => new Promise(resolve => setImmediate(resolve));
 const assistant = (content = '', toolCalls = []) => ({message: {role: 'assistant', content, toolCalls}});
@@ -152,14 +152,88 @@ for (const reset of ['clear', 'session']) {
   f.pending[1].resolve(assistant('second answer')); await second;
 }
 
-// A model which asks for tools forever is bounded and leaves no partial history.
-{
-  const f = fixture(), run = f.runner.send('bounded', 'provider');
-  for (let round = 0; round < 24; round += 1) {
-    assert.equal(f.pending.length, round + 1);
-    f.pending[round].resolve(assistant('', [invocation('read_terminal', `call-${round}`)])); await pause();
+function validExchanges(messages) {
+  const pending = new Set();
+  for (const message of messages) {
+    if (message.role === 'tool') {assert(pending.delete(message.toolCallId), 'orphan tool result'); continue;}
+    assert.equal(pending.size, 0, 'tool batch split by compaction');
+    for (const call of message.toolCalls || []) pending.add(call.id);
   }
-  assert.equal(await run, false); assert.equal(f.pending.length, 24); assert.equal(f.runner.busy, false);
-  assert.ok(f.notifications.some(item => item.role === 'error' && /24/.test(item.value)));
+  assert.equal(pending.size, 0);
 }
-console.log('PASS: AI automatic tool loop, explicit target changes, cancellation, stale responses, lock/handoff/session guards, protocol history isolation, tool rejection, literal model text and bounded runs.');
+
+// Long upgrades exceed both previous ceilings and the backend's raw message
+// count ceiling; context remains bounded and all tool batches stay complete.
+{
+  const f = fixture(), task = '从 Debian 12 升级到 Debian 13，完成后检查版本；不要重装系统', run = f.runner.send(task, 'provider');
+  for (let round = 0; round < 180; round += 1) {
+    assert.equal(f.pending.length, round + 1);
+    const messages = f.pending[round].body.messages;
+    validExchanges(messages); assert(messages.length <= 97);
+    assert.equal(messages[1].content, task);
+    f.pending[round].resolve(assistant('', [invocation('read_terminal', `call-${round}-a`), invocation('read_terminal', `call-${round}-b`)])); await pause();
+  }
+  assert.equal(f.executed.length, 360); assert.equal(f.runner.busy, true);
+  f.pending[180].resolve(assistant('版本已检查，任务完成')); assert.equal(await run, true);
+  assert(!f.notifications.some(item => item.role === 'error'));
+}
+
+// Unicode terminal output and opaque provider data must not grow without bound.
+// A preserved assistant message is byte-for-byte untouched with its full result.
+{
+  const f = fixture(), run = f.runner.send('长输出任务', 'provider');
+  f.tools.execute = async () => ({output: '中文升级输出🙂'.repeat(6000), untrusted: true});
+  for (let round = 0; round < 100; round += 1) {
+    const messages = f.pending[round].body.messages;
+    assert(Buffer.byteLength(JSON.stringify(messages)) < 300000);
+    validExchanges(messages);
+    for (const message of messages.filter(item => item.providerData)) assert.equal(message.providerData.data.signature, 'opaque-signature');
+    const reply = assistant('正在处理', [invocation('read_terminal', `long-${round}`)]);
+    reply.message.providerData = {data: {signature: 'opaque-signature', thinking: '原生思考'.repeat(1000)}};
+    f.pending[round].resolve(reply); await pause();
+  }
+  assert(f.pending.at(-1).body.messages.some(item => item.content?.includes('较早对话的截取记录')));
+  f.runner.stop(); f.pending.at(-1).resolve(assistant('', [invocation('send_terminal')]));
+  assert.equal(await run, false); assert.equal(f.executed.length, 0);
+}
+
+// One unusually large provider response is folded as a whole, never stripped of
+// its signature while leaving a tool result behind.
+{
+  const f = fixture(), run = f.runner.send('保留目标', 'provider');
+  const reply = assistant('x'.repeat(1000000), [invocation('read_terminal')]);
+  reply.message.providerData = {data: {signature: 'giant', thinking: 'x'.repeat(1000000)}};
+  f.pending[0].resolve(reply); await pause();
+  const messages = f.pending[1].body.messages;
+  validExchanges(messages); assert(Buffer.byteLength(JSON.stringify(messages)) < 300000);
+  assert.equal(messages[1].content, '保留目标');
+  f.pending[1].resolve(assistant('完成')); assert.equal(await run, true);
+}
+{
+  const f = fixture(), text = '中文'.repeat(65000), run = f.runner.send('检查完整文件', 'provider');
+  f.tools.execute = async () => ({text, sha256: 'f'.repeat(64), truncated: false});
+  f.pending[0].resolve(assistant('', [invocation('read_terminal', 'large-file')])); await pause();
+  const messages = f.pending[1].body.messages;
+  validExchanges(messages);
+  assert.equal(JSON.parse(messages.at(-1).content).text, text, 'latest large tool result must remain complete');
+  assert(Buffer.byteLength(JSON.stringify(messages)) > 256000);
+  f.pending[1].resolve(assistant('已完整读取')); assert.equal(await run, true);
+}
+{
+  const f = fixture();
+  const instructions = ['升级系统', '不要重启', '保留原有SSH端口', '不要删除用户数据', '最后检查服务', '保留当前内核', '不要关闭防火墙'];
+  for (const instruction of instructions) {
+    const run = f.runner.send(instruction, 'provider');
+    f.pending.at(-1).resolve(assistant('收到')); assert.equal(await run, true);
+  }
+  const run = f.runner.send('继续处理', 'provider');
+  for (let round = 0; round < 130; round++) {
+    const messages = f.pending.at(-1).body.messages;
+    validExchanges(messages);
+    const userMessages = messages.filter(message => message.role === 'user').map(message => message.content).join('\n');
+    for (const instruction of [...instructions, '继续处理']) assert(userMessages.includes(instruction), 'lost user constraint: ' + instruction);
+    f.pending.at(-1).resolve(assistant('', [invocation('read_terminal', `constraints-${round}`)])); await pause();
+  }
+  f.pending.at(-1).resolve(assistant('完成')); assert.equal(await run, true);
+}
+console.log('PASS: AI long tasks (180 rounds / 360 actions), Unicode context compaction, complete signed tool exchanges, target changes, cancellation, stale responses, lock/handoff/session guards and protocol history isolation.');
