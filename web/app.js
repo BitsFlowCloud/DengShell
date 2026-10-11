@@ -1026,24 +1026,39 @@ const savedLayout = readSaved('cloudshell.layout', {});
 let layout = savedLayout && typeof savedLayout === 'object' ? savedLayout : {};
 // Adopt the roomier terminal once; subsequent manual pane sizes stay intact.
 if (layout.version !== 2) { delete layout.files; layout.version = 2; save('cloudshell.layout', layout); }
+function filePanelLimits() {
+  const workspace = $('#workspace');
+  // The separator is 8px in either direction; its full height in right mode
+  // must never overwrite the separately remembered bottom-panel height.
+  const maxWidth = Math.max(160, workspace.clientWidth - 240 - 8);
+  return { minWidth: Math.min(280, maxWidth), maxWidth, maxHeight: Math.max(100, workspace.clientHeight - 160 - 8) };
+}
 function clampLayouts() {
-  const maxWidth = Math.min(460, Math.max(225, logicalWidth() - 400));
-  const maxHeight = Math.max(100, $('#workspace').clientHeight - 160 - $('#files-splitter').clientHeight);
+  const maxSidebar = Math.min(460, Math.max(225, logicalWidth() - 400));
+  const { minWidth, maxWidth, maxHeight } = filePanelLimits(), root = document.documentElement;
   if (Number.isFinite(layout.sidebar)) {
-    layout.sidebar = Math.max(Math.min(240, maxWidth), Math.min(maxWidth, layout.sidebar));
-    document.documentElement.style.setProperty('--sidebar-width', `${layout.sidebar}px`);
+    layout.sidebar = Math.max(Math.min(240, maxSidebar), Math.min(maxSidebar, layout.sidebar));
+    root.style.setProperty('--sidebar-width', `${layout.sidebar}px`);
   }
-  if (Number.isFinite(layout.files)) {
-    layout.files = Math.max(100, Math.min(maxHeight, layout.files));
-    document.documentElement.style.setProperty('--files-height', `${layout.files}px`);
-  }
+  // Clamp displayed sizes to this window without losing the user's preferred
+  // dimensions when temporarily switching position, resizing or hiding panes.
+  if (Number.isFinite(layout.files)) root.style.setProperty('--files-height', `${Math.max(100, Math.min(maxHeight, layout.files))}px`);
+  const preferredWidth = Number.isFinite(layout.filesWidth) ? layout.filesWidth : Math.min(480, Math.max(320, $('#workspace').clientWidth * .42));
+  root.style.setProperty('--files-width', `${Math.max(minWidth, Math.min(maxWidth, preferredWidth))}px`);
   $('#sidebar-splitter').setAttribute('aria-valuenow', Math.round($('.sidebar').offsetWidth));
-  $('#sidebar-splitter').setAttribute('aria-valuemax', maxWidth);
-  $('#files-splitter').setAttribute('aria-valuenow', Math.round($('#files-panel').clientHeight));
-  $('#files-splitter').setAttribute('aria-valuemax', maxHeight);
+  $('#sidebar-splitter').setAttribute('aria-valuemax', maxSidebar);
+  const right = appearance.filesPosition === 'right', splitter = $('#files-splitter');
+  splitter.setAttribute('aria-valuemin', right ? minWidth : 100);
+  splitter.setAttribute('aria-valuemax', right ? maxWidth : maxHeight);
+  splitter.setAttribute('aria-valuenow', Math.round($('#files-panel')[right ? 'clientWidth' : 'clientHeight']));
 }
 function resizeSidebar(width) { layout.sidebar = width; clampLayouts(); }
-function resizeFiles(y) { const rect = $('#workspace').getBoundingClientRect(); layout.files = (appearance.filesPosition === 'top' ? y - rect.top : rect.bottom - y) / effectiveScale; clampLayouts(); }
+function resizeFiles(event) {
+  const rect = $('#workspace').getBoundingClientRect(), { minWidth, maxWidth, maxHeight } = filePanelLimits();
+  if (appearance.filesPosition === 'right') layout.filesWidth = Math.max(minWidth, Math.min(maxWidth, (rect.right - event.clientX) / effectiveScale));
+  else layout.files = Math.max(100, Math.min(maxHeight, (appearance.filesPosition === 'top' ? event.clientY - rect.top : rect.bottom - event.clientY) / effectiveScale));
+  clampLayouts();
+}
 function bindSplitter(selector, handler, keyboardHandler) {
   const splitter = $(selector);
   let dragging = false;
@@ -1065,12 +1080,21 @@ function bindSplitter(selector, handler, keyboardHandler) {
   });
 }
 bindSplitter('#sidebar-splitter', event => { const rect = $('.sidebar').getBoundingClientRect(); resizeSidebar((appearance.monitorSide === 'right' ? rect.right - event.clientX : event.clientX - rect.left) / effectiveScale); }, key => { if (key === 'ArrowLeft' || key === 'ArrowRight') resizeSidebar($('.sidebar').offsetWidth + (key === 'ArrowLeft' ? -12 : 12) * (appearance.monitorSide === 'right' ? -1 : 1)); });
-bindSplitter('#files-splitter', event => resizeFiles(event.clientY), key => { if (key === 'ArrowUp' || key === 'ArrowDown') { layout.files = $('#files-panel').clientHeight + (key === 'ArrowUp' ? 20 : -20) * (appearance.filesPosition === 'top' ? -1 : 1); clampLayouts(); } });
+bindSplitter('#files-splitter', resizeFiles, key => {
+  const { minWidth, maxWidth, maxHeight } = filePanelLimits();
+  if (appearance.filesPosition === 'right') {
+    if (key === 'ArrowLeft' || key === 'ArrowRight') layout.filesWidth = Math.max(minWidth, Math.min(maxWidth, $('#files-panel').clientWidth + (key === 'ArrowLeft' ? 20 : -20)));
+  } else if (key === 'ArrowUp' || key === 'ArrowDown') {
+    layout.files = Math.max(100, Math.min(maxHeight, $('#files-panel').clientHeight + (key === 'ArrowUp' ? 20 : -20) * (appearance.filesPosition === 'top' ? -1 : 1)));
+  }
+  clampLayouts();
+});
 $('#reset-layout').onclick = () => {
   layout = { version: 2 };
   save('cloudshell.layout', layout);
   document.documentElement.style.removeProperty('--sidebar-width');
   document.documentElement.style.removeProperty('--files-height');
+  document.documentElement.style.removeProperty('--files-width');
   document.documentElement.style.removeProperty('--terminal-font');
   terminalFont = 14; changeFont(0);
   clampLayouts();

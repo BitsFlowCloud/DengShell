@@ -66,7 +66,18 @@ function reflectFontColorDialog(card) {
 function applyWorkspacePlacement() {
   const root = document.documentElement;
   root.dataset.monitorSide = appearance.monitorSide === 'right' ? 'right' : 'left';
-  root.dataset.filesPosition = appearance.filesPosition === 'top' ? 'top' : 'bottom';
+  root.dataset.filesPosition = ['top', 'right'].includes(appearance.filesPosition) ? appearance.filesPosition : 'bottom';
+  const right = root.dataset.filesPosition === 'right', toggle = $('#toggle-files-position');
+  if (toggle) {
+    toggle.title = right ? '将 SFTP 放在终端下方' : '将 SFTP 放在终端右侧';
+    toggle.setAttribute('aria-label', toggle.title);
+    toggle.setAttribute('aria-pressed', String(right));
+    toggle.querySelector('path').setAttribute('d', right ? 'M3 14h18' : 'M15 4v16');
+  }
+  const splitter = $('#files-splitter');
+  splitter.classList.toggle('vertical', right); splitter.classList.toggle('horizontal', !right);
+  splitter.setAttribute('aria-orientation', right ? 'vertical' : 'horizontal');
+  splitter.setAttribute('aria-label', right ? '调整文件面板宽度' : '调整文件面板高度');
   if ($('#monitor-side')) $('#monitor-side').value = root.dataset.monitorSide;
   if ($('#files-position')) $('#files-position').value = root.dataset.filesPosition;
   for (const dialog of movableColorDialogs) clampColorDialog(dialog);
@@ -148,11 +159,12 @@ function openPromptColors() {
 function initializeAppearanceTools() {
   const anchor = $('#settings-menu .scale-setting');
   const promptButton = node('button'); promptButton.id = 'manage-prompt-colors'; promptButton.type = 'button'; promptButton.setAttribute('role', 'menuitem'); promptButton.append(icon('terminal'), document.createTextNode('提示符颜色')); promptButton.onclick = openPromptColors; anchor.before(promptButton);
-  for (const [id, key, title, options] of [['monitor-side', 'monitorSide', '监控位置', [['left', '左侧'], ['right', '右侧']]], ['files-position', 'filesPosition', '文件面板', [['bottom', '终端下方'], ['top', '终端上方']]]]) {
+  for (const [id, key, title, options] of [['monitor-side', 'monitorSide', '监控位置', [['left', '左侧'], ['right', '右侧']]], ['files-position', 'filesPosition', '文件面板', [['bottom', '终端下方'], ['right', '终端右侧'], ['top', '终端上方']]]]) {
     const row = node('div', 'scale-setting placement-setting'), label = node('label', '', title), select = node('select'); label.htmlFor = select.id = id; select.setAttribute('aria-label', title);
     for (const [value, text] of options) { const option = node('option', '', text); option.value = value; select.append(option); }
     select.onchange = safe(() => chooseAppearance({ [key]: select.value })); row.append(label, select); anchor.before(row);
   }
+  $('#toggle-files-position').onclick = safe(() => chooseAppearance({ filesPosition: appearance.filesPosition === 'right' ? 'bottom' : 'right' }));
   applyWorkspacePlacement();
   window.addEventListener('resize', () => { for (const dialog of movableColorDialogs) clampColorDialog(dialog); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) flushPromptColors().catch(() => {}); });

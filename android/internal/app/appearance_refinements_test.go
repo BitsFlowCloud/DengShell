@@ -73,3 +73,31 @@ func TestAppearanceWorkspacePromptRejectsInvalidPreferences(t *testing.T) {
 		})
 	}
 }
+
+func TestAppearanceFilePositionsPreserveIndependentPanelSizes(t *testing.T) {
+	store, err := OpenStore(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw := `{"version":2,"files":235,"filesWidth":410,"filesHidden":true}`
+	if _, err = store.PatchAppearance(preferencePatch(t, `{"theme":"dark","layout":{"cloudshell.layout":`+raw+`}}`)); err != nil {
+		t.Fatal(err)
+	}
+	for _, position := range []string{"right", "bottom", "top", "right"} {
+		if _, err = store.PatchAppearance(preferencePatch(t, `{"filesPosition":"`+position+`"}`)); err != nil {
+			t.Fatal(err)
+		}
+		store, err = OpenStore(store.dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		saved := store.List().Appearance
+		var sizes map[string]any
+		if err = json.Unmarshal(saved.Layout["cloudshell.layout"], &sizes); err != nil {
+			t.Fatal(err)
+		}
+		if saved.FilesPosition != position || saved.Theme != "dark" || sizes["files"] != float64(235) || sizes["filesWidth"] != float64(410) || sizes["filesHidden"] != true {
+			t.Fatalf("position switch lost saved state: %+v, %+v", saved, sizes)
+		}
+	}
+}

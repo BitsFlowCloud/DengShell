@@ -8,15 +8,37 @@ button,input,select,textarea { font-family:inherit; }
 [data-monitor-side="right"]:not([data-narrow="true"]) .app-shell { grid-template-columns:minmax(0,1fr) var(--pane-gap) var(--sidebar-width); }
 [data-monitor-side="right"]:not([data-narrow="true"]) .app-shell > .sidebar { grid-column:3; }
 [data-monitor-side="right"]:not([data-narrow="true"]) .app-shell > .main-panel { grid-column:1; }
+.workspace { grid-template-columns:minmax(0,1fr); }
 .workspace > .terminal-panel { grid-row:1; grid-column:1; }
 .workspace > #files-splitter { grid-row:2; grid-column:1; }
 .workspace > #files-panel { grid-row:3; grid-column:1; }
 [data-files-position="top"] .workspace { grid-template-rows:var(--files-height) 8px minmax(130px,1fr); }
 [data-files-position="top"] .workspace > .terminal-panel { grid-row:3; }
 [data-files-position="top"] .workspace > #files-panel { grid-row:1; }
-/* Hidden file panes must release both reserved tracks, in either position. */
-.workspace.files-hidden { grid-template-rows:minmax(0,1fr); }
-.workspace.files-hidden > .terminal-panel { grid-row:1; }
+[data-files-position="right"] .workspace { grid-template-rows:minmax(0,1fr); grid-template-columns:minmax(0,1fr) 8px var(--files-width,420px); }
+[data-files-position="right"] .workspace > #files-splitter { grid-row:1; grid-column:2; }
+[data-files-position="right"] .workspace > #files-panel { grid-row:1; grid-column:3; }
+/* Hidden panes release every reserved track, in every supported position. */
+[data-files-position] .workspace.files-hidden { grid-template-rows:minmax(0,1fr); grid-template-columns:minmax(0,1fr); }
+[data-files-position] .workspace.files-hidden > .terminal-panel { grid-row:1; grid-column:1; }
+.files-panel .files-position-button { flex:0 0 28px; width:28px; height:28px; margin-left:auto; border-radius:7px; color:var(--accent,#7198b1); }
+.files-position-button svg { width:18px; height:18px; }
+.files-position-button:hover,.files-position-button[aria-pressed="true"] { background:var(--surface-selected,#edf3f7); }
+.files-panel .files-tip { margin-left:2px; white-space:nowrap; }
+/* A right-hand pane is narrow even on a wide monitor. Keep its controls
+   reachable according to the pane's width, rather than the window's width. */
+@container (max-width:650px) {
+  [data-files-position="right"] .file-toolbar { flex-wrap:wrap; }
+  [data-files-position="right"] .file-toolbar .icon-button { flex-shrink:0; }
+  [data-files-position="right"] .file-toolbar .path-form { flex-basis:calc(100% - 100px); }
+  [data-files-position="right"] .file-content { grid-template-columns:104px minmax(0,1fr); padding-inline:4px; }
+  [data-files-position="right"] .file-table { min-width:360px; }
+}
+@container (max-width:480px) {
+  .files-panel .file-tabs { flex-wrap:wrap; overflow:visible; }
+  [data-files-position="right"] .file-content { grid-template-columns:minmax(0,1fr); }
+  [data-files-position="right"] .file-content > .directory-tree { display:none; }
+}
 [data-narrow="true"] .app-shell > .main-panel { grid-column:1; }
 [data-narrow="true"][data-monitor-side="right"][data-monitor-open="true"] .sidebar { left:auto; right:8px; }
 .placement-setting .themed-select { min-width:112px; }

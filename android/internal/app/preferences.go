@@ -162,8 +162,8 @@ func (s *Store) saveAppearanceLocked(value Appearance) (Appearance, error) {
 	if value.MonitorSide != "left" && value.MonitorSide != "right" {
 		return Appearance{}, errors.New("监控位置应为 left 或 right")
 	}
-	if value.FilesPosition != "top" && value.FilesPosition != "bottom" {
-		return Appearance{}, errors.New("文件面板位置应为 top 或 bottom")
+	if value.FilesPosition != "top" && value.FilesPosition != "bottom" && value.FilesPosition != "right" {
+		return Appearance{}, errors.New("文件面板位置应为 top、bottom 或 right")
 	}
 	if value.MinimizeAction != "ask" && value.MinimizeAction != "minimize" && value.MinimizeAction != "tray" {
 		return Appearance{}, errors.New("最小化行为应为 ask、minimize 或 tray")
