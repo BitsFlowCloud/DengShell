@@ -14,6 +14,9 @@ button,input,select,textarea { font-family:inherit; }
 [data-files-position="top"] .workspace { grid-template-rows:var(--files-height) 8px minmax(130px,1fr); }
 [data-files-position="top"] .workspace > .terminal-panel { grid-row:3; }
 [data-files-position="top"] .workspace > #files-panel { grid-row:1; }
+/* Hidden file panes must release both reserved tracks, in either position. */
+.workspace.files-hidden { grid-template-rows:minmax(0,1fr); }
+.workspace.files-hidden > .terminal-panel { grid-row:1; }
 [data-narrow="true"] .app-shell > .main-panel { grid-column:1; }
 [data-narrow="true"][data-monitor-side="right"][data-monitor-open="true"] .sidebar { left:auto; right:8px; }
 .placement-setting .themed-select { min-width:112px; }

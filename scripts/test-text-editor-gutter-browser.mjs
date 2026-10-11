@@ -103,11 +103,11 @@ try {
     // Range measures the actual first/last glyph boxes across the gutter;
     // compare its used line spacing with the textarea's complete extent.
     const gutterLineHeight = await page.$eval(gutter, e => {
-      const text = e.firstElementChild.firstChild, value = text.textContent;
-      const range = document.createRange(); range.setStart(text, 0); range.setEnd(text, 1);
-      const firstY = range.getBoundingClientRect().top, last = value.lastIndexOf('\n') + 1;
-      range.setStart(text, last); range.setEnd(text, last + 1);
-      return (range.getBoundingClientRect().top - firstY) / (value.split('\n').length - 1) / effectiveScale;
+      const numbers = e.querySelectorAll('.text-editor-line-number');
+      const first = numbers[0], last = numbers[numbers.length - 1], range = document.createRange();
+      range.selectNodeContents(first); const firstY = range.getBoundingClientRect().top;
+      range.selectNodeContents(last);
+      return (range.getBoundingClientRect().top - firstY) / (Number(last.textContent) - Number(first.textContent)) / effectiveScale;
     });
     assert(Math.abs(gutterLineHeight - height.actual / 200001) < 0.01, 'Gutter glyph spacing must match native textarea line boxes');
     largeLayouts.push({scale, actualLineHeight: height.actual / 200001, gutterLineHeight, renderedCount: rendered.length, first: rendered[0], last: rendered.at(-1)});
@@ -127,9 +127,9 @@ try {
     const result = await page.$eval(active, e => {
       const a = e.querySelector('textarea'), g = e.querySelector('.text-editor-gutter'), lines = g.firstElementChild;
       const style = getComputedStyle(a), rect = a.getBoundingClientRect(), zoom = rect.height / a.offsetHeight;
-      const first = Number(lines.textContent.trim().split(/\s+/)[0]);
+      const firstNumber = lines.querySelector('.text-editor-line-number'), first = Number(firstNumber.textContent);
       const expectedY = rect.top + (parseFloat(style.borderTopWidth) + parseFloat(style.paddingTop) + (first - 1) * parseFloat(style.lineHeight) - a.scrollTop) * zoom;
-      return {first, alignmentError: Math.abs(lines.getBoundingClientRect().top - expectedY), gutterWidth: g.getBoundingClientRect().width / zoom, areaWidth: rect.width / zoom, overflow: e.scrollWidth > e.clientWidth + 1};
+      return {first, alignmentError: Math.abs(firstNumber.getBoundingClientRect().top - expectedY), gutterWidth: g.getBoundingClientRect().width / zoom, areaWidth: rect.width / zoom, overflow: e.scrollWidth > e.clientWidth + 1};
     });
     assert(result.alignmentError < 2, JSON.stringify({width, height, scale, ...result}));
     assert(result.gutterWidth < 80 && result.areaWidth > 150 && !result.overflow);

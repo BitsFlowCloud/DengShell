@@ -25,12 +25,7 @@ window.DengEditorTools = (doc, changed) => {
   function select(range) {
     if (!range || !available()) return;
     area.focus({ preventScroll: true }); area.setSelectionRange(...range);
-    const style = getComputedStyle(area), before = area.value.slice(0, range[0]), lineNumber = before.split('\n').length - 1;
-    area.scrollTop = Math.max(0, lineNumber * parseFloat(style.lineHeight) - area.clientHeight / 2);
-    // Approximate horizontal reveal using measured monospace text, including tabs.
-    const prefix = before.slice(before.lastIndexOf('\n') + 1).replace(/\t/g, '    ');
-    const canvas = document.createElement('canvas'), context = canvas.getContext('2d'); context.font = style.font;
-    area.scrollLeft = Math.max(0, context.measureText(prefix).width - area.clientWidth / 2);
+    ui.gutter.reveal(range[0]);
     refresh();
   }
   function find(backwards = false) { if (available() && query.value) { const result = info(); select(backwards ? result.previous : result.next); refresh(); } }

@@ -871,6 +871,7 @@ document.addEventListener('keydown', event => { if (event.key === 'Escape' && !d
 function setWorkspaceVisible(visible, persist = true) {
   if (persist) workspaceInitialized = true;
   $('#files-panel').hidden = !visible; $('#files-splitter').hidden = !visible;
+  $('#workspace').classList.toggle('files-hidden', !visible);
   $('#toggle-sftp').setAttribute('aria-expanded', String(visible));
   if (persist) { layout.filesHidden = !visible; save('cloudshell.layout', layout); }
   requestAnimationFrame(fitActive);

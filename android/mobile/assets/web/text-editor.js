@@ -11,43 +11,102 @@ window.DengTextEditors = (() => {
   const isDirty = () => [...documents.values()].some(d => d.dirty);
   function lineNumbers(area) {
     const element = node('div', 'text-editor-gutter'), lines = node('span', 'text-editor-line-numbers');
-    element.setAttribute('aria-hidden', 'true'); element.append(lines);
-    let previous, count = 1, frame = 0, disposed = false;
+    const ruler = node('span', 'text-editor-scale');
+    element.setAttribute('aria-hidden', 'true'); element.append(lines, ruler);
+    const mirror = node('div', 'text-editor-measure'); mirror.setAttribute('aria-hidden', 'true');
+    const range = document.createRange();
+    let previous, starts = [0], chunks = [], frame = 0, disposed = false, layoutKey = '';
+    const positions = new Map();
+    function layout() {
+      if (disposed || !area.clientHeight) return null;
+      const style = getComputedStyle(area);
+      // Use the same native text layout and scrollbar width as the textarea,
+      // including fractional widths at non-integer UI scales. Plain text
+      // chunks share one inline layout without a DOM element for each line.
+      const properties = ['width', 'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'fontStretch', 'fontVariant', 'fontKerning', 'fontFeatureSettings', 'fontVariationSettings', 'lineHeight', 'letterSpacing', 'wordSpacing', 'tabSize', 'textIndent', 'textTransform', 'direction', 'unicodeBidi', 'textAlign', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'];
+      for (const property of properties) mirror.style[property] = style[property];
+      // Chromium and WebKit expose zoomed DOM rectangles differently.
+      const scale = ruler.getBoundingClientRect().width / 100 || 1;
+      const key = JSON.stringify([scale, ...properties.map(property => style[property])]);
+      if (key !== layoutKey) { layoutKey = key; positions.clear(); }
+      const top = mirror.getBoundingClientRect().top;
+      const position = offset => {
+        if (positions.has(offset)) return positions.get(offset);
+        let low = 0, high = chunks.length;
+        while (low < high) {
+          const middle = (low + high) >>> 1;
+          if (chunks[middle].start <= offset) low = middle + 1; else high = middle;
+        }
+        const chunk = chunks[Math.max(0, low - 1)], local = Math.min(offset, previous.length) - chunk.start;
+        range.setStart(chunk.text, local);
+        range.setEnd(chunk.text, Math.min(local + 1, chunk.text.length));
+        // WebKit may prepend the previous line's zero-width caret rectangle
+        // after a newline. The last rectangle belongs to this character.
+        const boxes = range.getClientRects(), box = boxes[boxes.length - 1];
+        const y = box ? (box.top - top) / scale : parseFloat(style.paddingTop);
+        positions.set(offset, y); return y;
+      };
+      // Range reports the glyph box; translate it to the containing line box
+      // so the number and textarea use the same baseline for every font.
+      const inset = position(0) - parseFloat(style.paddingTop);
+      return offset => position(offset) - inset;
+    }
     function render() {
       frame = 0;
-      if (disposed || !area.clientHeight) return;
-      const style = getComputedStyle(area), padding = parseFloat(style.paddingTop);
-      // At fractional UI scales, native text line boxes round differently
-      // from the computed CSS line-height. Calibrate from the full scroll
-      // extent so that this rounding cannot accumulate over long files.
-      const height = area.scrollHeight > area.clientHeight
-        ? (area.scrollHeight - padding - parseFloat(style.paddingBottom)) / count
-        : parseFloat(style.lineHeight);
+      if (positions.size > 8192) positions.clear();
+      const position = layout(); if (!position) return;
       const scroll = Math.max(0, Math.min(area.scrollTop, area.scrollHeight - area.clientHeight));
-      const first = Math.min(count - 1, Math.max(0, Math.floor((scroll - padding) / height) - 1));
-      const end = Math.min(count, Math.ceil((scroll + area.clientHeight - padding) / height) + 1);
-      const visible = [];
-      for (let line = first; line < end; line++) visible.push(line + 1);
-      // Only the viewport is materialised, even when a file has hundreds of
-      // thousands of lines. Its offset follows textarea scrolling, not a
-      // second independently scrollable element.
-      lines.textContent = visible.join('\n');
-      lines.style.transform = `translateY(${padding + first * height - scroll}px)`;
+      let low = 0, high = starts.length;
+      while (low < high) {
+        const middle = (low + high) >>> 1;
+        if (position(starts[middle]) <= scroll) low = middle + 1; else high = middle;
+      }
+      const visible = document.createDocumentFragment();
+      for (let line = Math.max(0, low - 1); line < starts.length; line++) {
+        const y = position(starts[line]);
+        if (y > scroll + area.clientHeight) break;
+        const number = node('span', 'text-editor-line-number', String(line + 1));
+        number.dataset.line = String(line + 1);
+        number.style.top = y + 'px'; visible.append(number, document.createTextNode('\n'));
+      }
+      lines.replaceChildren(visible);
+      lines.style.transform = `translateY(${-scroll}px)`;
       element.style.height = area.clientHeight + 'px';
     }
     function schedule() { if (!disposed && !frame) frame = requestAnimationFrame(render); }
     function refresh() {
       const value = area.value;
       if (value !== previous) {
-        previous = value; count = 1;
-        for (let offset = value.indexOf('\n'); offset !== -1; offset = value.indexOf('\n', offset + 1)) count++;
-        element.style.width = `calc(${Math.max(2, String(count).length)}ch + 18px)`;
+        previous = value; starts = [0]; positions.clear();
+        for (let offset = value.indexOf('\n'); offset !== -1; offset = value.indexOf('\n', offset + 1)) starts.push(offset + 1);
+        // Range on one huge Text node scans all its line fragments. Split at
+        // existing newlines so each query only visits a small part of a large
+        // file; adjacent Text nodes preserve the exact native wrapping.
+        chunks = []; const fragment = document.createDocumentFragment();
+        for (let line = 0; line < starts.length; line += 256) {
+          const start = starts[line], last = line + 256 >= starts.length;
+          // A zero-width sentinel keeps the final empty line measurable; it
+          // never enters the textarea, raw document, clipboard or saved bytes.
+          const text = document.createTextNode(value.slice(start, last ? value.length : starts[line + 256]) + (last ? '\u200b' : ''));
+          chunks.push({ start, text }); fragment.append(text);
+        }
+        mirror.replaceChildren(fragment);
+        element.style.width = `calc(${Math.max(2, String(starts.length).length)}ch + 18px)`;
       }
       schedule();
     }
+    function reveal(offset) {
+      refresh(); const position = layout(); if (!position) return;
+      area.scrollTop = Math.max(0, position(offset) - area.clientHeight / 2);
+      area.scrollLeft = 0; schedule();
+    }
     const observer = new ResizeObserver(schedule); observer.observe(area);
+    const appearanceObserver = new MutationObserver(schedule);
+    for (const target of [document.documentElement, document.body]) appearanceObserver.observe(target, { attributes: true, attributeFilter: ['style', 'class'] });
     area.addEventListener('scroll', schedule, { passive: true });
-    return { element, refresh, dispose() { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); area.removeEventListener('scroll', schedule); } };
+    const fontsChanged = () => { positions.clear(); schedule(); };
+    document.fonts?.addEventListener('loadingdone', fontsChanged);
+    return { element, mirror, refresh, reveal, dispose() { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); appearanceObserver.disconnect(); area.removeEventListener('scroll', schedule); document.fonts?.removeEventListener('loadingdone', fontsChanged); } };
   }
   function reflect() {
     for (const doc of documents.values()) update(doc);
@@ -215,8 +274,8 @@ window.DengTextEditors = (() => {
     const more = node('details', 'text-editor-more'), moreBody = node('div', 'text-editor-more-body');
     more.append(node('summary', '', '更多'), moreBody); moreBody.append(label, ui.reload, ui.copy);
     moreBody.addEventListener('click', event => { if (event.target.closest('button') && !event.target.closest('.themed-select')) more.open = false; });
-    const area = ui.area = node('textarea', 'text-editor-area'); area.spellcheck = false; area.autocapitalize = 'off'; area.autocomplete = 'off'; area.wrap = 'off'; area.setAttribute('aria-label', `${doc.owner} · ${doc.path}`);
-    const code = node('div', 'text-editor-code'); ui.gutter = lineNumbers(area); code.append(ui.gutter.element, area);
+    const area = ui.area = node('textarea', 'text-editor-area'); area.spellcheck = false; area.autocapitalize = 'off'; area.autocomplete = 'off'; area.wrap = 'soft'; area.setAttribute('aria-label', `${doc.owner} · ${doc.path}`);
+    const code = node('div', 'text-editor-code'); ui.gutter = lineNumbers(area); code.append(ui.gutter.element, area, ui.gutter.mirror);
     const sync = caret => { area.value = doc.model.visible; if (caret != null) area.setSelectionRange(caret, caret); update(doc); };
     area.oninput = () => { if (doc.model && !doc.loading) { doc.model.edit(area.value); update(doc); } };
     area.addEventListener('paste', event => {
