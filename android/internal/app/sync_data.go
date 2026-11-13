@@ -40,9 +40,10 @@ func (s *Store) syncConfigProjection(config Config, secrets bool, keyData map[st
 		p.Group = "" // Derived display path; group IDs are the synchronized identity.
 		p.HasSecret = false
 		p.KeyPath = ""
-		p.NeedsProxy = p.NeedsProxy || p.ProxyID != "" || (p.Proxy.Type != "" && p.Proxy.Type != "direct")
+		p.NeedsProxy = p.NeedsProxy || p.JumpHostID != "" || p.ProxyID != "" || (p.Proxy.Type != "" && p.Proxy.Type != "direct")
 		p.Proxy = ProxyConfig{}
 		p.ProxyID = ""
+		p.JumpHostID = ""
 		if !secrets {
 			p.Secret = ""
 			p.KeyID = ""
@@ -181,9 +182,13 @@ func (s *Store) prepareSyncWithBaseline(expected, next map[string]json.RawMessag
 			p.HasSecret = false
 			p.Proxy = ProxyConfig{Type: "direct"}
 			p.ProxyID = ""
+			p.JumpHostID = ""
 			if old, ok := oldProfiles[id]; ok {
 				p.Proxy = old.Proxy
 				p.ProxyID = old.ProxyID
+				if p.Protocol != "rdp" {
+					p.JumpHostID = old.JumpHostID
+				}
 				p.NeedsProxy = old.NeedsProxy
 				p.FinalShellID = old.FinalShellID
 				if !secrets {

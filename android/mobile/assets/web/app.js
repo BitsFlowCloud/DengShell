@@ -76,11 +76,11 @@ function waitForDesktop() {
 function endpoint(path) { return boot.base + path; }
 async function api(path, options = {}) {
   if (desktopPage) await waitForDesktop();
-  if (native()) { try { return JSON.parse(await native().Request(options.method || 'GET', path, options.body || '')); } catch (error) { const message = error?.message || String(error); const marker = message.indexOf('DENGSHELL_ERROR:'); if (marker >= 0) { let data; try { data = JSON.parse(message.slice(marker + 16)); } catch {} if(data?.code==='DENGSHELL_LOCKED')window.DengSecurityLock?.blocked(); if (data) throw Object.assign(new Error(data.error), { code: data.code, hostKey: data.hostKey }); } throw new Error(message); } }
+  if (native()) { try { return JSON.parse(await native().Request(options.method || 'GET', path, options.body || '')); } catch (error) { const message = error?.message || String(error); const marker = message.indexOf('DENGSHELL_ERROR:'); if (marker >= 0) { let data; try { data = JSON.parse(message.slice(marker + 16)); } catch {} if(data?.code==='DENGSHELL_LOCKED')window.DengSecurityLock?.blocked(); if (data) throw Object.assign(new Error(data.error), { code: data.code, hostKey: data.hostKey, jumpHostId: data.jumpHostId }); } throw new Error(message); } }
   const response = await fetch(endpoint(path), { ...options, headers: { 'Content-Type': 'application/json', 'X-CloudShell-Token': boot.token, ...options.headers } });
   const data = await response.json();
   if(data.code==='DENGSHELL_LOCKED')window.DengSecurityLock?.blocked();
-  if (!response.ok) throw Object.assign(new Error(data.error || `请求失败 (${response.status})`), { code: data.code, hostKey: data.hostKey });
+  if (!response.ok) throw Object.assign(new Error(data.error || `请求失败 (${response.status})`), { code: data.code, hostKey: data.hostKey, jumpHostId: data.jumpHostId });
   return data;
 }
 const post = (path, body) => api(path, { method: 'POST', body: JSON.stringify(body) });
@@ -209,19 +209,33 @@ async function connectProfile(profileID, { background = false, refreshHistory = 
       if (profile.auth === 'password' && !secret) throw new Error('请输入 SSH 密码');
     }
     showConnectionProgress(state, '🔗  连接主机...');
+    let jumpSecret = credentials.get(profile.jumpHostId) || '';
     const requestConnection = async () => {
-      let hostKeyApproval;
-      for (let confirmations = 0; ; confirmations++) {
-        try { return await api('/api/sessions', { method: 'POST', body: JSON.stringify({ profileId: profileID, secret, hostKeyApproval }), signal: state.connectionAbort.signal }); }
+      let hostKeyApproval, confirmations = 0, promptedForJump = false;
+      for (;;) {
+        try { return await api('/api/sessions', { method: 'POST', body: JSON.stringify({ profileId: profileID, secret, jumpSecret, hostKeyApproval }), signal: state.connectionAbort.signal }); }
         catch (error) {
           if (!alive()) return null;
-          if (!['ssh_host_key_unknown', 'ssh_host_key_changed'].includes(error.code) || !error.hostKey || confirmations >= 2) throw error;
-          const key = error.hostKey, changed = error.code === 'ssh_host_key_changed';
-          showConnectionProgress(state, '🛡️  等待核实服务器指纹...');
-          const accepted = await ask({ title: changed ? `服务器指纹已变化 · ${profile.name}` : `首次连接 · ${profile.name}`, description: `${key.host}\n算法：${key.algorithm}\n${changed ? `原指纹：${key.previousFingerprint}\n` : ''}新指纹：${key.fingerprint}\n\n${changed ? '服务器重装、密钥更换或连接被冒充都可能导致此变化。' : ''}请通过服务器控制台或可信管理员核对指纹；确认一致后才继续发送登录凭据。`, confirm: '已核实，信任并连接', signal: state.connectionAbort.signal });
-          if (!alive()) return null;
-          if (!accepted) { showConnectionProgress(state, '🚫  已取消连接', true); return null; }
-          hostKeyApproval = { host: key.host, fingerprint: key.fingerprint, previousFingerprint: key.previousFingerprint };
+          const jump = error.jumpHostId && profiles.find(item => item.id === error.jumpHostId);
+          const name = jump?.name || profile.name;
+          if (['ssh_host_key_unknown', 'ssh_host_key_changed'].includes(error.code) && error.hostKey && confirmations < (profile.jumpHostId ? 4 : 2)) {
+            confirmations++;
+            const key = error.hostKey, changed = error.code === 'ssh_host_key_changed';
+            showConnectionProgress(state, '🛡️  等待核实服务器指纹...');
+            const accepted = await ask({ title: `${changed ? '服务器指纹已变化' : '首次连接'} · ${error.jumpHostId ? '跳板机 · ' : ''}${name}`, description: `${key.host}\n算法：${key.algorithm}\n${changed ? `原指纹：${key.previousFingerprint}\n` : ''}新指纹：${key.fingerprint}\n\n${changed ? '服务器重装、密钥更换或连接被冒充都可能导致此变化。' : ''}请通过服务器控制台或可信管理员核对指纹；确认一致后才继续发送登录凭据。`, confirm: '已核实，信任并连接', signal: state.connectionAbort.signal });
+            if (!alive()) return null;
+            if (!accepted) { showConnectionProgress(state, '🚫  已取消连接', true); return null; }
+            hostKeyApproval = { host: key.host, fingerprint: key.fingerprint, previousFingerprint: key.previousFingerprint };
+          } else if (jump && !promptedForJump && ((jump.auth === 'password' && ['ssh_password_required', 'ssh_authentication_failed'].includes(error.code)) || (jump.auth === 'key' && ['ssh_key_passphrase_required', 'ssh_key_passphrase_invalid'].includes(error.code)))) {
+            promptedForJump = true;
+            showConnectionProgress(state, '🔑  等待输入跳板机凭据...');
+            jumpSecret = await ask({ title: `跳板机${jump.auth === 'key' ? '私钥口令' : '密码'} · ${name}`, description: error.message, input: true, secret: true, confirm: '连接', signal: state.connectionAbort.signal });
+            if (!alive()) return null;
+            if (jumpSecret === null) { showConnectionProgress(state, '🚫  已取消连接', true); return null; }
+            if (!jumpSecret) throw error;
+          } else {
+            throw error;
+          }
           showConnectionProgress(state, '🔗  连接主机...');
         }
       }
@@ -230,6 +244,7 @@ async function connectProfile(profileID, { background = false, refreshHistory = 
     try { info = await requestConnection(); }
     catch (error) {
       if (!alive()) return null;
+      if (error.jumpHostId) { credentials.delete(error.jumpHostId); throw error; }
       credentials.delete(profileID);
       const needsKeyPassphrase = profile.auth === 'key' && ['ssh_key_passphrase_required', 'ssh_key_passphrase_invalid'].includes(error.code);
       if (!needsKeyPassphrase && !(profile.auth === 'password' && error.code === 'ssh_authentication_failed')) throw error;
@@ -253,6 +268,7 @@ async function connectProfile(profileID, { background = false, refreshHistory = 
     // Each tab becomes usable independently, preserving order and the user's current focus.
     if (selected) activate(state.id); else renderTabs();
     if (secret) credentials.set(profileID, secret);
+    if (jumpSecret && profile.jumpHostId) credentials.set(profile.jumpHostId, jumpSecret);
     window.DengCommandHistory?.refresh(profileID).catch(error => toast('⚠️  命令历史刷新失败：' + error.message));
     if (current() === state && state.ready) { pollStats(); pollLatency(); }
     // A slow or failed SFTP listing must not block any other SSH connection.
@@ -823,7 +839,19 @@ function showConnectionForm(profile = null, groupID = '') {
   form.elements.proxyType.value = profile?.proxy?.type || 'direct';
   for (const [field, key] of [['proxyHost', 'host'], ['proxyPort', 'port'], ['proxyUser', 'user']]) form.elements[field].value = profile?.proxy?.[key] || '';
   form.elements.proxyPassword.placeholder = profile?.proxy?.hasPassword ? '已保存，留空保留' : '代理密码（可选）';
-  $('#proxy-settings').open = !!profile?.needsProxy; updateProxyFields();
+  const jump = form.elements.jumpHostId;
+  jump.replaceChildren(new Option('不使用跳板机', ''));
+  const addressMatches = item => item.host.toLowerCase() === profile?.host?.toLowerCase() && item.port === profile?.port;
+  for (const item of profiles) {
+    if (item.id !== profile?.id && item.protocol !== 'rdp' && !item.temporary && !item.jumpHostId && !addressMatches(item)) {
+      jump.add(new Option(`${item.name} · ${item.user}@${item.host}:${item.port}`, item.id));
+    }
+  }
+  if (profile?.jumpHostId && ![...jump.options].some(option => option.value === profile.jumpHostId)) {
+    jump.add(new Option('已配置的跳板机不可用', profile.jumpHostId));
+  }
+  jump.value = profile?.jumpHostId || '';
+  $('#proxy-settings').open = !!(profile?.needsProxy || profile?.jumpHostId);
   chooseConnectionGroup(profile, groupID);
   form.elements.remember.checked = !!profile?.hasSecret; $('#saved-secret-note').hidden = !profile?.hasSecret; $('#reset-host-key').hidden = !profile;
   $('#connection-form-title').textContent = profile?.needsProxy ? '编辑连接 · 请补充代理或确认直连' : profile ? '编辑连接' : '新建连接'; $('#save-connection').textContent = profile ? '保存更改' : '保存并连接'; updateAuthFields(); $('#connection-dialog').showModal(); $('#connection-form .connection-form-body').scrollTop = 0;
@@ -833,6 +861,9 @@ function updateAuthFields() {
   const rdp = form.elements.protocol.value === 'rdp';
   $('#connection-auth-field').hidden = rdp; $('#rdp-domain-field').hidden = !rdp; $('#rdp-clipboard-field').hidden = !rdp; $('#rdp-connection-note').hidden = !rdp;
   $('#reset-host-key').hidden = rdp || !form.elements.id.value;
+  $('#profile-jump-field').hidden = rdp;
+  form.elements.jumpHostId.disabled = rdp;
+  updateProxyFields();
   const needsSecret = auth === 'password' || (auth === 'key' && (!key || (key.encrypted && !key.hasPassphrase)));
   $('#key-library-field').hidden = auth !== 'key'; $('#key-path-field').hidden = auth !== 'key' || !!form.elements.keyId.value;
   $('#secret-field').hidden = !needsSecret; $('#remember-secret-field').hidden = !needsSecret;
@@ -841,6 +872,7 @@ function updateAuthFields() {
   $('#secret-label').textContent = auth === 'key' ? '私钥口令' : '密码'; $('#choose-key').hidden = !native();
 }
 $('#connection-form').elements.auth.onchange = updateAuthFields;
+$('#connection-form').elements.jumpHostId.onchange = updateProxyFields;
 $('#connection-protocol').onchange = () => {
   const form = $('#connection-form'), rdp = form.elements.protocol.value === 'rdp';
   if (rdp) form.elements.auth.value = 'password';
@@ -858,7 +890,7 @@ $('#connection-form').onsubmit = safe(async event => {
   const previous = profiles.find(profile => profile.id === values.id);
   const proxy = { type: values.proxyId ? 'direct' : values.proxyType, host: values.proxyHost, port: Number(values.proxyPort), user: values.proxyUser, password: values.proxyPassword, clearPassword: form.elements.clearProxyPassword.checked };
   for (const name of ['proxyType', 'proxyHost', 'proxyPort', 'proxyUser', 'proxyPassword', 'clearProxyPassword']) delete values[name];
-  const saved = await post('/api/profiles', { ...values, rdpClipboard: form.elements.rdpClipboard.checked, port: Number(values.port), secret: remember ? secret : '', clearSecret: !remember, proxy });
+  const saved = await post('/api/profiles', { ...values, rdpClipboard: form.elements.rdpClipboard.checked, port: Number(values.port), secret: remember ? secret : '', clearSecret: !remember, proxy: values.jumpHostId ? { type: 'direct' } : proxy, proxyId: values.jumpHostId ? '' : values.proxyId });
   credentials.delete(saved.id);
   if (secret) credentials.set(saved.id, secret); else if (!remember) credentials.delete(saved.id);
   $('#connection-dialog').close(); await loadProfiles(); if (isNew) await connect(saved.id); else { renderSessionInfo(); toast('连接配置已保存，下次连接时生效'); }
@@ -889,8 +921,10 @@ $('#upload-folder-option').onclick = safe(async () => { $('#upload-menu').hidden
 for (const id of ['file-picker', 'folder-picker']) $(`#${id}`).onchange = safe(async event => { const files = [...event.target.files]; event.target.value = ''; await queueFiles(files.map(file => ({ file, relativePath: file.webkitRelativePath || file.name }))); });
 let activeUploads = 0;
 async function queueFiles(items, state = current(), destination = state?.cwd) {
-  if (state?.sftpAvailable === false) return toast('当前连接的 SFTP 文件服务不可用');
   if (!state?.connected) return toast('请先连接服务器');
+  if (state.closed || sessions.get(state.id) !== state) return toast('连接已断开，请重新连接后再次选择文件');
+  if (state.sftpPending) return toast('SFTP 文件服务正在连接，请稍后重试');
+  if (state.sftpAvailable === false) return toast('当前连接的 SFTP 文件服务不可用');
   if (!items.length) return toast('没有可上传的文件');
   const prepared = items.map(({ file, relativePath }) => ({ file, target: normalizePath(relativePath, destination) }));
   const decision = await window.DengUploadConfirmation.prepare(state, { targets: prepared.map(item => item.target), directory: destination });
@@ -916,16 +950,48 @@ async function uploadBrowser(task) {
 }
 async function uploadNative(paths, state = current(), directory = state?.cwd) {
   if (!state?.connected) return toast('请先连接服务器');
+  if (state.closed || sessions.get(state.id) !== state) return toast('连接已断开，请重新连接后再次选择文件');
+  if (state.sftpPending) return toast('SFTP 文件服务正在连接，请稍后重试');
   if (state.sftpAvailable === false) return toast('当前连接的 SFTP 文件服务不可用');
   const decision = await window.DengUploadConfirmation.prepare(state, { paths, directory });
   if (!decision) return;
-  const result = await post(`/api/sessions/${state.id}/upload-local`, { paths, directory, ...decision });
-  for (const id of result.ids) { nativeUploadIDs.add(id); const task = localTasks.get(id); if (task?.historicalResult) { task.resultSeen = false; delete task.historicalResult; } }
-  await pollTransfers(); updateTransferNotice(); if (result.ids.length) toast(`已添加 ${result.ids.length} 个上传任务`); if (!result.ids.length) { toast(decision.skipTargets.length ? '已跳过同名项目' : '目录已创建'); await navigate(state.cwd, state); }
+  let result;
+  try {
+    result = await post(`/api/sessions/${state.id}/upload-local`, { paths, directory, ...decision });
+  } catch (error) {
+    if (!window.DengSecurityLock?.isLocked()) await ask({ title: '无法开始上传', description: error.message, confirm: '关闭' });
+    return;
+  }
+  const tasks = new Map((result.tasks || []).map(task => [task.id, task]));
+  for (const id of result.ids) {
+    const task = localTasks.get(id);
+    if (task?.historicalResult) { task.resultSeen = false; delete task.historicalResult; }
+    if (!task?.backendSeen) {
+      nativeUploadIDs.add(id);
+      if (tasks.has(id)) localTasks.set(id, tasks.get(id));
+    }
+  }
+  renderTransfers();
+  await pollTransfers();
+  if (result.ids.length) toast(`已添加 ${result.ids.length} 个上传任务`);
+  else if (result.directories) { toast('目录已创建'); await navigate(state.cwd, state); }
+  else if (decision.skipTargets.length) toast('已跳过同名项目');
 }
+const pendingWindowsDrops = new Map();
+let windowsDropSequence = 0;
 window.cloudshellNativeDrop = safe(async ({ x, y, paths }) => {
-  const rect = $('#files-panel').getBoundingClientRect(); if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return toast('请将文件拖入下方文件区域');
-  if (paths?.length) await uploadNative(paths);
+  const pending = x === -1 ? pendingWindowsDrops.get(y) : null;
+  if (x === -1) {
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    pendingWindowsDrops.delete(y);
+  } else {
+    const rect = $('#files-panel').getBoundingClientRect();
+    if (window.chrome?.webview || $('#files-panel').hidden || x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return;
+  }
+  const files = (paths || []).filter(Boolean);
+  if (files.length) await uploadNative(files, pending?.state || current(), pending?.directory);
+  else toast('无法读取拖入文件的本地路径，请使用上传菜单');
 });
 function refreshUploaded(task) { const state = sessions.get(task.sessionId); if (!state?.connected || task.refreshed) return; task.refreshed = true; if (task.target.startsWith(state.cwd === '/' ? '/' : state.cwd + '/')) navigate(state.cwd, state).catch(() => {}); }
 let transfersBusy = false, transferEpoch = 0, clearingTransfers = false, transfersInitialized = false;
@@ -1007,7 +1073,7 @@ const filesPanel = $('#files-panel'); let dragDepth = 0;
 const isFileDrag = event => [...(event.dataTransfer?.types || [])].includes('Files');
 window.addEventListener('dragover', event => { if (isFileDrag(event)) { event.preventDefault(); event.dataTransfer.dropEffect = filesPanel.contains(event.target) && current()?.connected ? 'copy' : 'none'; } });
 window.addEventListener('drop', event => { if (isFileDrag(event)) event.preventDefault(); dragDepth = 0; $('#drop-overlay').hidden = true; });
-filesPanel.addEventListener('dragenter', event => { if (!isFileDrag(event) || !current()?.connected || native()) return; event.preventDefault(); dragDepth++; $('#drop-overlay').hidden = false; });
+filesPanel.addEventListener('dragenter', event => { if (!isFileDrag(event) || !filesUsable()) return; event.preventDefault(); dragDepth++; $('#drop-overlay').hidden = false; });
 filesPanel.addEventListener('dragleave', () => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) $('#drop-overlay').hidden = true; });
 async function readEntry(entry, prefix = '') {
   if (entry.isFile) { const file = await new Promise((resolve, reject) => entry.file(resolve, reject)); return [{ file, relativePath: prefix + file.name }]; }
@@ -1016,8 +1082,35 @@ async function readEntry(entry, prefix = '') {
   return result;
 }
 filesPanel.addEventListener('drop', safe(async event => {
-  if (!isFileDrag(event) || native()) return; event.preventDefault(); const state = current(), directory = state?.cwd, files = [...event.dataTransfer.files], entries = [...event.dataTransfer.items].filter(item => item.kind === 'file').map(item => item.webkitGetAsEntry?.());
+  if (!isFileDrag(event)) return;
+  event.preventDefault();
+  const state = current(), directory = state?.cwd;
   dragDepth = 0; $('#drop-overlay').hidden = true;
+  if (native()) {
+    if (!window.chrome?.webview) return; // GTK and Cocoa provide native paths directly.
+    if (!filesUsable(state)) return toast('请等待 SFTP 文件服务就绪后再拖入文件');
+    const files = [...event.dataTransfer.files];
+    if (!files.length || typeof window.chrome.webview.postMessageWithAdditionalObjects !== 'function') {
+      return toast('当前无法读取拖入的本地文件，请使用上传菜单');
+    }
+    // Wails echoes these two integer fields with the resolved paths. Use them
+    // to match the original destination even if the user switches tabs.
+    const id = ++windowsDropSequence;
+    const timer = setTimeout(() => {
+      pendingWindowsDrops.delete(id);
+      toast('读取拖入文件超时，请使用上传菜单');
+    }, 5000);
+    pendingWindowsDrops.set(id, { state, directory, timer });
+    try {
+      window.chrome.webview.postMessageWithAdditionalObjects(`file:drop:-1:${id}`, files);
+    } catch (error) {
+      clearTimeout(timer);
+      pendingWindowsDrops.delete(id);
+      throw error;
+    }
+    return;
+  }
+  const files = [...event.dataTransfer.files], entries = [...event.dataTransfer.items].filter(item => item.kind === 'file').map(item => item.webkitGetAsEntry?.());
   if (entries.length && entries.every(Boolean)) { const items = []; for (const entry of entries) items.push(...await readEntry(entry)); await queueFiles(items, state, directory); }
   else await queueFiles(files.map(file => ({ file, relativePath: file.name })), state, directory);
 }));
@@ -1109,16 +1202,8 @@ window.addEventListener('resize', () => {
 });
 
 initializeWorkspaceTools(); initializeAppearance(); initializeRefinements(); renderSessionInfo(); renderFiles(); renderTransfers(); applyUIScale();
-let windowsDropReady = false;
-function initializeWindowsDrop() {
-  if (!windowsDropReady && window.chrome?.webview?.postMessageWithAdditionalObjects && window.runtime?.OnFileDrop) {
-    // Register WebView2's file-path resolver. Go handles the resolved drop once.
-    window.runtime.OnFileDrop(() => {}, false);
-    windowsDropReady = true;
-  }
-}
 async function initializeConfig() {
-  try { if (desktopPage) await waitForDesktop(); await initializeWindowControls(); await initializeQuitConfirmation(); await window.DengSecurityLock?.ready; if(window.DengSecurityLock?.isLocked()) window.runtime?.EventsEmit('cloudshell:ready'); await window.DengSecurityLock?.whenUnlocked(); window.DengSessionWindows.prepareRestore(); await loadProfiles(); await window.DengSessionWindows.restore(); initializeWindowsDrop(); syncDesktopTheme(); $('#connection-button').classList.remove('failed'); $('#connection-button').title = '打开服务器管理'; window.runtime?.EventsEmit('cloudshell:ready'); }
+  try { if (desktopPage) await waitForDesktop(); await initializeWindowControls(); await initializeQuitConfirmation(); await window.DengSecurityLock?.ready; if(window.DengSecurityLock?.isLocked()) window.runtime?.EventsEmit('cloudshell:ready'); await window.DengSecurityLock?.whenUnlocked(); window.DengSessionWindows.prepareRestore(); await loadProfiles(); await window.DengSessionWindows.restore(); syncDesktopTheme(); $('#connection-button').classList.remove('failed'); $('#connection-button').title = '打开服务器管理'; window.runtime?.EventsEmit('cloudshell:ready'); }
   catch (error) { $('#connection-button').classList.add('failed'); $('#connection-button').title = error.message + ' · 点击重试'; toast(error.message); }
 }
 $('#connection-button').onclick = () => $('#connection-button').classList.contains('failed') ? initializeConfig() : setDrawer(true);

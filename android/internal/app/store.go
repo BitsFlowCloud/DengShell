@@ -37,6 +37,7 @@ type Profile struct {
 	HasSecret    bool        `json:"hasSecret,omitempty"`
 	Proxy        ProxyConfig `json:"proxy"`
 	ProxyID      string      `json:"proxyId,omitempty"`
+	JumpHostID   string      `json:"jumpHostId,omitempty"`
 }
 
 type Config struct {
@@ -170,6 +171,27 @@ func (s *Store) saveProfile(p Profile, clearSecret, allowNewID bool) (Profile, e
 	}
 	if p.Port < 1 || p.Port > 65535 {
 		return Profile{}, errors.New("端口应为 1–65535")
+	}
+	if p.JumpHostID != "" {
+		for _, entry := range s.config.Servers {
+			if entry.DeletedAt == nil && entry.JumpHostID == p.ID && p.ID != "" {
+				return Profile{}, errors.New("此连接已被用作跳板机，不能再经过其他跳板机")
+			}
+		}
+		var jump Profile
+		for _, entry := range s.config.Servers {
+			if entry.ID == p.JumpHostID && entry.DeletedAt == nil {
+				jump = entry
+				break
+			}
+		}
+		if !validSSHJumpHost(p, jump) {
+			return Profile{}, errors.New("请选择其他已保存且可直接连接的 SSH 服务器作为跳板机")
+		}
+		if p.ProxyID != "" || p.Proxy.Type != "direct" {
+			return Profile{}, errors.New("请在跳板机的连接配置中设置代理")
+		}
+		p.NeedsProxy = false
 	}
 	if p.Auth == "" {
 		p.Auth = "password"

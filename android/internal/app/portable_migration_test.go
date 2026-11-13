@@ -57,6 +57,11 @@ func TestPortableDataMigrationKeepsEncryptedAISettingsAndKey(t *testing.T) {
 	want := aiSettings{Provider: "migration-fixture", Timeout: 45, Providers: []aiProvider{{
 		ID: "migration-fixture", Name: "Portable AI", Format: "openai",
 		BaseURL: "https://migration.invalid/v1", Model: "fixture-model", APIKey: "portable-ai-test-secret",
+		Proxy: aiProxy{Type: "system"},
+	}, {
+		ID: "migration-second", Name: "Portable AI with proxy", Format: "openai",
+		BaseURL: "https://migration.invalid/v1", Model: "fixture-model", APIKey: "portable-second-ai-secret",
+		Proxy: aiProxy{Type: "http", Host: "127.0.0.1", Port: 8080, User: "migration", Password: "portable-proxy-secret"},
 	}}}
 	if _, err := previous.saveAISettings(want); err != nil {
 		t.Fatal(err)
@@ -69,8 +74,12 @@ func TestPortableDataMigrationKeepsEncryptedAISettingsAndKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytes.Contains(encrypted, []byte(want.Providers[0].APIKey)) || bytes.Contains(encrypted, []byte(want.Providers[0].BaseURL)) {
-		t.Fatal("fixture AI settings were not encrypted")
+	for _, provider := range want.Providers {
+		for _, secret := range []string{provider.APIKey, provider.BaseURL, provider.Proxy.Password} {
+			if secret != "" && bytes.Contains(encrypted, []byte(secret)) {
+				t.Fatal("fixture AI settings were not encrypted")
+			}
+		}
 	}
 	target := filepath.Join(root, "data")
 	if err := MigratePortableData(target); err != nil {

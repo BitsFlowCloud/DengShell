@@ -136,8 +136,11 @@ func (a *App) Connect(ctx context.Context, profileID, secret string) (*Session, 
 }
 
 func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret string, approval *HostKeyApproval) (*Session, error) {
-	// The complete connection attempt, including Agent discovery and signatures,
-	// belongs to both the caller and the application lifetime.
+	return a.connectSSH(ctx, profileID, secret, "", approval)
+}
+
+func (a *App) connectSSH(ctx context.Context, profileID, secret, jumpSecret string, approval *HostKeyApproval) (*Session, error) {
+	// The deadline covers the jump host, target and any SSH Agent requests.
 	dialCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	stopApp := context.AfterFunc(a.ctx, cancel)
@@ -152,120 +155,49 @@ func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret 
 	if p.Protocol == "rdp" {
 		return nil, errors.New("此连接为 RDP，请使用远程桌面打开")
 	}
-	if p.NeedsProxy {
-		return nil, &AuthenticationError{code: "ssh_proxy_missing", message: "此导入连接尚未配置代理，请编辑连接后再连接。"}
-	}
-	if p.ProxyID != "" {
-		p.Proxy, err = a.store.ResolveProxy(p.ProxyID)
+	dial := dialSSH
+	routeType := ""
+	var jump *ssh.Client
+	if p.JumpHostID != "" {
+		host, err := a.store.Get(p.JumpHostID)
+		if err != nil || !validSSHJumpHost(p, host) {
+			return nil, errors.New("所选 SSH 跳板机不可用，请编辑目标连接并重新选择")
+		}
+		if p.ProxyID != "" || (p.Proxy.Type != "" && p.Proxy.Type != "direct") {
+			return nil, errors.New("请在跳板机的连接配置中设置代理")
+		}
+		upstream, err := a.openSSHConnection(dialCtx, host, jumpSecret, approval, dialSSH)
 		if err != nil {
-			return nil, err
+			return nil, &sshJumpHostError{profileID: host.ID, name: host.Name, cause: err}
 		}
-	}
-	if secret == "" {
-		secret = p.Secret
-	}
-	var auth []ssh.AuthMethod
-	var agentConn net.Conn
-	switch p.Auth {
-	case "password":
-		if secret == "" {
-			return nil, errors.New("请输入 SSH 密码")
-		}
-		auth = []ssh.AuthMethod{ssh.Password(secret), ssh.KeyboardInteractive(passwordChallenge(secret))}
-	case "key":
-		if p.KeyID == "" && p.KeyPath == "" {
-			return nil, &AuthenticationError{code: "ssh_key_missing", message: "此连接尚未配置私钥，请在编辑连接中选择密钥管理器里的密钥或私钥文件。"}
-		}
-		var data []byte
-		var savedPassphrase string
-		if p.KeyID != "" {
-			data, savedPassphrase, err = a.store.keyMaterial(p.KeyID)
-			if savedPassphrase != "" {
-				// The key manager is authoritative, including over stale per-profile
-				// credentials or a detached window's cached input.
-				secret = savedPassphrase
-			}
-		} else {
-			data, err = readPrivateKey(p.KeyPath)
-		}
-		if err != nil {
-			if errors.Is(err, errManagedKeyMissing) || os.IsNotExist(err) {
-				return nil, &AuthenticationError{code: "ssh_key_missing", message: "此连接的私钥已缺失，请重新配置密钥。"}
-			}
-			return nil, &AuthenticationError{code: "ssh_key_unavailable", message: "无法读取此连接的私钥，请检查文件权限或重新配置密钥。"}
-		}
-		defer clear(data)
-		var signer ssh.Signer
-		signer, err = ssh.ParsePrivateKey(data)
-		var passphraseRequired *ssh.PassphraseMissingError
-		if errors.As(err, &passphraseRequired) {
-			if secret == "" {
-				return nil, &AuthenticationError{code: "ssh_key_passphrase_required", message: "此私钥已加密，请输入私钥口令；可在密钥管理器中保存，供所有引用此密钥的连接使用。"}
-			}
-			signer, err = ssh.ParsePrivateKeyWithPassphrase(data, []byte(secret))
+		jump = upstream.client
+		dial = func(ctx context.Context, address string, _ ProxyConfig) (net.Conn, error) {
+			conn, err := jump.DialContext(ctx, "tcp", address)
 			if err != nil {
-				if savedPassphrase != "" {
-					return nil, &AuthenticationError{code: "ssh_managed_key_invalid", message: "密钥管理器中保存的口令无法解锁此私钥，请在密钥管理器中检查并更新。"}
-				}
-				return nil, &AuthenticationError{code: "ssh_key_passphrase_invalid", message: "私钥口令不正确，无法解锁此私钥。"}
+				return nil, fmt.Errorf("SSH 跳板机「%s」无法转发到目标：%w", host.Name, err)
 			}
+			return &sshJumpConn{Conn: conn, jump: jump}, nil
 		}
-		if err != nil {
-			return nil, &AuthenticationError{code: "ssh_private_key_invalid", message: "无法解析私钥，请确认所选文件是受支持的完整私钥。"}
-		}
-		auth = []ssh.AuthMethod{ssh.PublicKeys(signer)}
-	case "agent":
-		agentConn, err = dialSSHAgent(dialCtx)
-		if err != nil {
-			return nil, fmt.Errorf("连接 SSH Agent：%w", err)
-		}
-		defer agentConn.Close()
-		stopAgent := context.AfterFunc(dialCtx, func() { _ = agentConn.Close() })
-		defer stopAgent()
-		deadline, _ := dialCtx.Deadline()
-		if err := agentConn.SetDeadline(deadline); err != nil {
-			return nil, fmt.Errorf("设置 SSH Agent 超时：%w", err)
-		}
-		signers, err := agent.NewClient(agentConn).Signers()
-		if err != nil {
-			if dialCtx.Err() != nil {
-				return nil, dialCtx.Err()
-			}
-			return nil, err
-		}
-		if len(signers) == 0 {
-			return nil, errors.New("SSH Agent 中没有可用密钥")
-		}
-		auth = []ssh.AuthMethod{ssh.PublicKeys(signers...)}
-	default:
-		return nil, errors.New("认证方式无效")
+		routeType = "ssh-jump"
 	}
-	address := net.JoinHostPort(p.Host, strconv.Itoa(p.Port))
-	conn, err := dialSSH(dialCtx, address, p.Proxy)
+	transport, err := a.openSSHConnection(dialCtx, p, secret, approval, dial)
 	if err != nil {
-		return nil, fmt.Errorf("连接 %s：%w", address, err)
+		if jump != nil {
+			_ = jump.Close()
+		}
+		return nil, err
 	}
-	activity := newSSHActivityConn(conn)
-	conn = activity
-	stop := context.AfterFunc(dialCtx, func() { conn.Close() })
-	defer stop()
-	deadline, _ := dialCtx.Deadline()
-	_ = conn.SetDeadline(deadline)
-	fingerprint := ""
-	trace := authenticationTrace{}
-	config := &ssh.ClientConfig{User: p.User, Auth: auth, AuthCallback: trace.observe, HostKeyCallback: func(host string, remote net.Addr, key ssh.PublicKey) error {
-		fingerprint = ssh.FingerprintSHA256(key)
-		return a.store.hostKeyWithApproval(host, key, approval)
-	}}
-	sshConn, chans, reqs, err := ssh.NewClientConn(conn, address, config)
-	if err != nil {
-		conn.Close()
-		return nil, explainSSHAuthentication(err, p.Auth, trace)
+	client, activity, fingerprint := transport.client, transport.activity, transport.fingerprint
+	if jump == nil {
+		routeType = transport.proxy.Type
 	}
-	client := ssh.NewClient(sshConn, chans, reqs)
+	address := sshProfileAddress(p)
 	sessionCtx, sessionCancel := context.WithCancel(a.ctx)
-	writeIdentity := strings.Join([]string{address, fingerprint, p.User, p.Proxy.Type, p.Proxy.Host, strconv.Itoa(p.Proxy.Port), p.Proxy.User}, "\x00")
-	s := &Session{ID: randomID(), ProfileID: p.ID, Fingerprint: fingerprint, connectionHost: p.Host, connectionPeer: directSSHServerPeer(client.RemoteAddr(), p.Proxy.Type), fileWriteIdentity: writeIdentity, client: client, activity: activity, ctx: sessionCtx, cancel: sessionCancel}
+	writeIdentity := strings.Join([]string{address, fingerprint, p.User, routeType, transport.proxy.Host, strconv.Itoa(transport.proxy.Port), transport.proxy.User}, "\x00")
+	if p.JumpHostID != "" {
+		writeIdentity += "\x00" + p.JumpHostID
+	}
+	s := &Session{ID: randomID(), ProfileID: p.ID, Fingerprint: fingerprint, connectionHost: p.Host, connectionPeer: directSSHServerPeer(client.RemoteAddr(), routeType), fileWriteIdentity: writeIdentity, client: client, activity: activity, ctx: sessionCtx, cancel: sessionCancel}
 	appearance := a.store.List().Appearance
 	s.promptUsernameColor, s.promptHostnameColor = appearance.PromptUsernameColor, appearance.PromptHostnameColor
 	// Publish immediately after SSH authentication. The terminal stages its own
@@ -283,10 +215,9 @@ func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret 
 	if err := sessionCtx.Err(); err != nil {
 		return nil, err
 	}
-	if !stop() || dialCtx.Err() != nil {
-		return nil, dialCtx.Err()
+	if err := dialCtx.Err(); err != nil {
+		return nil, err
 	}
-	conn.SetDeadline(time.Time{})
 	a.mu.Lock()
 	if _, exists := a.store.Get(p.ID); exists == nil {
 		if err := a.store.MarkConnected(p.ID, time.Now()); err != nil {
@@ -312,8 +243,142 @@ func (a *App) ConnectWithHostKeyApproval(ctx context.Context, profileID, secret 
 			a.disconnect(s.ID)
 		}
 	})
-	s.startPing(p.Host, p.Proxy.Type, client.RemoteAddr())
+	s.startPing(p.Host, routeType, client.RemoteAddr())
 	return s, nil
+}
+
+type sshConnection struct {
+	client      *ssh.Client
+	activity    *sshActivityConn
+	fingerprint string
+	proxy       ProxyConfig
+}
+
+func sshProfileAddress(p Profile) string {
+	return net.JoinHostPort(p.Host, strconv.Itoa(p.Port))
+}
+
+func (a *App) openSSHConnection(dialCtx context.Context, p Profile, secret string, approval *HostKeyApproval, dial func(context.Context, string, ProxyConfig) (net.Conn, error)) (sshConnection, error) {
+	if p.NeedsProxy {
+		return sshConnection{}, &AuthenticationError{code: "ssh_proxy_missing", message: "此导入连接尚未配置代理，请编辑连接后再连接。"}
+	}
+	var err error
+	if p.ProxyID != "" {
+		p.Proxy, err = a.store.ResolveProxy(p.ProxyID)
+		if err != nil {
+			return sshConnection{}, err
+		}
+	}
+	if secret == "" {
+		secret = p.Secret
+	}
+	var auth []ssh.AuthMethod
+	var agentConn net.Conn
+	switch p.Auth {
+	case "password":
+		if secret == "" {
+			return sshConnection{}, &AuthenticationError{code: "ssh_password_required", message: "请输入 SSH 密码"}
+		}
+		auth = []ssh.AuthMethod{ssh.Password(secret), ssh.KeyboardInteractive(passwordChallenge(secret))}
+	case "key":
+		if p.KeyID == "" && p.KeyPath == "" {
+			return sshConnection{}, &AuthenticationError{code: "ssh_key_missing", message: "此连接尚未配置私钥，请在编辑连接中选择密钥管理器里的密钥或私钥文件。"}
+		}
+		var data []byte
+		var savedPassphrase string
+		if p.KeyID != "" {
+			data, savedPassphrase, err = a.store.keyMaterial(p.KeyID)
+			if savedPassphrase != "" {
+				// The key manager is authoritative, including over stale per-profile
+				// credentials or a detached window's cached input.
+				secret = savedPassphrase
+			}
+		} else {
+			data, err = readPrivateKey(p.KeyPath)
+		}
+		if err != nil {
+			if errors.Is(err, errManagedKeyMissing) || os.IsNotExist(err) {
+				return sshConnection{}, &AuthenticationError{code: "ssh_key_missing", message: "此连接的私钥已缺失，请重新配置密钥。"}
+			}
+			return sshConnection{}, &AuthenticationError{code: "ssh_key_unavailable", message: "无法读取此连接的私钥，请检查文件权限或重新配置密钥。"}
+		}
+		defer clear(data)
+		var signer ssh.Signer
+		signer, err = ssh.ParsePrivateKey(data)
+		var passphraseRequired *ssh.PassphraseMissingError
+		if errors.As(err, &passphraseRequired) {
+			if secret == "" {
+				return sshConnection{}, &AuthenticationError{code: "ssh_key_passphrase_required", message: "此私钥已加密，请输入私钥口令；可在密钥管理器中保存，供所有引用此密钥的连接使用。"}
+			}
+			signer, err = ssh.ParsePrivateKeyWithPassphrase(data, []byte(secret))
+			if err != nil {
+				if savedPassphrase != "" {
+					return sshConnection{}, &AuthenticationError{code: "ssh_managed_key_invalid", message: "密钥管理器中保存的口令无法解锁此私钥，请在密钥管理器中检查并更新。"}
+				}
+				return sshConnection{}, &AuthenticationError{code: "ssh_key_passphrase_invalid", message: "私钥口令不正确，无法解锁此私钥。"}
+			}
+		}
+		if err != nil {
+			return sshConnection{}, &AuthenticationError{code: "ssh_private_key_invalid", message: "无法解析私钥，请确认所选文件是受支持的完整私钥。"}
+		}
+		auth = []ssh.AuthMethod{ssh.PublicKeys(signer)}
+	case "agent":
+		agentConn, err = dialSSHAgent(dialCtx)
+		if err != nil {
+			return sshConnection{}, fmt.Errorf("连接 SSH Agent：%w", err)
+		}
+		defer agentConn.Close()
+		stopAgent := context.AfterFunc(dialCtx, func() { _ = agentConn.Close() })
+		defer stopAgent()
+		deadline, _ := dialCtx.Deadline()
+		if err := agentConn.SetDeadline(deadline); err != nil {
+			return sshConnection{}, fmt.Errorf("设置 SSH Agent 超时：%w", err)
+		}
+		signers, err := agent.NewClient(agentConn).Signers()
+		if err != nil {
+			if dialCtx.Err() != nil {
+				return sshConnection{}, dialCtx.Err()
+			}
+			return sshConnection{}, err
+		}
+		if len(signers) == 0 {
+			return sshConnection{}, errors.New("SSH Agent 中没有可用密钥")
+		}
+		auth = []ssh.AuthMethod{ssh.PublicKeys(signers...)}
+	default:
+		return sshConnection{}, errors.New("认证方式无效")
+	}
+	address := sshProfileAddress(p)
+	conn, err := dial(dialCtx, address, p.Proxy)
+	if err != nil {
+		return sshConnection{}, fmt.Errorf("连接 %s：%w", address, err)
+	}
+	activity := newSSHActivityConn(conn)
+	conn = activity
+	stop := context.AfterFunc(dialCtx, func() { conn.Close() })
+	defer stop()
+	deadline, _ := dialCtx.Deadline()
+	_ = conn.SetDeadline(deadline)
+	fingerprint := ""
+	trace := authenticationTrace{}
+	config := &ssh.ClientConfig{User: p.User, Auth: auth, AuthCallback: trace.observe, HostKeyCallback: func(host string, remote net.Addr, key ssh.PublicKey) error {
+		fingerprint = ssh.FingerprintSHA256(key)
+		return a.store.hostKeyWithApproval(host, key, approval)
+	}}
+	sshConn, chans, reqs, err := ssh.NewClientConn(conn, address, config)
+	if err != nil {
+		conn.Close()
+		if dialCtx.Err() != nil {
+			return sshConnection{}, dialCtx.Err()
+		}
+		return sshConnection{}, explainSSHAuthentication(err, p.Auth, trace)
+	}
+	if !stop() || dialCtx.Err() != nil {
+		conn.Close()
+		return sshConnection{}, dialCtx.Err()
+	}
+	_ = conn.SetDeadline(time.Time{})
+	return sshConnection{client: ssh.NewClient(sshConn, chans, reqs), activity: activity, fingerprint: fingerprint, proxy: p.Proxy}, nil
 }
 
 func (a *App) session(id string) (*Session, error) {

@@ -66,6 +66,40 @@ try{
  fs.mkdirSync(path.join(local,'dropped-folder'));fs.writeFileSync(path.join(local,'dropped-folder/文件.txt'),'native-directory');
  await go('commands');await page.evaluate(async folder=>{const r=document.querySelector('#files-panel').getBoundingClientRect();await cloudshellNativeDrop({x:r.left+40,y:r.top+80,paths:[folder]});await loadProfiles()},path.join(local,'dropped-folder'));
  await settle();assert.equal(await pane(),'commands');await assertCount(1);assert.equal(fs.readFileSync(path.join(remote,'dropped-folder/文件.txt'),'utf8'),'native-directory');await read();await go('files');
+ // Exercise the picker and the WebView2 drop message against the real SFTP
+ // fixture. Hold path resolution, then switch directories before delivering it.
+ const chosen=path.join(local,'picked.txt'), dropped=path.join(local,'windows-dragged.txt');
+ fs.writeFileSync(chosen,'native picker');fs.writeFileSync(dropped,'windows drop');
+ fs.mkdirSync(path.join(remote,'other'));
+ await page.evaluate(({chosen,origin,token})=>{
+  window.go={main:{Desktop:{
+   ChooseUploads:async()=>[chosen],
+   Request:async(method,pathname,body)=>{
+    const response=await fetch(origin+pathname,{method,headers:{'Content-Type':'application/json','X-CloudShell-Token':token},body:body||undefined});
+    const data=await response.text();
+    if(!response.ok)throw new Error('DENGSHELL_ERROR:'+data);
+    return data;
+   },
+  }}};
+  window.chrome.webview={postMessageWithAdditionalObjects(message,files){window.qaDrop={message,count:files.length}}};
+  document.querySelector('#upload-files-option').onclick();
+ },{chosen,origin,token});
+ await page.waitForFunction(()=>[...localTasks.values()].some(t=>t.name==='picked.txt'&&t.status==='done'));
+ assert.equal(fs.readFileSync(path.join(remote,'picked.txt'),'utf8'),'native picker');
+ await page.evaluate(async dropped=>{
+  const dt=new DataTransfer();dt.items.add(new File(['drop'],'windows-dragged.txt'));
+  document.querySelector('#files-panel').dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true,clientX:101.5,clientY:390.25}));
+  if(window.qaDrop?.count!==1||!/^file:drop:-1:\d+$/.test(window.qaDrop.message))throw new Error('invalid WebView2 drop');
+  const [dropX,dropID]=window.qaDrop.message.split(':').slice(2).map(Number);
+  const previous=qaState.cwd;qaState.cwd=previous+'/other';
+  await cloudshellNativeDrop({x:dropX,y:dropID,paths:[dropped]});
+  qaState.cwd=previous;
+  delete window.chrome.webview;delete window.go;
+ },dropped);
+ await page.waitForFunction(()=>[...localTasks.values()].some(t=>t.name==='windows-dragged.txt'&&t.status==='done'));
+ assert.equal(fs.readFileSync(path.join(remote,'windows-dragged.txt'),'utf8'),'windows drop');
+ assert(!fs.existsSync(path.join(remote,'other/windows-dragged.txt')));
+ await read();await go('files');
  // A config response can arrive after the user changes panes. Even if the
  // older response contains 'transfers', it must not undo that local choice.
  await page.evaluate(async()=>{

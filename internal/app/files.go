@@ -418,6 +418,10 @@ func (a *App) uploadLocal(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &input) {
 		return
 	}
+	if len(input.Paths) == 0 {
+		writeError(w, 400, errors.New("没有可上传的本地文件"))
+		return
+	}
 	dir, err := remotePath(input.Directory)
 	if err != nil {
 		writeError(w, 400, err)
@@ -439,24 +443,33 @@ func (a *App) uploadLocal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ids := []string{}
+	tasks := []Transfer{}
 	directories := 0
 	op := startSFTPOperation(r.Context(), s, sftpIdleTimeout)
 	defer op.close()
+	// Create directories before publishing file jobs, so a mkdir failure
+	// cannot hide a partially queued batch from the caller.
 	for _, item := range items {
+		if !item.folder || uploadTargetSkipped(item.target, skipped) {
+			continue
+		}
 		if err := op.ctx.Err(); err != nil {
 			writeError(w, 400, op.err(err))
 			return
 		}
-		if uploadTargetSkipped(item.target, skipped) {
-			continue
+		if err := s.files.MkdirAll(item.target); err != nil {
+			writeError(w, 400, op.err(fmt.Errorf("无法创建远端目录 %s：%w", item.target, err)))
+			return
 		}
-		if item.folder {
-			if err := s.files.MkdirAll(item.target); err != nil {
-				writeError(w, 400, op.err(err))
-				return
-			}
-			directories++
-			op.touch()
+		directories++
+		op.touch()
+	}
+	if err := op.ctx.Err(); err != nil {
+		writeError(w, 400, op.err(err))
+		return
+	}
+	for _, item := range items {
+		if item.folder || uploadTargetSkipped(item.target, skipped) {
 			continue
 		}
 		ctx, t, err := a.beginTransfer(s.ctx, s, "", item.target, item.size)
@@ -464,16 +477,15 @@ func (a *App) uploadLocal(w http.ResponseWriter, r *http.Request) {
 			writeError(w, 400, err)
 			return
 		}
-		ids = append(ids, t.ID)
 		a.mu.Lock()
 		t.localPath = item.local
 		t.Retryable = true
-		t.Status = "queued"
+		tasks = append(tasks, *t)
 		a.mu.Unlock()
+		ids = append(ids, t.ID)
 		go a.runNativeUpload(ctx, s, t, item.local, input.Overwrite || approved[item.target])
-		op.touch()
 	}
-	writeJSON(w, map[string]any{"ids": ids, "directories": directories})
+	writeJSON(w, map[string]any{"ids": ids, "tasks": tasks, "directories": directories})
 }
 
 // Native selections/drops, browser pages and retries share the same limit.

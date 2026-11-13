@@ -63,7 +63,12 @@
         overwrite.onclick = () => finish({ overwriteTargets: paths, skipTargets: [] });
         // Do not focus the destructive choice: pressing Enter must not approve it by accident.
         cancel.focus();
-      }).catch(error => { if (!finished) finish(null, error); });
+      }).catch(error => {
+        if (finished) return;
+        title.textContent = '无法开始上传';
+        description.textContent = error.message || String(error);
+        cancel.textContent = '关闭';
+      });
     }));
     dialogQueue = result.catch(() => undefined);
     return result;

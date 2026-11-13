@@ -223,11 +223,12 @@
     <h3 id="connection-options-title">分组与选项</h3>
       <label>分组<div class="input-with-button"><select name="groupId" id="profile-group" required></select><button type="button" id="profile-new-group">新建分组</button></div></label>
     <details class="proxy-settings" id="proxy-settings"><summary>连接代理 <span id="proxy-summary">直连</span><svg><use href="#i-chevron"/></svg></summary>
-      <div class="connection-fields"><label>使用代理<div class="input-with-button"><select name="proxyId" id="profile-proxy"></select><button type="button" id="manage-profile-proxies">管理代理</button></div></label>
+      <div class="connection-fields"><label id="profile-jump-field">SSH 跳板机<select name="jumpHostId"><option value="">不使用跳板机</option></select></label>
+      <label id="profile-proxy-field">使用代理<div class="input-with-button"><select name="proxyId" id="profile-proxy"></select><button type="button" id="manage-profile-proxies">管理代理</button></div></label>
       <label id="proxy-type-field">自定义代理类型<select name="proxyType"><option value="direct">直连</option><option value="socks5">SOCKS5</option><option value="http">HTTP CONNECT</option></select></label>
       </div>
       <div id="proxy-fields" hidden><div class="form-row"><label>代理地址<input name="proxyHost" placeholder="127.0.0.1" autocomplete="off"></label><label class="port-field">端口<input name="proxyPort" type="number" min="1" max="65535" placeholder="7890"></label></div><div class="form-row"><label>用户名（可选）<input name="proxyUser" autocomplete="off"></label><label>密码（可选）<input name="proxyPassword" type="password" autocomplete="new-password" placeholder="留空保留已保存密码"></label></div><label class="checkbox-label"><input name="clearProxyPassword" type="checkbox">清除已保存的代理密码</label></div>
-      <p class="proxy-note">直连跟随系统路由；使用代理时，由代理端解析域名。</p>
+      <p class="proxy-note" id="proxy-note">直连跟随系统路由；使用代理时，由代理端解析域名。</p>
     </details>
     <label class="connection-notes-field">备注（可选）<textarea id="connection-notes" name="notes" rows="3" aria-describedby="connection-notes-hint" placeholder="续费网址、到期时间、用途等"></textarea><small id="connection-notes-hint" class="notes-input-hint" aria-live="polite">正文最多 3 行，每行最多 20 个中文或 40 个英文字符</small></label>
     </aside></div></div>
@@ -333,7 +334,7 @@
   <script src="vendor/addon-fit.js"></script>
   <script src="vendor/addon-serialize.js"></script>
   <script src="command-composer.js?v=20261001-composer"></script>
-  <script src="workspace-tools.js?v=20260925-v002-b86"></script>
+  <script src="workspace-tools.js?v=20261114-jump"></script>
   <script src="appearance.js?v=20260920-v002-b70"></script>
   <script src="ui-appearance.js?v=20260920-v002-b70"></script>
   <script src="font-library.js?v=20260920-v002-b70"></script>
@@ -364,8 +365,8 @@
   <script src="session-tabs-layout.js?v=20260920-v002-b70"></script>
   <script src="system-identity.js?v=20260920-v002-b70"></script>
   <script src="rdp.js?v=20260927-preview1"></script>
-  <script src="upload-confirmation.js?v=20260928-overwrite1"></script>
-  <script src="app.js?v=20261011-sftp-right"></script>
+  <script src="upload-confirmation.js?v=20261114-upload"></script>
+  <script src="app.js?v=20261114-jump-upload"></script>
   <script src="sync.js?v=20260920-sync1"></script>
   <script src="quick-connect.js?v=20260920-v002-b70"></script>
   <script src="process-view.js?v=20260920-v002-b70"></script>
