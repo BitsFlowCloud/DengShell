@@ -368,6 +368,9 @@ func (a *App) openSSHConnection(dialCtx context.Context, p Profile, secret strin
 	sshConn, chans, reqs, err := ssh.NewClientConn(conn, address, config)
 	if err != nil {
 		conn.Close()
+		if dialCtx.Err() != nil {
+			return sshConnection{}, dialCtx.Err()
+		}
 		return sshConnection{}, explainSSHAuthentication(err, p.Auth, trace)
 	}
 	if !stop() || dialCtx.Err() != nil {

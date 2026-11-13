@@ -191,6 +191,7 @@ func (s *Store) saveProfile(p Profile, clearSecret, allowNewID bool) (Profile, e
 		if p.ProxyID != "" || p.Proxy.Type != "direct" {
 			return Profile{}, errors.New("请在跳板机的连接配置中设置代理")
 		}
+		p.NeedsProxy = false
 	}
 	if p.Auth == "" {
 		p.Auth = "password"
