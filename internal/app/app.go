@@ -215,12 +215,13 @@ func (a *App) Handler(assets fs.FS) http.Handler {
 		var input struct {
 			ProfileID       string           `json:"profileId"`
 			Secret          string           `json:"secret"`
+			JumpSecret      string           `json:"jumpSecret"`
 			HostKeyApproval *HostKeyApproval `json:"hostKeyApproval"`
 		}
 		if !decode(w, r, &input) {
 			return
 		}
-		s, err := a.ConnectWithHostKeyApproval(r.Context(), input.ProfileID, input.Secret, input.HostKeyApproval)
+		s, err := a.connectSSH(r.Context(), input.ProfileID, input.Secret, input.JumpSecret, input.HostKeyApproval)
 		respond(w, s, err)
 	})
 	mux.HandleFunc("DELETE /api/sessions/{id}", func(w http.ResponseWriter, r *http.Request) {
@@ -312,6 +313,10 @@ func writeError(w http.ResponseWriter, status int, err error) {
 	var coded interface{ Code() string }
 	if errors.As(err, &coded) {
 		payload["code"] = coded.Code()
+	}
+	var jump *sshJumpHostError
+	if errors.As(err, &jump) {
+		payload["jumpHostId"] = jump.profileID
 	}
 	var hostKey *HostKeyError
 	if errors.As(err, &hostKey) {

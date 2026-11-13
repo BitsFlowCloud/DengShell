@@ -212,11 +212,15 @@ function editKey(mode, key = null) {
 }
 
 function updateProxyFields() {
-  const form = $('#connection-form'), type = form.elements.proxyType.value, library = managedProxies.find(item => item.id === form.elements.proxyId.value), enabled = !library && type !== 'direct';
-  $('#proxy-type-field').hidden = !!library;
+  const form = $('#connection-form'), type = form.elements.proxyType.value, library = managedProxies.find(item => item.id === form.elements.proxyId.value);
+  const jump = form.elements.protocol.value !== 'rdp' && form.elements.jumpHostId.value;
+  const enabled = !jump && !library && type !== 'direct';
+  $('#profile-proxy-field').hidden = !!jump;
+  $('#proxy-note').hidden = !!jump;
+  $('#proxy-type-field').hidden = !!(jump || library);
   $('#proxy-fields').hidden = !enabled;
   form.elements.proxyHost.required = enabled; form.elements.proxyPort.required = enabled;
-  $('#proxy-summary').textContent = library?.name || { direct: '直连', socks5: 'SOCKS5', http: 'HTTP CONNECT' }[type];
+  $('#proxy-summary').textContent = jump ? 'SSH 跳板机' : library?.name || { direct: '直连', socks5: 'SOCKS5', http: 'HTTP CONNECT' }[type];
 }
 
 function initializeWorkspaceTools() {

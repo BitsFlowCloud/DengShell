@@ -66,6 +66,13 @@ try {
  await start([{name:'one.txt',data:'do-not-upload'}]);await ready();await decision('跳过同名文件');assert.equal((await finishTasks()).length,0);
  fs.symlinkSync(path.join(remote,'one.txt'),path.join(remote,'link.txt'));
  await start([{name:'link.txt',data:'unsafe'}]);await ready();assert(await page.$eval('#upload-confirmation-dialog .primary-button',e=>e.hidden));await decision('跳过同名文件');assert.equal(contents('one.txt'),'selection-new');
+ // A selected file that disappears before preflight leaves a visible error
+ // and does not create a task. Closing it allows the next selection to run.
+ await start([path.join(local,'missing.txt')],true);
+ await page.waitForFunction(()=>document.querySelector('#upload-confirmation-title')?.textContent==='无法开始上传');
+ assert.match(await page.$eval('.upload-confirmation-description',e=>e.textContent),/missing\.txt/);
+ assert.equal(await page.evaluate(()=>localTasks.size),0);
+ await decision('关闭');
  // Non-conflicting upload proceeds without asking for a decision.
  await start([{name:'unique.txt',data:'unique'}]);await page.waitForFunction(()=>qaSettled);assert((await finishTasks()).every(t=>t.status==='done'));assert.equal(contents('unique.txt'),'unique');await reset();
  // Large selections remain one modal, bounded DOM, safe text insertion.

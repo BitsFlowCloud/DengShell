@@ -76,6 +76,7 @@ func normalizeRDPProfile(p *Profile) error {
 		return errors.New("RDP 连接使用用户名和密码认证")
 	}
 	p.Auth = "password"
+	p.JumpHostID = ""
 	p.KeyID = ""
 	p.KeyPath = ""
 	p.Domain = strings.TrimSpace(p.Domain)

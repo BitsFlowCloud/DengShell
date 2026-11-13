@@ -72,6 +72,9 @@ func (s *Session) startPing(target, proxyType string, remote net.Addr) {
 	if proxied {
 		note = "SSH 使用代理；ICMP 由本机直连，不经过 SOCKS5/HTTP CONNECT，本机 DNS 结果可能与代理端不同"
 	}
+	if proxyType == "ssh-jump" {
+		note = "SSH 经跳板机连接；ICMP 由本机直连目标，结果取决于本机网络和 DNS"
+	}
 	s.pingMu.Lock()
 	s.ping = PingStats{Target: target, Address: address, AddressSource: addressSource, RouteNote: pingRouteNote(note, address), Status: "pending", Samples: []PingSample{}}
 	s.pingMu.Unlock()
